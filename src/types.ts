@@ -3,6 +3,7 @@ export type WeatherLayerMode = "back" | "front" | "both";
 export type WeatherLayerPreference = "auto" | WeatherLayerMode;
 export type WeatherPalette = "dawn" | "day" | "dusk" | "night" | "storm" | "mist" | "snow";
 export type ReducedMotionMode = "system" | "always" | "never";
+export type WeatherSourceMode = "story" | "manual";
 
 export interface WidgetPosition {
   x: number;
@@ -21,6 +22,7 @@ export interface WeatherState {
   palette: WeatherPalette;
   timestampMs: number | null;
   updatedAt: number;
+  source: WeatherSourceMode;
 }
 
 export interface WeatherPrefs {
@@ -42,6 +44,8 @@ export type FrontendToBackend =
       attrs: Record<string, string>;
       isStreaming?: boolean;
     }
+  | { type: "set_manual_state"; chatId?: string | null; state: Partial<WeatherState> }
+  | { type: "clear_manual_override"; chatId?: string | null }
   | { type: "save_prefs"; prefs: Partial<WeatherPrefs> }
   | { type: "reset_widget_position" };
 

@@ -1,6 +1,7 @@
 // @bun
 // src/shared.ts
 var WEATHER_STATE_VAR = "weather_state_json";
+var WEATHER_MANUAL_STATE_VAR = "weather_manual_state_json";
 var WEATHER_CONDITIONS = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
 var WEATHER_LAYERS = ["back", "front", "both"];
 var WEATHER_PALETTES = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
@@ -9,7 +10,7 @@ var DEFAULT_PREFS = {
   effectsEnabled: true,
   layerMode: "auto",
   intensity: 1,
-  reducedMotion: "system",
+  reducedMotion: "never",
   pauseEffects: false,
   widgetPosition: null
 };
@@ -36,6 +37,9 @@ function normalizePalette(value, fallback) {
 }
 function normalizeReducedMotion(value, fallback) {
   return typeof value === "string" && REDUCED_MOTION_VALUES.includes(value) ? value : fallback;
+}
+function normalizeSource(value, fallback) {
+  return value === "manual" || value === "story" ? value : fallback;
 }
 function parseNumeric(value) {
   if (typeof value === "number" && Number.isFinite(value))
@@ -165,7 +169,8 @@ function makeDefaultWeatherState(now = Date.now()) {
     layer: "both",
     palette: "day",
     timestampMs: date.getTime(),
-    updatedAt: now
+    updatedAt: now,
+    source: "story"
   };
 }
 function normalizeWeatherState(input, previous) {
@@ -189,11 +194,12 @@ function normalizeWeatherState(input, previous) {
     layer: normalizeLayer(source.layer, fallback.layer),
     palette,
     timestampMs: timestampMs ?? fallback.timestampMs,
-    updatedAt
+    updatedAt,
+    source: normalizeSource(source.source, fallback.source)
   };
 }
 function normalizeWeatherTag(attrs, previous) {
-  return normalizeWeatherState({ ...attrs, updatedAt: Date.now() }, previous);
+  return normalizeWeatherState({ ...attrs, updatedAt: Date.now(), source: "story" }, previous);
 }
 function normalizePrefs(input) {
   const source = isRecord(input) ? input : {};
@@ -238,7 +244,7 @@ async function loadPrefs(userId) {
 async function savePrefs(userId, prefs) {
   await spindle.userStorage.setJson(PREFS_FILE, prefs, { userId });
 }
-async function loadWeatherState(chatId) {
+async function loadStoryWeatherState(chatId) {
   try {
     const raw = await spindle.variables.local.get(chatId, WEATHER_STATE_VAR);
     if (!raw)
@@ -248,8 +254,32 @@ async function loadWeatherState(chatId) {
     return null;
   }
 }
-async function saveWeatherState(chatId, state) {
+async function saveStoryWeatherState(chatId, state) {
   await spindle.variables.local.set(chatId, WEATHER_STATE_VAR, JSON.stringify(state));
+}
+async function loadManualWeatherState(chatId) {
+  try {
+    const raw = await spindle.variables.local.get(chatId, WEATHER_MANUAL_STATE_VAR);
+    if (!raw)
+      return null;
+    return normalizeWeatherState(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+async function saveManualWeatherState(chatId, state) {
+  await spindle.variables.local.set(chatId, WEATHER_MANUAL_STATE_VAR, JSON.stringify(state));
+}
+async function clearManualWeatherState(chatId) {
+  try {
+    await spindle.variables.local.delete(chatId, WEATHER_MANUAL_STATE_VAR);
+  } catch {}
+}
+async function loadEffectiveWeatherState(chatId) {
+  const manual = await loadManualWeatherState(chatId);
+  if (manual)
+    return manual;
+  return loadStoryWeatherState(chatId);
 }
 async function resolveChatId(candidate) {
   if (candidate)
@@ -273,7 +303,7 @@ async function pushActiveChatState(chatId) {
     send({ type: "active_chat_state", chatId: null, state: null });
     return;
   }
-  const state = await loadWeatherState(resolvedChatId);
+  const state = await loadEffectiveWeatherState(resolvedChatId);
   send({ type: "active_chat_state", chatId: resolvedChatId, state });
 }
 function buildPromptInstruction(state) {
@@ -314,7 +344,7 @@ function extractChatId(payload) {
 }
 spindle.registerInterceptor(async (messages, context) => {
   const chatId = extractChatId(context);
-  const state = chatId ? await loadWeatherState(chatId) : null;
+  const state = chatId ? await loadEffectiveWeatherState(chatId) : null;
   return [
     {
       role: "system",
@@ -349,11 +379,39 @@ spindle.onFrontendMessage(async (raw, userId) => {
           send({ type: "error", message: "Weather tag ignored because no active chat could be resolved." });
           break;
         }
-        const previous = await loadWeatherState(chatId);
-        const nextState = normalizeWeatherTag(message.attrs, previous);
-        await saveWeatherState(chatId, nextState);
+        const previousStory = await loadStoryWeatherState(chatId);
+        const nextState = normalizeWeatherTag(message.attrs, previousStory);
+        await saveStoryWeatherState(chatId, nextState);
+        lastKnownChatId = chatId;
+        const manualOverride = await loadManualWeatherState(chatId);
+        if (!manualOverride) {
+          send({ type: "weather_state", chatId, state: nextState });
+        }
+        break;
+      }
+      case "set_manual_state": {
+        const chatId = await resolveChatId(message.chatId);
+        if (!chatId) {
+          send({ type: "error", message: "Manual weather override could not resolve an active chat." });
+          break;
+        }
+        const previous = await loadManualWeatherState(chatId) ?? await loadEffectiveWeatherState(chatId) ?? makeDefaultWeatherState();
+        const nextState = normalizeWeatherState({ ...previous, ...message.state, updatedAt: Date.now(), source: "manual" }, previous);
+        await saveManualWeatherState(chatId, nextState);
         lastKnownChatId = chatId;
         send({ type: "weather_state", chatId, state: nextState });
+        break;
+      }
+      case "clear_manual_override": {
+        const chatId = await resolveChatId(message.chatId);
+        if (!chatId) {
+          send({ type: "error", message: "Manual weather override could not be cleared because no chat is active." });
+          break;
+        }
+        await clearManualWeatherState(chatId);
+        lastKnownChatId = chatId;
+        const restored = await loadStoryWeatherState(chatId) ?? makeDefaultWeatherState();
+        send({ type: "weather_state", chatId, state: restored });
         break;
       }
       case "save_prefs": {

@@ -4,7 +4,7 @@ var DEFAULT_PREFS = {
   effectsEnabled: true,
   layerMode: "auto",
   intensity: 1,
-  reducedMotion: "system",
+  reducedMotion: "never",
   pauseEffects: false,
   widgetPosition: null
 };
@@ -36,11 +36,21 @@ function makeDefaultWeatherState(now = Date.now()) {
     layer: "both",
     palette: "day",
     timestampMs: date.getTime(),
-    updatedAt: now
+    updatedAt: now,
+    source: "story"
   };
 }
 
 // src/ui/settings.ts
+var CONDITIONS = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
+var PALETTES = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
+function createLabeledInput(labelText, input) {
+  const label = document.createElement("label");
+  label.className = "weather-settings-label";
+  label.textContent = labelText;
+  label.appendChild(input);
+  return label;
+}
 function createSettingsUI(sendToBackend) {
   const root = document.createElement("section");
   root.className = "weather-settings-card";
@@ -105,9 +115,9 @@ function createSettingsUI(sendToBackend) {
   const motionSelect = document.createElement("select");
   motionSelect.className = "weather-settings-select";
   motionSelect.innerHTML = `
+    <option value="never">Always animate</option>
     <option value="system">Follow system setting</option>
     <option value="always">Always reduce motion</option>
-    <option value="never">Always animate</option>
   `;
   motionSelect.addEventListener("change", () => {
     sendToBackend({ type: "save_prefs", prefs: { reducedMotion: motionSelect.value } });
@@ -125,6 +135,151 @@ function createSettingsUI(sendToBackend) {
   pauseLabel.appendChild(pauseToggle);
   const preview = document.createElement("div");
   preview.className = "weather-settings-preview";
+  const manualCard = document.createElement("section");
+  manualCard.className = "weather-settings-manual-card";
+  const manualHeader = document.createElement("div");
+  manualHeader.className = "weather-settings-manual-header";
+  const manualTitle = document.createElement("strong");
+  manualTitle.textContent = "Manual weather";
+  const manualModePill = document.createElement("span");
+  manualModePill.className = "weather-settings-status-pill";
+  manualHeader.appendChild(manualTitle);
+  manualHeader.appendChild(manualModePill);
+  const manualHint = document.createElement("p");
+  manualHint.className = "weather-settings-manual-hint";
+  manualHint.textContent = "Lock the HUD to your chosen scene, or return to story sync whenever you want.";
+  const manualToggle = document.createElement("input");
+  manualToggle.type = "checkbox";
+  manualToggle.className = "weather-settings-checkbox";
+  const manualToggleLabel = createLabeledInput("Manual override", manualToggle);
+  const conditionSelect = document.createElement("select");
+  conditionSelect.className = "weather-settings-select";
+  conditionSelect.innerHTML = CONDITIONS.map((condition) => `<option value="${condition}">${condition}</option>`).join("");
+  const paletteSelect = document.createElement("select");
+  paletteSelect.className = "weather-settings-select";
+  paletteSelect.innerHTML = PALETTES.map((palette) => `<option value="${palette}">${palette}</option>`).join("");
+  const sceneLayerSelect = document.createElement("select");
+  sceneLayerSelect.className = "weather-settings-select";
+  sceneLayerSelect.innerHTML = `
+    <option value="back">Back</option>
+    <option value="front">Front</option>
+    <option value="both">Both</option>
+  `;
+  const dateInput = document.createElement("input");
+  dateInput.type = "date";
+  dateInput.className = "weather-settings-input";
+  const timeInput = document.createElement("input");
+  timeInput.type = "text";
+  timeInput.className = "weather-settings-input";
+  timeInput.placeholder = "9:42 PM";
+  const temperatureInput = document.createElement("input");
+  temperatureInput.type = "text";
+  temperatureInput.className = "weather-settings-input";
+  temperatureInput.placeholder = "61F";
+  const windInput = document.createElement("input");
+  windInput.type = "text";
+  windInput.className = "weather-settings-input";
+  windInput.placeholder = "breezy";
+  const summaryInput = document.createElement("input");
+  summaryInput.type = "text";
+  summaryInput.className = "weather-settings-input";
+  summaryInput.placeholder = "Cold spring rain";
+  const sceneIntensityRow = document.createElement("div");
+  sceneIntensityRow.className = "weather-settings-row";
+  const sceneIntensity = document.createElement("input");
+  sceneIntensity.type = "range";
+  sceneIntensity.className = "weather-settings-range";
+  sceneIntensity.min = "0.00";
+  sceneIntensity.max = "1.00";
+  sceneIntensity.step = "0.05";
+  const sceneIntensityValue = document.createElement("span");
+  sceneIntensityValue.className = "weather-settings-value";
+  sceneIntensity.addEventListener("input", () => {
+    sceneIntensityValue.textContent = `${Math.round(Number.parseFloat(sceneIntensity.value) * 100)}%`;
+  });
+  sceneIntensityRow.appendChild(sceneIntensity);
+  sceneIntensityRow.appendChild(sceneIntensityValue);
+  const quickButtons = document.createElement("div");
+  quickButtons.className = "weather-settings-chip-grid";
+  let currentState = null;
+  const updateChipSelection = () => {
+    for (const chip of quickButtons.querySelectorAll(".weather-settings-chip")) {
+      chip.classList.toggle("weather-settings-chip-active", chip.dataset.condition === conditionSelect.value);
+    }
+  };
+  const buildManualState = () => ({
+    date: dateInput.value || currentState?.date,
+    time: timeInput.value.trim() || currentState?.time,
+    condition: conditionSelect.value,
+    summary: summaryInput.value.trim() || currentState?.summary,
+    temperature: temperatureInput.value.trim() || currentState?.temperature,
+    wind: windInput.value.trim() || currentState?.wind,
+    layer: sceneLayerSelect.value,
+    palette: paletteSelect.value,
+    intensity: Number.parseFloat(sceneIntensity.value),
+    source: "manual"
+  });
+  const applyManualState = () => {
+    sendToBackend({ type: "set_manual_state", state: buildManualState() });
+  };
+  for (const condition of CONDITIONS) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "weather-settings-chip";
+    chip.dataset.condition = condition;
+    chip.textContent = condition;
+    chip.addEventListener("click", () => {
+      conditionSelect.value = condition;
+      updateChipSelection();
+      manualToggle.checked = true;
+      applyManualState();
+    });
+    quickButtons.appendChild(chip);
+  }
+  conditionSelect.addEventListener("change", updateChipSelection);
+  manualToggle.addEventListener("change", () => {
+    if (manualToggle.checked) {
+      applyManualState();
+    } else {
+      sendToBackend({ type: "clear_manual_override" });
+    }
+  });
+  const manualGrid = document.createElement("div");
+  manualGrid.className = "weather-settings-manual-grid";
+  manualGrid.appendChild(createLabeledInput("Condition", conditionSelect));
+  manualGrid.appendChild(createLabeledInput("Palette", paletteSelect));
+  manualGrid.appendChild(createLabeledInput("Story date", dateInput));
+  manualGrid.appendChild(createLabeledInput("Story time", timeInput));
+  manualGrid.appendChild(createLabeledInput("Temperature", temperatureInput));
+  manualGrid.appendChild(createLabeledInput("Wind", windInput));
+  manualGrid.appendChild(createLabeledInput("Scene layer", sceneLayerSelect));
+  manualGrid.appendChild(createLabeledInput("Summary", summaryInput));
+  const sceneIntensityLabel = createLabeledInput("Scene intensity", sceneIntensityRow);
+  const manualActions = document.createElement("div");
+  manualActions.className = "weather-settings-actions";
+  const applyButton = document.createElement("button");
+  applyButton.className = "weather-settings-button weather-settings-button-primary";
+  applyButton.textContent = "Apply manual weather";
+  applyButton.addEventListener("click", () => {
+    manualToggle.checked = true;
+    applyManualState();
+  });
+  const resumeButton = document.createElement("button");
+  resumeButton.className = "weather-settings-button";
+  resumeButton.textContent = "Resume story sync";
+  resumeButton.addEventListener("click", () => {
+    manualToggle.checked = false;
+    sendToBackend({ type: "clear_manual_override" });
+  });
+  manualActions.appendChild(applyButton);
+  manualActions.appendChild(resumeButton);
+  manualCard.appendChild(manualHeader);
+  manualCard.appendChild(manualHint);
+  manualCard.appendChild(manualToggleLabel);
+  manualCard.appendChild(quickButtons);
+  manualCard.appendChild(manualGrid);
+  manualCard.appendChild(sceneIntensityLabel);
+  manualCard.appendChild(manualActions);
   const resetButton = document.createElement("button");
   resetButton.className = "weather-settings-button";
   resetButton.textContent = "Reset HUD position";
@@ -137,20 +292,49 @@ function createSettingsUI(sendToBackend) {
   body.appendChild(motionLabel);
   body.appendChild(pauseLabel);
   body.appendChild(preview);
+  body.appendChild(manualCard);
   body.appendChild(resetButton);
   root.appendChild(header);
   root.appendChild(body);
   return {
     root,
     sync(prefs, state) {
+      currentState = state;
       effectsToggle.checked = prefs.effectsEnabled;
       layerSelect.value = prefs.layerMode;
       intensitySlider.value = String(prefs.intensity.toFixed(2));
       intensityValue.textContent = `${Math.round(prefs.intensity * 100)}%`;
       motionSelect.value = prefs.reducedMotion;
       pauseToggle.checked = prefs.pauseEffects;
-      status.textContent = state ? `${state.condition} ${state.temperature}` : "Waiting for story weather";
+      status.textContent = state ? `${state.source === "manual" ? "manual" : "story"} / ${state.condition} ${state.temperature}` : "Waiting for story weather";
       preview.textContent = state ? `${state.date} at ${state.time} - ${state.summary} (${state.wind})` : "The HUD will wake up as soon as the model emits its first weather-state tag.";
+      manualModePill.textContent = state?.source === "manual" ? "Manual lock" : "Story sync";
+      manualModePill.dataset.mode = state?.source === "manual" ? "manual" : "story";
+      manualToggle.checked = state?.source === "manual";
+      if (state) {
+        conditionSelect.value = state.condition;
+        paletteSelect.value = state.palette;
+        dateInput.value = /^\d{4}-\d{2}-\d{2}$/.test(state.date) ? state.date : "";
+        timeInput.value = state.time;
+        temperatureInput.value = state.temperature;
+        windInput.value = state.wind;
+        summaryInput.value = state.summary;
+        sceneLayerSelect.value = state.layer;
+        sceneIntensity.value = String(state.intensity.toFixed(2));
+        sceneIntensityValue.textContent = `${Math.round(state.intensity * 100)}%`;
+      } else {
+        conditionSelect.value = "clear";
+        paletteSelect.value = "day";
+        dateInput.value = "";
+        timeInput.value = "";
+        temperatureInput.value = "";
+        windInput.value = "";
+        summaryInput.value = "";
+        sceneLayerSelect.value = "both";
+        sceneIntensity.value = "0.30";
+        sceneIntensityValue.textContent = "30%";
+      }
+      updateChipSelection();
     },
     destroy() {
       root.remove();
@@ -206,6 +390,7 @@ var WEATHER_HUD_CSS = `
 }
 
 .weather-settings-select,
+.weather-settings-input,
 .weather-settings-button {
   width: 100%;
   box-sizing: border-box;
@@ -217,9 +402,23 @@ var WEATHER_HUD_CSS = `
   font-size: 12px;
 }
 
+.weather-settings-input {
+  appearance: none;
+}
+
 .weather-settings-button {
   cursor: pointer;
   transition: border-color var(--lumiverse-transition-fast), background var(--lumiverse-transition-fast);
+}
+
+.weather-settings-button-primary {
+  border-color: color-mix(in srgb, var(--lumiverse-primary, #82a8ff) 45%, var(--lumiverse-border));
+  background: linear-gradient(135deg, rgba(83, 126, 201, 0.92), rgba(43, 85, 157, 0.92));
+  color: #f7fbff;
+}
+
+.weather-settings-button-primary:hover {
+  background: linear-gradient(135deg, rgba(99, 142, 219, 0.96), rgba(52, 95, 171, 0.96));
 }
 
 .weather-settings-button:hover {
@@ -258,6 +457,84 @@ var WEATHER_HUD_CSS = `
   font-size: 11px;
   line-height: 1.45;
   color: var(--lumiverse-text);
+}
+
+.weather-settings-manual-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top right, rgba(142, 188, 255, 0.14), transparent 32%),
+    linear-gradient(180deg, color-mix(in srgb, var(--lumiverse-fill-subtle) 90%, #0f1d30 10%), color-mix(in srgb, var(--lumiverse-fill-subtle) 96%, transparent));
+  border: 1px solid color-mix(in srgb, var(--lumiverse-border) 82%, transparent);
+}
+
+.weather-settings-manual-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.weather-settings-status-pill {
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(241, 246, 255, 0.92);
+  background: rgba(70, 96, 132, 0.52);
+}
+
+.weather-settings-status-pill[data-mode="manual"] {
+  background: linear-gradient(135deg, rgba(86, 122, 189, 0.88), rgba(46, 86, 151, 0.92));
+}
+
+.weather-settings-manual-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--lumiverse-text-muted);
+}
+
+.weather-settings-manual-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.weather-settings-chip-grid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.weather-settings-chip {
+  border: 1px solid color-mix(in srgb, var(--lumiverse-border) 72%, transparent);
+  background: color-mix(in srgb, var(--lumiverse-fill-subtle) 82%, transparent);
+  color: var(--lumiverse-text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+
+.weather-settings-chip:hover,
+.weather-settings-chip-active {
+  border-color: rgba(130, 168, 255, 0.54);
+  background: rgba(86, 122, 189, 0.2);
+}
+
+.weather-settings-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.weather-settings-actions .weather-settings-button {
+  flex: 1 1 0;
 }
 
 .weather-hud-widget {
@@ -408,7 +685,7 @@ var WEATHER_HUD_CSS = `
 }
 
 .weather-fx-root {
-  position: fixed;
+  position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
@@ -421,11 +698,11 @@ var WEATHER_HUD_CSS = `
 }
 
 .weather-fx-root[data-kind="back"] {
-  z-index: 2;
+  z-index: 1;
 }
 
 .weather-fx-root[data-kind="front"] {
-  z-index: 32;
+  z-index: 4;
 }
 
 .weather-fx-root.weather-hidden {
@@ -447,6 +724,7 @@ var WEATHER_HUD_CSS = `
   background:
     linear-gradient(180deg, var(--weather-bg-start) 0%, var(--weather-bg-mid) 46%, var(--weather-bg-end) 100%);
   opacity: var(--weather-sky-opacity, 0.3);
+  animation: weather-sky-shift 22s ease-in-out infinite alternate;
 }
 
 .weather-fx-glow {
@@ -455,6 +733,7 @@ var WEATHER_HUD_CSS = `
     radial-gradient(circle at 80% 24%, color-mix(in srgb, var(--weather-glow) 72%, white 20%), transparent 26%);
   opacity: var(--weather-glow-opacity, 0.3);
   mix-blend-mode: screen;
+  animation: weather-glow-drift 16s ease-in-out infinite alternate;
 }
 
 .weather-fx-cloud,
@@ -535,9 +814,24 @@ var WEATHER_HUD_CSS = `
   animation-iteration-count: 1;
 }
 
+.weather-fx-root.weather-reduced-motion .weather-fx-sky,
+.weather-fx-root.weather-reduced-motion .weather-fx-glow {
+  animation: none;
+}
+
 .weather-fx-root.weather-reduced-motion .weather-fx-rain-drop,
 .weather-fx-root.weather-reduced-motion .weather-fx-snow-flake {
   opacity: var(--weather-particle-opacity-static, 0.08);
+}
+
+@keyframes weather-sky-shift {
+  0% { transform: scale(1) translate3d(0, 0, 0); }
+  100% { transform: scale(1.04) translate3d(0, -1.6vh, 0); }
+}
+
+@keyframes weather-glow-drift {
+  0% { transform: translate3d(-1vw, 0, 0) scale(1); }
+  100% { transform: translate3d(1vw, -1vh, 0) scale(1.08); }
 }
 
 @keyframes weather-cloud-drift {
@@ -569,6 +863,14 @@ var WEATHER_HUD_CSS = `
   .weather-hud-widget {
     width: 220px;
     min-height: 98px;
+  }
+
+  .weather-settings-manual-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .weather-settings-actions {
+    flex-direction: column;
   }
 
   .weather-hud-time {
@@ -675,6 +977,12 @@ function createFxMarkup(kind) {
   }
   return { root };
 }
+function resolveSceneHost() {
+  const sceneLayer = document.querySelector('[class*="sceneBackgroundLayer"]');
+  if (!(sceneLayer instanceof HTMLDivElement))
+    return null;
+  return sceneLayer.parentElement instanceof HTMLDivElement ? sceneLayer.parentElement : null;
+}
 function resolveSceneTokens(state, intensity) {
   const paletteMap = {
     dawn: { start: "#20385f", mid: "#5877a7", end: "#f0a36c", glow: "rgba(255, 201, 145, 0.86)" },
@@ -688,45 +996,45 @@ function resolveSceneTokens(state, intensity) {
   const palette = paletteMap[state.palette];
   const baseIntensity = clamp(intensity, 0, 1.5);
   const values = {
-    cloudOpacity: 0.16,
-    fogOpacity: 0.06,
+    cloudOpacity: 0.08,
+    fogOpacity: 0.02,
     rainOpacity: 0,
     snowOpacity: 0,
-    skyOpacity: 0.22,
-    glowOpacity: 0.34
+    skyOpacity: 0.08,
+    glowOpacity: 0.16
   };
   switch (state.condition) {
     case "cloudy":
-      values.cloudOpacity = 0.32;
-      values.glowOpacity = 0.2;
-      values.skyOpacity = 0.18;
+      values.cloudOpacity = 0.3;
+      values.glowOpacity = 0.14;
+      values.skyOpacity = 0.14;
       break;
     case "rain":
-      values.cloudOpacity = 0.42;
+      values.cloudOpacity = 0.36;
       values.rainOpacity = 0.62;
-      values.fogOpacity = 0.12;
-      values.glowOpacity = 0.16;
-      values.skyOpacity = 0.2;
-      break;
-    case "storm":
-      values.cloudOpacity = 0.54;
-      values.rainOpacity = 0.82;
-      values.fogOpacity = 0.18;
-      values.glowOpacity = 0.1;
-      values.skyOpacity = 0.24;
-      break;
-    case "snow":
-      values.cloudOpacity = 0.22;
-      values.snowOpacity = 0.76;
-      values.fogOpacity = 0.14;
-      values.glowOpacity = 0.28;
+      values.fogOpacity = 0.1;
+      values.glowOpacity = 0.08;
       values.skyOpacity = 0.16;
       break;
-    case "fog":
+    case "storm":
+      values.cloudOpacity = 0.46;
+      values.rainOpacity = 0.82;
+      values.fogOpacity = 0.14;
+      values.glowOpacity = 0.06;
+      values.skyOpacity = 0.18;
+      break;
+    case "snow":
       values.cloudOpacity = 0.18;
-      values.fogOpacity = 0.44;
-      values.glowOpacity = 0.22;
+      values.snowOpacity = 0.76;
+      values.fogOpacity = 0.08;
+      values.glowOpacity = 0.18;
       values.skyOpacity = 0.12;
+      break;
+    case "fog":
+      values.cloudOpacity = 0.14;
+      values.fogOpacity = 0.36;
+      values.glowOpacity = 0.12;
+      values.skyOpacity = 0.1;
       break;
     case "clear":
     default:
@@ -869,23 +1177,24 @@ function setFxVisibility(root, visible) {
 function applySceneState(root, state, prefs, reducedMotion) {
   const effectiveIntensity = clamp(state.intensity * prefs.intensity, 0, 1.5);
   const tokens = resolveSceneTokens(state, effectiveIntensity);
+  const isFront = root.root.dataset.kind === "front";
   root.root.classList.toggle("weather-reduced-motion", reducedMotion);
   root.root.style.setProperty("--weather-bg-start", tokens.bgStart);
   root.root.style.setProperty("--weather-bg-mid", tokens.bgMid);
   root.root.style.setProperty("--weather-bg-end", tokens.bgEnd);
   root.root.style.setProperty("--weather-glow", tokens.glow);
-  root.root.style.setProperty("--weather-cloud-opacity", String(tokens.cloudOpacity * (root.root.dataset.kind === "back" ? 1 : 0.65)));
-  root.root.style.setProperty("--weather-fog-opacity", String(tokens.fogOpacity * (root.root.dataset.kind === "back" ? 1 : 0.6)));
-  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (root.root.dataset.kind === "front" ? 1 : 0.45)));
-  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (root.root.dataset.kind === "front" ? 1 : 0.5)));
-  root.root.style.setProperty("--weather-sky-opacity", String(tokens.skyOpacity));
-  root.root.style.setProperty("--weather-glow-opacity", String(tokens.glowOpacity));
+  root.root.style.setProperty("--weather-cloud-opacity", String(isFront ? 0 : tokens.cloudOpacity));
+  root.root.style.setProperty("--weather-fog-opacity", String(tokens.fogOpacity * (isFront ? state.condition === "fog" ? 0.32 : 0.1 : 0.88)));
+  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (isFront ? 1 : 0.34)));
+  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (isFront ? 1 : 0.36)));
+  root.root.style.setProperty("--weather-sky-opacity", String(isFront ? 0 : tokens.skyOpacity));
+  root.root.style.setProperty("--weather-glow-opacity", String(isFront ? 0 : tokens.glowOpacity));
   root.root.style.setProperty("--weather-rain-color", state.condition === "storm" ? "rgba(201, 224, 255, 0.95)" : "rgba(193, 222, 255, 0.82)");
   root.root.style.setProperty("--weather-snow-color", "rgba(248, 251, 255, 0.92)");
   root.root.style.setProperty("--weather-particle-opacity-static", state.condition === "snow" ? String(tokens.snowOpacity * 0.18) : String(tokens.rainOpacity * 0.12));
 }
 function setup(ctx) {
-  console.info("[weather_hud] frontend build 2026-03-24.3");
+  console.info("[weather_hud] frontend build 2026-03-24.4");
   const cleanups = [];
   const removeStyle = ctx.dom.addStyle(WEATHER_HUD_CSS);
   cleanups.push(removeStyle);
@@ -900,9 +1209,48 @@ function setup(ctx) {
   cleanups.push(() => settingsUI.destroy());
   const backFx = createFxMarkup("back");
   const frontFx = createFxMarkup("front");
-  document.body.appendChild(backFx.root);
-  document.body.appendChild(frontFx.root);
+  let sceneHost = null;
+  let hostSyncFrame = null;
+  const attachFxRoots = () => {
+    hostSyncFrame = null;
+    const nextHost = resolveSceneHost();
+    if (!nextHost) {
+      const hadHost = !!sceneHost || backFx.root.isConnected || frontFx.root.isConnected;
+      sceneHost = null;
+      backFx.root.remove();
+      frontFx.root.remove();
+      return hadHost;
+    }
+    if (sceneHost !== nextHost || backFx.root.parentElement !== nextHost || frontFx.root.parentElement !== nextHost) {
+      sceneHost = nextHost;
+      nextHost.appendChild(backFx.root);
+      nextHost.appendChild(frontFx.root);
+      return true;
+    }
+    return false;
+  };
+  const queueFxRootAttach = () => {
+    if (hostSyncFrame !== null)
+      return;
+    hostSyncFrame = window.requestAnimationFrame(() => {
+      if (attachFxRoots()) {
+        updateScene();
+      }
+    });
+  };
+  const hostObserver = new MutationObserver(() => {
+    if (sceneHost?.isConnected && backFx.root.parentElement === sceneHost && frontFx.root.parentElement === sceneHost) {
+      return;
+    }
+    queueFxRootAttach();
+  });
+  hostObserver.observe(document.body, { childList: true, subtree: true });
   cleanups.push(() => {
+    if (hostSyncFrame !== null) {
+      window.cancelAnimationFrame(hostSyncFrame);
+      hostSyncFrame = null;
+    }
+    hostObserver.disconnect();
     backFx.root.remove();
     frontFx.root.remove();
   });
@@ -936,7 +1284,7 @@ function setup(ctx) {
   const updateScene = () => {
     const reducedMotion = getReducedMotion();
     const layerMode = getEffectiveLayerMode(currentPrefs, currentState);
-    const showEffects = currentPrefs.effectsEnabled && !currentPrefs.pauseEffects;
+    const showEffects = currentPrefs.effectsEnabled && !currentPrefs.pauseEffects && !!sceneHost;
     applyHudState(hud, currentPrefs, currentState);
     settingsUI.sync(currentPrefs, currentState);
     applySceneState(backFx, currentState, currentPrefs, reducedMotion);
@@ -998,10 +1346,12 @@ function setup(ctx) {
   const chatChangedUnsub = ctx.events.on("CHAT_CHANGED", (payload) => {
     const chatId = payload && typeof payload === "object" && "chatId" in payload ? payload.chatId ?? null : null;
     activeChatId = chatId;
+    queueFxRootAttach();
     sendToBackend(ctx, { type: "chat_changed", chatId });
   });
   cleanups.push(chatChangedUnsub);
   sendToBackend(ctx, { type: "frontend_ready" });
+  queueFxRootAttach();
   updateScene();
   return () => {
     resetFlashTimer();

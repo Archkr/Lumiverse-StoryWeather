@@ -4,10 +4,12 @@ import type {
   WeatherLayerMode,
   WeatherPalette,
   WeatherPrefs,
+  WeatherSourceMode,
   WeatherState,
 } from "./types";
 
 export const WEATHER_STATE_VAR = "weather_state_json";
+export const WEATHER_MANUAL_STATE_VAR = "weather_manual_state_json";
 export const WEATHER_TAG_NAME = "weather-state";
 
 export const WEATHER_CONDITIONS: WeatherCondition[] = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
@@ -19,7 +21,7 @@ export const DEFAULT_PREFS: WeatherPrefs = {
   effectsEnabled: true,
   layerMode: "auto",
   intensity: 1,
-  reducedMotion: "system",
+  reducedMotion: "never",
   pauseEffects: false,
   widgetPosition: null,
 };
@@ -60,6 +62,10 @@ function normalizeReducedMotion(value: unknown, fallback: ReducedMotionMode): Re
   return typeof value === "string" && REDUCED_MOTION_VALUES.includes(value as ReducedMotionMode)
     ? (value as ReducedMotionMode)
     : fallback;
+}
+
+function normalizeSource(value: unknown, fallback: WeatherSourceMode): WeatherSourceMode {
+  return value === "manual" || value === "story" ? value : fallback;
 }
 
 function parseNumeric(value: unknown): number | null {
@@ -180,6 +186,7 @@ export function makeDefaultWeatherState(now = Date.now()): WeatherState {
     palette: "day",
     timestampMs: date.getTime(),
     updatedAt: now,
+    source: "story",
   };
 }
 
@@ -206,11 +213,12 @@ export function normalizeWeatherState(input: unknown, previous?: WeatherState | 
     palette,
     timestampMs: timestampMs ?? fallback.timestampMs,
     updatedAt,
+    source: normalizeSource(source.source, fallback.source),
   };
 }
 
 export function normalizeWeatherTag(attrs: Record<string, string>, previous?: WeatherState | null): WeatherState {
-  return normalizeWeatherState({ ...attrs, updatedAt: Date.now() }, previous);
+  return normalizeWeatherState({ ...attrs, updatedAt: Date.now(), source: "story" }, previous);
 }
 
 export function normalizePrefs(input: unknown): WeatherPrefs {

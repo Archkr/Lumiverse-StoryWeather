@@ -3,6 +3,7 @@ type WeatherSpindleAPI = import("lumiverse-spindle-types").SpindleAPI & {
     local: {
       get(chatId: string, key: string): Promise<string>;
       set(chatId: string, key: string, value: string): Promise<void>;
+      delete(chatId: string, key: string): Promise<void>;
     };
   };
   chats: {
@@ -17,8 +18,10 @@ import {
   DEFAULT_PREFS,
   WEATHER_CONDITIONS,
   WEATHER_LAYERS,
+  WEATHER_MANUAL_STATE_VAR,
   WEATHER_PALETTES,
   WEATHER_STATE_VAR,
+  makeDefaultWeatherState,
   normalizePrefs,
   normalizeWeatherState,
   normalizeWeatherTag,
@@ -54,7 +57,7 @@ async function savePrefs(userId: string, prefs: WeatherPrefs): Promise<void> {
   await spindle.userStorage.setJson(PREFS_FILE, prefs, { userId });
 }
 
-async function loadWeatherState(chatId: string): Promise<WeatherState | null> {
+async function loadStoryWeatherState(chatId: string): Promise<WeatherState | null> {
   try {
     const raw = await spindle.variables.local.get(chatId, WEATHER_STATE_VAR);
     if (!raw) return null;
@@ -64,8 +67,36 @@ async function loadWeatherState(chatId: string): Promise<WeatherState | null> {
   }
 }
 
-async function saveWeatherState(chatId: string, state: WeatherState): Promise<void> {
+async function saveStoryWeatherState(chatId: string, state: WeatherState): Promise<void> {
   await spindle.variables.local.set(chatId, WEATHER_STATE_VAR, JSON.stringify(state));
+}
+
+async function loadManualWeatherState(chatId: string): Promise<WeatherState | null> {
+  try {
+    const raw = await spindle.variables.local.get(chatId, WEATHER_MANUAL_STATE_VAR);
+    if (!raw) return null;
+    return normalizeWeatherState(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+async function saveManualWeatherState(chatId: string, state: WeatherState): Promise<void> {
+  await spindle.variables.local.set(chatId, WEATHER_MANUAL_STATE_VAR, JSON.stringify(state));
+}
+
+async function clearManualWeatherState(chatId: string): Promise<void> {
+  try {
+    await spindle.variables.local.delete(chatId, WEATHER_MANUAL_STATE_VAR);
+  } catch {
+    // ignore missing override state
+  }
+}
+
+async function loadEffectiveWeatherState(chatId: string): Promise<WeatherState | null> {
+  const manual = await loadManualWeatherState(chatId);
+  if (manual) return manual;
+  return loadStoryWeatherState(chatId);
 }
 
 async function resolveChatId(candidate?: string | null): Promise<string | null> {
@@ -92,7 +123,7 @@ async function pushActiveChatState(chatId?: string | null): Promise<void> {
     return;
   }
 
-  const state = await loadWeatherState(resolvedChatId);
+  const state = await loadEffectiveWeatherState(resolvedChatId);
   send({ type: "active_chat_state", chatId: resolvedChatId, state });
 }
 
@@ -136,7 +167,7 @@ function extractChatId(payload: unknown): string | null {
 
 spindle.registerInterceptor(async (messages, context) => {
   const chatId = extractChatId(context);
-  const state = chatId ? await loadWeatherState(chatId) : null;
+  const state = chatId ? await loadEffectiveWeatherState(chatId) : null;
 
   return [
     {
@@ -177,11 +208,49 @@ spindle.onFrontendMessage(async (raw, userId) => {
           break;
         }
 
-        const previous = await loadWeatherState(chatId);
-        const nextState = normalizeWeatherTag(message.attrs, previous);
-        await saveWeatherState(chatId, nextState);
+        const previousStory = await loadStoryWeatherState(chatId);
+        const nextState = normalizeWeatherTag(message.attrs, previousStory);
+        await saveStoryWeatherState(chatId, nextState);
+        lastKnownChatId = chatId;
+        const manualOverride = await loadManualWeatherState(chatId);
+        if (!manualOverride) {
+          send({ type: "weather_state", chatId, state: nextState });
+        }
+        break;
+      }
+
+      case "set_manual_state": {
+        const chatId = await resolveChatId(message.chatId);
+        if (!chatId) {
+          send({ type: "error", message: "Manual weather override could not resolve an active chat." });
+          break;
+        }
+
+        const previous =
+          (await loadManualWeatherState(chatId)) ??
+          (await loadEffectiveWeatherState(chatId)) ??
+          makeDefaultWeatherState();
+        const nextState = normalizeWeatherState(
+          { ...previous, ...message.state, updatedAt: Date.now(), source: "manual" },
+          previous,
+        );
+        await saveManualWeatherState(chatId, nextState);
         lastKnownChatId = chatId;
         send({ type: "weather_state", chatId, state: nextState });
+        break;
+      }
+
+      case "clear_manual_override": {
+        const chatId = await resolveChatId(message.chatId);
+        if (!chatId) {
+          send({ type: "error", message: "Manual weather override could not be cleared because no chat is active." });
+          break;
+        }
+
+        await clearManualWeatherState(chatId);
+        lastKnownChatId = chatId;
+        const restored = (await loadStoryWeatherState(chatId)) ?? makeDefaultWeatherState();
+        send({ type: "weather_state", chatId, state: restored });
         break;
       }
 

@@ -154,6 +154,12 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
   return { root };
 }
 
+function resolveSceneHost(): HTMLDivElement | null {
+  const sceneLayer = document.querySelector('[class*="sceneBackgroundLayer"]');
+  if (!(sceneLayer instanceof HTMLDivElement)) return null;
+  return sceneLayer.parentElement instanceof HTMLDivElement ? sceneLayer.parentElement : null;
+}
+
 function resolveSceneTokens(state: WeatherState, intensity: number) {
   const paletteMap: Record<WeatherState["palette"], { start: string; mid: string; end: string; glow: string }> = {
     dawn: { start: "#20385f", mid: "#5877a7", end: "#f0a36c", glow: "rgba(255, 201, 145, 0.86)" },
@@ -169,46 +175,46 @@ function resolveSceneTokens(state: WeatherState, intensity: number) {
   const baseIntensity = clamp(intensity, 0, 1.5);
 
   const values = {
-    cloudOpacity: 0.16,
-    fogOpacity: 0.06,
+    cloudOpacity: 0.08,
+    fogOpacity: 0.02,
     rainOpacity: 0,
     snowOpacity: 0,
-    skyOpacity: 0.22,
-    glowOpacity: 0.34,
+    skyOpacity: 0.08,
+    glowOpacity: 0.16,
   };
 
   switch (state.condition) {
     case "cloudy":
-      values.cloudOpacity = 0.32;
-      values.glowOpacity = 0.2;
-      values.skyOpacity = 0.18;
+      values.cloudOpacity = 0.3;
+      values.glowOpacity = 0.14;
+      values.skyOpacity = 0.14;
       break;
     case "rain":
-      values.cloudOpacity = 0.42;
+      values.cloudOpacity = 0.36;
       values.rainOpacity = 0.62;
-      values.fogOpacity = 0.12;
-      values.glowOpacity = 0.16;
-      values.skyOpacity = 0.2;
-      break;
-    case "storm":
-      values.cloudOpacity = 0.54;
-      values.rainOpacity = 0.82;
-      values.fogOpacity = 0.18;
-      values.glowOpacity = 0.1;
-      values.skyOpacity = 0.24;
-      break;
-    case "snow":
-      values.cloudOpacity = 0.22;
-      values.snowOpacity = 0.76;
-      values.fogOpacity = 0.14;
-      values.glowOpacity = 0.28;
+      values.fogOpacity = 0.1;
+      values.glowOpacity = 0.08;
       values.skyOpacity = 0.16;
       break;
-    case "fog":
+    case "storm":
+      values.cloudOpacity = 0.46;
+      values.rainOpacity = 0.82;
+      values.fogOpacity = 0.14;
+      values.glowOpacity = 0.06;
+      values.skyOpacity = 0.18;
+      break;
+    case "snow":
       values.cloudOpacity = 0.18;
-      values.fogOpacity = 0.44;
-      values.glowOpacity = 0.22;
+      values.snowOpacity = 0.76;
+      values.fogOpacity = 0.08;
+      values.glowOpacity = 0.18;
       values.skyOpacity = 0.12;
+      break;
+    case "fog":
+      values.cloudOpacity = 0.14;
+      values.fogOpacity = 0.36;
+      values.glowOpacity = 0.12;
+      values.skyOpacity = 0.1;
       break;
     case "clear":
     default:
@@ -373,18 +379,22 @@ function setFxVisibility(root: FxRoot, visible: boolean): void {
 function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs, reducedMotion: boolean): void {
   const effectiveIntensity = clamp(state.intensity * prefs.intensity, 0, 1.5);
   const tokens = resolveSceneTokens(state, effectiveIntensity);
+  const isFront = root.root.dataset.kind === "front";
 
   root.root.classList.toggle("weather-reduced-motion", reducedMotion);
   root.root.style.setProperty("--weather-bg-start", tokens.bgStart);
   root.root.style.setProperty("--weather-bg-mid", tokens.bgMid);
   root.root.style.setProperty("--weather-bg-end", tokens.bgEnd);
   root.root.style.setProperty("--weather-glow", tokens.glow);
-  root.root.style.setProperty("--weather-cloud-opacity", String(tokens.cloudOpacity * (root.root.dataset.kind === "back" ? 1 : 0.65)));
-  root.root.style.setProperty("--weather-fog-opacity", String(tokens.fogOpacity * (root.root.dataset.kind === "back" ? 1 : 0.6)));
-  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (root.root.dataset.kind === "front" ? 1 : 0.45)));
-  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (root.root.dataset.kind === "front" ? 1 : 0.5)));
-  root.root.style.setProperty("--weather-sky-opacity", String(tokens.skyOpacity));
-  root.root.style.setProperty("--weather-glow-opacity", String(tokens.glowOpacity));
+  root.root.style.setProperty("--weather-cloud-opacity", String(isFront ? 0 : tokens.cloudOpacity));
+  root.root.style.setProperty(
+    "--weather-fog-opacity",
+    String(tokens.fogOpacity * (isFront ? (state.condition === "fog" ? 0.32 : 0.1) : 0.88)),
+  );
+  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (isFront ? 1 : 0.34)));
+  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (isFront ? 1 : 0.36)));
+  root.root.style.setProperty("--weather-sky-opacity", String(isFront ? 0 : tokens.skyOpacity));
+  root.root.style.setProperty("--weather-glow-opacity", String(isFront ? 0 : tokens.glowOpacity));
   root.root.style.setProperty("--weather-rain-color", state.condition === "storm" ? "rgba(201, 224, 255, 0.95)" : "rgba(193, 222, 255, 0.82)");
   root.root.style.setProperty("--weather-snow-color", "rgba(248, 251, 255, 0.92)");
   root.root.style.setProperty(
@@ -394,7 +404,7 @@ function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs,
 }
 
 export function setup(ctx: SpindleFrontendContext) {
-  console.info("[weather_hud] frontend build 2026-03-24.3");
+  console.info("[weather_hud] frontend build 2026-03-24.4");
 
   const cleanups: Array<() => void> = [];
   const removeStyle = ctx.dom.addStyle(WEATHER_HUD_CSS);
@@ -416,9 +426,57 @@ export function setup(ctx: SpindleFrontendContext) {
 
   const backFx = createFxMarkup("back");
   const frontFx = createFxMarkup("front");
-  document.body.appendChild(backFx.root);
-  document.body.appendChild(frontFx.root);
+  let sceneHost: HTMLDivElement | null = null;
+  let hostSyncFrame: number | null = null;
+
+  const attachFxRoots = (): boolean => {
+    hostSyncFrame = null;
+    const nextHost = resolveSceneHost();
+
+    if (!nextHost) {
+      const hadHost = !!sceneHost || backFx.root.isConnected || frontFx.root.isConnected;
+      sceneHost = null;
+      backFx.root.remove();
+      frontFx.root.remove();
+      return hadHost;
+    }
+
+    if (sceneHost !== nextHost || backFx.root.parentElement !== nextHost || frontFx.root.parentElement !== nextHost) {
+      sceneHost = nextHost;
+      nextHost.appendChild(backFx.root);
+      nextHost.appendChild(frontFx.root);
+      return true;
+    }
+
+    return false;
+  };
+
+  const queueFxRootAttach = () => {
+    if (hostSyncFrame !== null) return;
+    hostSyncFrame = window.requestAnimationFrame(() => {
+      if (attachFxRoots()) {
+        updateScene();
+      }
+    });
+  };
+
+  const hostObserver = new MutationObserver(() => {
+    if (
+      sceneHost?.isConnected &&
+      backFx.root.parentElement === sceneHost &&
+      frontFx.root.parentElement === sceneHost
+    ) {
+      return;
+    }
+    queueFxRootAttach();
+  });
+  hostObserver.observe(document.body, { childList: true, subtree: true });
   cleanups.push(() => {
+    if (hostSyncFrame !== null) {
+      window.cancelAnimationFrame(hostSyncFrame);
+      hostSyncFrame = null;
+    }
+    hostObserver.disconnect();
     backFx.root.remove();
     frontFx.root.remove();
   });
@@ -459,7 +517,7 @@ export function setup(ctx: SpindleFrontendContext) {
   const updateScene = () => {
     const reducedMotion = getReducedMotion();
     const layerMode = getEffectiveLayerMode(currentPrefs, currentState);
-    const showEffects = currentPrefs.effectsEnabled && !currentPrefs.pauseEffects;
+    const showEffects = currentPrefs.effectsEnabled && !currentPrefs.pauseEffects && !!sceneHost;
 
     applyHudState(hud, currentPrefs, currentState);
     settingsUI.sync(currentPrefs, currentState);
@@ -537,11 +595,13 @@ export function setup(ctx: SpindleFrontendContext) {
         ? (payload as { chatId?: string }).chatId ?? null
         : null;
     activeChatId = chatId;
+    queueFxRootAttach();
     sendToBackend(ctx, { type: "chat_changed", chatId });
   });
   cleanups.push(chatChangedUnsub);
 
   sendToBackend(ctx, { type: "frontend_ready" });
+  queueFxRootAttach();
   updateScene();
 
   return () => {
