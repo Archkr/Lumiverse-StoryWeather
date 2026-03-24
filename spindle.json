@@ -1,0 +1,13 @@
+{
+  "identifier": "weather_hud",
+  "version": "1.0.0",
+  "name": "Story Weather HUD",
+  "author": "Codex",
+  "github": "https://github.com/prolix-oc/Lumiverse",
+  "homepage": "https://lumiverse.chat",
+  "description": "Story-driven weather, date, and time HUD with layered ambient effects for chat scenes.",
+  "permissions": ["interceptor", "ui_panels", "app_manipulation", "chats"],
+  "entry_backend": "dist/backend.js",
+  "entry_frontend": "dist/frontend.js",
+  "minimum_lumiverse_version": "0.1.0"
+}
