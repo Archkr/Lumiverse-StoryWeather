@@ -698,11 +698,18 @@ var WEATHER_HUD_CSS = `
 }
 
 .weather-fx-root[data-kind="back"] {
-  z-index: 1;
+  z-index: 0;
 }
 
 .weather-fx-root[data-kind="front"] {
-  z-index: 4;
+  z-index: 12;
+}
+
+.weather-fx-root[data-kind="front"] .weather-fx-sky,
+.weather-fx-root[data-kind="front"] .weather-fx-glow,
+.weather-fx-root[data-kind="front"] .weather-fx-clouds,
+.weather-fx-root[data-kind="front"] .weather-fx-fog {
+  display: none;
 }
 
 .weather-fx-root.weather-hidden {
@@ -724,6 +731,7 @@ var WEATHER_HUD_CSS = `
   background:
     linear-gradient(180deg, var(--weather-bg-start) 0%, var(--weather-bg-mid) 46%, var(--weather-bg-end) 100%);
   opacity: var(--weather-sky-opacity, 0.3);
+  mix-blend-mode: soft-light;
   animation: weather-sky-shift 22s ease-in-out infinite alternate;
 }
 
@@ -741,6 +749,7 @@ var WEATHER_HUD_CSS = `
 .weather-fx-rain-drop,
 .weather-fx-snow-flake {
   position: absolute;
+  will-change: transform, opacity;
 }
 
 .weather-fx-cloud {
@@ -780,6 +789,7 @@ var WEATHER_HUD_CSS = `
   border-radius: 999px;
   opacity: var(--weather-rain-opacity, 0);
   transform: rotate(11deg);
+  filter: drop-shadow(0 0 6px rgba(191, 221, 255, 0.28));
   animation: weather-rain-fall var(--drop-duration) linear infinite;
   animation-delay: var(--drop-delay);
 }
@@ -795,6 +805,14 @@ var WEATHER_HUD_CSS = `
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
   animation: weather-snow-fall var(--flake-duration) linear infinite;
   animation-delay: var(--flake-delay);
+}
+
+.weather-fx-root[data-kind="front"] .weather-fx-rain-drop {
+  filter: drop-shadow(0 0 8px rgba(210, 230, 255, 0.34));
+}
+
+.weather-fx-root[data-kind="front"] .weather-fx-snow-flake {
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.46);
 }
 
 .weather-fx-flash {
@@ -845,13 +863,29 @@ var WEATHER_HUD_CSS = `
 }
 
 @keyframes weather-rain-fall {
-  0% { transform: translate3d(0, 0, 0) rotate(11deg); }
-  100% { transform: translate3d(-5vw, 118vh, 0) rotate(11deg); }
+  0% {
+    transform: translate3d(0, 0, 0) rotate(11deg);
+    opacity: 0;
+  }
+  14% {
+    opacity: var(--weather-rain-opacity, 0);
+  }
+  100% {
+    transform: translate3d(var(--drop-drift), 118vh, 0) rotate(11deg);
+    opacity: 0;
+  }
 }
 
 @keyframes weather-snow-fall {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(3vw, 116vh, 0); }
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(var(--flake-drift-mid), 56vh, 0) rotate(var(--flake-spin-mid));
+  }
+  100% {
+    transform: translate3d(var(--flake-drift-end), 116vh, 0) rotate(var(--flake-spin-end));
+  }
 }
 
 @keyframes weather-flash {
@@ -964,7 +998,8 @@ function createFxMarkup(kind) {
       "--drop-width": `${kind === "back" ? 1 : 2}px`,
       "--drop-length": `${24 + Math.round(Math.random() * 28)}px`,
       "--drop-duration": `${0.85 + Math.random() * 0.9}s`,
-      "--drop-delay": `${Math.random() * -2.2}s`
+      "--drop-delay": `${Math.random() * -2.2}s`,
+      "--drop-drift": `${(-5 - Math.random() * (kind === "back" ? 4 : 10)).toFixed(2)}vw`
     }));
   }
   for (let index = 0;index < snowCount; index += 1) {
@@ -972,16 +1007,42 @@ function createFxMarkup(kind) {
       "--flake-left": `${Math.round(Math.random() * 104)}%`,
       "--flake-size": `${kind === "back" ? 3 + Math.random() * 3 : 4 + Math.random() * 5}px`,
       "--flake-duration": `${5.4 + Math.random() * 4.2}s`,
-      "--flake-delay": `${Math.random() * -5}s`
+      "--flake-delay": `${Math.random() * -5}s`,
+      "--flake-drift-mid": `${(-2 + Math.random() * 4).toFixed(2)}vw`,
+      "--flake-drift-end": `${(-6 + Math.random() * 12).toFixed(2)}vw`,
+      "--flake-spin-mid": `${Math.round(-18 + Math.random() * 36)}deg`,
+      "--flake-spin-end": `${Math.round(-42 + Math.random() * 84)}deg`
     }));
   }
-  return { root };
+  return { root, host: null, releaseHost: null };
 }
-function resolveSceneHost() {
-  const sceneLayer = document.querySelector('[class*="sceneBackgroundLayer"]');
-  if (!(sceneLayer instanceof HTMLDivElement))
+function asHTMLElement(element) {
+  return element instanceof HTMLElement ? element : null;
+}
+function resolveInitialChatId() {
+  const source = [window.location.pathname, window.location.search, window.location.hash].join(" ");
+  const match = source.match(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i);
+  return match?.[0] ?? null;
+}
+function resolveSceneHosts() {
+  const backgroundHost = asHTMLElement(document.querySelector('[class*="sceneBackgroundLayer"]'));
+  const scrollRegion = asHTMLElement(document.querySelector('[data-chat-scroll="true"]'));
+  const frontHost = scrollRegion?.parentElement instanceof HTMLElement ? scrollRegion.parentElement : scrollRegion;
+  return {
+    back: backgroundHost ?? (frontHost?.parentElement instanceof HTMLElement ? frontHost.parentElement : frontHost ?? null),
+    front: frontHost ?? backgroundHost
+  };
+}
+function readChatIdFromSettingsUpdate(payload) {
+  if (!payload || typeof payload !== "object")
+    return;
+  const key = "key" in payload ? payload.key : undefined;
+  if (key !== "activeChatId")
+    return;
+  const value = "value" in payload ? payload.value : undefined;
+  if (typeof value !== "string" || !value.trim())
     return null;
-  return sceneLayer.parentElement instanceof HTMLDivElement ? sceneLayer.parentElement : null;
+  return value;
 }
 function resolveSceneTokens(state, intensity) {
   const paletteMap = {
@@ -996,12 +1057,12 @@ function resolveSceneTokens(state, intensity) {
   const palette = paletteMap[state.palette];
   const baseIntensity = clamp(intensity, 0, 1.5);
   const values = {
-    cloudOpacity: 0.08,
-    fogOpacity: 0.02,
+    cloudOpacity: 0.02,
+    fogOpacity: 0,
     rainOpacity: 0,
     snowOpacity: 0,
-    skyOpacity: 0.08,
-    glowOpacity: 0.16
+    skyOpacity: 0.025,
+    glowOpacity: 0.09
   };
   switch (state.condition) {
     case "cloudy":
@@ -1184,9 +1245,9 @@ function applySceneState(root, state, prefs, reducedMotion) {
   root.root.style.setProperty("--weather-bg-end", tokens.bgEnd);
   root.root.style.setProperty("--weather-glow", tokens.glow);
   root.root.style.setProperty("--weather-cloud-opacity", String(isFront ? 0 : tokens.cloudOpacity));
-  root.root.style.setProperty("--weather-fog-opacity", String(tokens.fogOpacity * (isFront ? state.condition === "fog" ? 0.32 : 0.1 : 0.88)));
-  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (isFront ? 1 : 0.34)));
-  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (isFront ? 1 : 0.36)));
+  root.root.style.setProperty("--weather-fog-opacity", String(isFront ? 0 : tokens.fogOpacity * 0.92));
+  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (isFront ? 0.94 : 0.46)));
+  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (isFront ? 0.96 : 0.42)));
   root.root.style.setProperty("--weather-sky-opacity", String(isFront ? 0 : tokens.skyOpacity));
   root.root.style.setProperty("--weather-glow-opacity", String(isFront ? 0 : tokens.glowOpacity));
   root.root.style.setProperty("--weather-rain-color", state.condition === "storm" ? "rgba(201, 224, 255, 0.95)" : "rgba(193, 222, 255, 0.82)");
@@ -1194,40 +1255,106 @@ function applySceneState(root, state, prefs, reducedMotion) {
   root.root.style.setProperty("--weather-particle-opacity-static", state.condition === "snow" ? String(tokens.snowOpacity * 0.18) : String(tokens.rainOpacity * 0.12));
 }
 function setup(ctx) {
-  console.info("[weather_hud] frontend build 2026-03-24.4");
+  console.info("[weather_hud] frontend build 2026-03-24.5");
   const cleanups = [];
   const removeStyle = ctx.dom.addStyle(WEATHER_HUD_CSS);
   cleanups.push(removeStyle);
   let currentPrefs = DEFAULT_PREFS;
   let currentState = makeDefaultWeatherState();
-  let activeChatId = null;
+  let activeChatId = resolveInitialChatId();
   const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
   const getReducedMotion = () => currentPrefs.reducedMotion === "always" || currentPrefs.reducedMotion === "system" && motionMedia.matches;
   const settingsMount = ctx.ui.mount("settings_extensions");
-  const settingsUI = createSettingsUI((payload) => sendToBackend(ctx, payload));
+  const settingsUI = createSettingsUI((payload) => {
+    const message = payload;
+    if (message.type === "set_manual_state" || message.type === "clear_manual_override") {
+      sendToBackend(ctx, { ...message, chatId: activeChatId });
+      return;
+    }
+    sendToBackend(ctx, message);
+  });
   settingsMount.appendChild(settingsUI.root);
   cleanups.push(() => settingsUI.destroy());
   const backFx = createFxMarkup("back");
   const frontFx = createFxMarkup("front");
-  let sceneHost = null;
   let hostSyncFrame = null;
-  const attachFxRoots = () => {
-    hostSyncFrame = null;
-    const nextHost = resolveSceneHost();
+  const managedHosts = new Map;
+  const prepareHostStyles = (host) => {
+    const previousPosition = host.style.position;
+    const previousOverflow = host.style.overflow;
+    const previousIsolation = host.style.isolation;
+    if (window.getComputedStyle(host).position === "static") {
+      host.style.position = "relative";
+    }
+    if (window.getComputedStyle(host).overflow === "visible") {
+      host.style.overflow = "hidden";
+    }
+    if (!host.style.isolation) {
+      host.style.isolation = "isolate";
+    }
+    return () => {
+      host.style.position = previousPosition;
+      host.style.overflow = previousOverflow;
+      host.style.isolation = previousIsolation;
+    };
+  };
+  const retainHost = (host) => {
+    const existing = managedHosts.get(host);
+    if (existing) {
+      existing.count += 1;
+      return () => {
+        const current = managedHosts.get(host);
+        if (!current)
+          return;
+        current.count -= 1;
+        if (current.count <= 0) {
+          current.restore();
+          managedHosts.delete(host);
+        }
+      };
+    }
+    const restore = prepareHostStyles(host);
+    managedHosts.set(host, { count: 1, restore });
+    return () => {
+      const current = managedHosts.get(host);
+      if (!current)
+        return;
+      current.count -= 1;
+      if (current.count <= 0) {
+        current.restore();
+        managedHosts.delete(host);
+      }
+    };
+  };
+  const detachFxRoot = (fxRoot) => {
+    fxRoot.root.remove();
+    fxRoot.host = null;
+    if (fxRoot.releaseHost) {
+      fxRoot.releaseHost();
+      fxRoot.releaseHost = null;
+    }
+  };
+  const attachFxRoot = (fxRoot, nextHost) => {
     if (!nextHost) {
-      const hadHost = !!sceneHost || backFx.root.isConnected || frontFx.root.isConnected;
-      sceneHost = null;
-      backFx.root.remove();
-      frontFx.root.remove();
+      const hadHost = !!fxRoot.host || fxRoot.root.isConnected;
+      detachFxRoot(fxRoot);
       return hadHost;
     }
-    if (sceneHost !== nextHost || backFx.root.parentElement !== nextHost || frontFx.root.parentElement !== nextHost) {
-      sceneHost = nextHost;
-      nextHost.appendChild(backFx.root);
-      nextHost.appendChild(frontFx.root);
-      return true;
+    if (fxRoot.host === nextHost && fxRoot.root.parentElement === nextHost) {
+      return false;
     }
-    return false;
+    detachFxRoot(fxRoot);
+    fxRoot.host = nextHost;
+    fxRoot.releaseHost = retainHost(nextHost);
+    nextHost.appendChild(fxRoot.root);
+    return true;
+  };
+  const attachFxRoots = () => {
+    hostSyncFrame = null;
+    const nextHosts = resolveSceneHosts();
+    const backChanged = attachFxRoot(backFx, nextHosts.back);
+    const frontChanged = attachFxRoot(frontFx, nextHosts.front);
+    return backChanged || frontChanged;
   };
   const queueFxRootAttach = () => {
     if (hostSyncFrame !== null)
@@ -1239,7 +1366,7 @@ function setup(ctx) {
     });
   };
   const hostObserver = new MutationObserver(() => {
-    if (sceneHost?.isConnected && backFx.root.parentElement === sceneHost && frontFx.root.parentElement === sceneHost) {
+    if (backFx.host?.isConnected && frontFx.host?.isConnected && backFx.root.parentElement === backFx.host && frontFx.root.parentElement === frontFx.host) {
       return;
     }
     queueFxRootAttach();
@@ -1251,8 +1378,8 @@ function setup(ctx) {
       hostSyncFrame = null;
     }
     hostObserver.disconnect();
-    backFx.root.remove();
-    frontFx.root.remove();
+    detachFxRoot(backFx);
+    detachFxRoot(frontFx);
   });
   let hud = createHudWidget(ctx, currentPrefs.widgetPosition);
   cleanups.push(() => hud.widget.destroy());
@@ -1284,13 +1411,13 @@ function setup(ctx) {
   const updateScene = () => {
     const reducedMotion = getReducedMotion();
     const layerMode = getEffectiveLayerMode(currentPrefs, currentState);
-    const showEffects = currentPrefs.effectsEnabled && !currentPrefs.pauseEffects && !!sceneHost;
+    const showEffects = currentPrefs.effectsEnabled && !currentPrefs.pauseEffects;
     applyHudState(hud, currentPrefs, currentState);
     settingsUI.sync(currentPrefs, currentState);
     applySceneState(backFx, currentState, currentPrefs, reducedMotion);
     applySceneState(frontFx, currentState, currentPrefs, reducedMotion);
-    setFxVisibility(backFx, showEffects && (layerMode === "back" || layerMode === "both"));
-    setFxVisibility(frontFx, showEffects && (layerMode === "front" || layerMode === "both"));
+    setFxVisibility(backFx, showEffects && !!backFx.host && (layerMode === "back" || layerMode === "both"));
+    setFxVisibility(frontFx, showEffects && !!frontFx.host && (layerMode === "front" || layerMode === "both"));
     scheduleStormFlash();
   };
   const clockTimer = window.setInterval(() => {
@@ -1350,7 +1477,19 @@ function setup(ctx) {
     sendToBackend(ctx, { type: "chat_changed", chatId });
   });
   cleanups.push(chatChangedUnsub);
+  const settingsChangedUnsub = ctx.events.on("SETTINGS_UPDATED", (payload) => {
+    const nextChatId = readChatIdFromSettingsUpdate(payload);
+    if (typeof nextChatId === "undefined")
+      return;
+    activeChatId = nextChatId;
+    queueFxRootAttach();
+    sendToBackend(ctx, { type: "chat_changed", chatId: nextChatId });
+  });
+  cleanups.push(settingsChangedUnsub);
   sendToBackend(ctx, { type: "frontend_ready" });
+  if (activeChatId) {
+    sendToBackend(ctx, { type: "chat_changed", chatId: activeChatId });
+  }
   queueFxRootAttach();
   updateScene();
   return () => {

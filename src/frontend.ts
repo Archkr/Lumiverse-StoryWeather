@@ -17,6 +17,8 @@ type FloatWidgetHandle = ReturnType<SpindleFrontendContext["ui"]["createFloatWid
 
 type FxRoot = {
   root: HTMLDivElement;
+  host: HTMLElement | null;
+  releaseHost: (() => void) | null;
 };
 
 type HudElements = {
@@ -136,6 +138,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
         "--drop-length": `${24 + Math.round(Math.random() * 28)}px`,
         "--drop-duration": `${0.85 + Math.random() * 0.9}s`,
         "--drop-delay": `${Math.random() * -2.2}s`,
+        "--drop-drift": `${(-5 - Math.random() * (kind === "back" ? 4 : 10)).toFixed(2)}vw`,
       }),
     );
   }
@@ -147,17 +150,47 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
         "--flake-size": `${kind === "back" ? 3 + Math.random() * 3 : 4 + Math.random() * 5}px`,
         "--flake-duration": `${5.4 + Math.random() * 4.2}s`,
         "--flake-delay": `${Math.random() * -5}s`,
+        "--flake-drift-mid": `${(-2 + Math.random() * 4).toFixed(2)}vw`,
+        "--flake-drift-end": `${(-6 + Math.random() * 12).toFixed(2)}vw`,
+        "--flake-spin-mid": `${Math.round(-18 + Math.random() * 36)}deg`,
+        "--flake-spin-end": `${Math.round(-42 + Math.random() * 84)}deg`,
       }),
     );
   }
 
-  return { root };
+  return { root, host: null, releaseHost: null };
 }
 
-function resolveSceneHost(): HTMLDivElement | null {
-  const sceneLayer = document.querySelector('[class*="sceneBackgroundLayer"]');
-  if (!(sceneLayer instanceof HTMLDivElement)) return null;
-  return sceneLayer.parentElement instanceof HTMLDivElement ? sceneLayer.parentElement : null;
+function asHTMLElement(element: Element | null): HTMLElement | null {
+  return element instanceof HTMLElement ? element : null;
+}
+
+function resolveInitialChatId(): string | null {
+  const source = [window.location.pathname, window.location.search, window.location.hash].join(" ");
+  const match = source.match(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i);
+  return match?.[0] ?? null;
+}
+
+function resolveSceneHosts(): { back: HTMLElement | null; front: HTMLElement | null } {
+  const backgroundHost = asHTMLElement(document.querySelector('[class*="sceneBackgroundLayer"]'));
+  const scrollRegion = asHTMLElement(document.querySelector('[data-chat-scroll="true"]'));
+  const frontHost = scrollRegion?.parentElement instanceof HTMLElement ? scrollRegion.parentElement : scrollRegion;
+
+  return {
+    back: backgroundHost ?? (frontHost?.parentElement instanceof HTMLElement ? frontHost.parentElement : frontHost ?? null),
+    front: frontHost ?? backgroundHost,
+  };
+}
+
+function readChatIdFromSettingsUpdate(payload: unknown): string | null | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+
+  const key = "key" in payload ? (payload as { key?: unknown }).key : undefined;
+  if (key !== "activeChatId") return undefined;
+
+  const value = "value" in payload ? (payload as { value?: unknown }).value : undefined;
+  if (typeof value !== "string" || !value.trim()) return null;
+  return value;
 }
 
 function resolveSceneTokens(state: WeatherState, intensity: number) {
@@ -175,12 +208,12 @@ function resolveSceneTokens(state: WeatherState, intensity: number) {
   const baseIntensity = clamp(intensity, 0, 1.5);
 
   const values = {
-    cloudOpacity: 0.08,
-    fogOpacity: 0.02,
+    cloudOpacity: 0.02,
+    fogOpacity: 0,
     rainOpacity: 0,
     snowOpacity: 0,
-    skyOpacity: 0.08,
-    glowOpacity: 0.16,
+    skyOpacity: 0.025,
+    glowOpacity: 0.09,
   };
 
   switch (state.condition) {
@@ -387,12 +420,9 @@ function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs,
   root.root.style.setProperty("--weather-bg-end", tokens.bgEnd);
   root.root.style.setProperty("--weather-glow", tokens.glow);
   root.root.style.setProperty("--weather-cloud-opacity", String(isFront ? 0 : tokens.cloudOpacity));
-  root.root.style.setProperty(
-    "--weather-fog-opacity",
-    String(tokens.fogOpacity * (isFront ? (state.condition === "fog" ? 0.32 : 0.1) : 0.88)),
-  );
-  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (isFront ? 1 : 0.34)));
-  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (isFront ? 1 : 0.36)));
+  root.root.style.setProperty("--weather-fog-opacity", String(isFront ? 0 : tokens.fogOpacity * 0.92));
+  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (isFront ? 0.94 : 0.46)));
+  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (isFront ? 0.96 : 0.42)));
   root.root.style.setProperty("--weather-sky-opacity", String(isFront ? 0 : tokens.skyOpacity));
   root.root.style.setProperty("--weather-glow-opacity", String(isFront ? 0 : tokens.glowOpacity));
   root.root.style.setProperty("--weather-rain-color", state.condition === "storm" ? "rgba(201, 224, 255, 0.95)" : "rgba(193, 222, 255, 0.82)");
@@ -404,7 +434,7 @@ function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs,
 }
 
 export function setup(ctx: SpindleFrontendContext) {
-  console.info("[weather_hud] frontend build 2026-03-24.4");
+  console.info("[weather_hud] frontend build 2026-03-24.5");
 
   const cleanups: Array<() => void> = [];
   const removeStyle = ctx.dom.addStyle(WEATHER_HUD_CSS);
@@ -412,7 +442,7 @@ export function setup(ctx: SpindleFrontendContext) {
 
   let currentPrefs: WeatherPrefs = DEFAULT_PREFS;
   let currentState: WeatherState = makeDefaultWeatherState();
-  let activeChatId: string | null = null;
+  let activeChatId: string | null = resolveInitialChatId();
 
   const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
   const getReducedMotion = () =>
@@ -420,35 +450,105 @@ export function setup(ctx: SpindleFrontendContext) {
     (currentPrefs.reducedMotion === "system" && motionMedia.matches);
 
   const settingsMount = ctx.ui.mount("settings_extensions");
-  const settingsUI = createSettingsUI((payload) => sendToBackend(ctx, payload as FrontendToBackend));
+  const settingsUI = createSettingsUI((payload) => {
+    const message = payload as FrontendToBackend;
+    if (message.type === "set_manual_state" || message.type === "clear_manual_override") {
+      sendToBackend(ctx, { ...message, chatId: activeChatId });
+      return;
+    }
+    sendToBackend(ctx, message);
+  });
   settingsMount.appendChild(settingsUI.root);
   cleanups.push(() => settingsUI.destroy());
 
   const backFx = createFxMarkup("back");
   const frontFx = createFxMarkup("front");
-  let sceneHost: HTMLDivElement | null = null;
   let hostSyncFrame: number | null = null;
+  const managedHosts = new Map<HTMLElement, { count: number; restore: () => void }>();
 
-  const attachFxRoots = (): boolean => {
-    hostSyncFrame = null;
-    const nextHost = resolveSceneHost();
+  const prepareHostStyles = (host: HTMLElement): (() => void) => {
+    const previousPosition = host.style.position;
+    const previousOverflow = host.style.overflow;
+    const previousIsolation = host.style.isolation;
 
+    if (window.getComputedStyle(host).position === "static") {
+      host.style.position = "relative";
+    }
+    if (window.getComputedStyle(host).overflow === "visible") {
+      host.style.overflow = "hidden";
+    }
+    if (!host.style.isolation) {
+      host.style.isolation = "isolate";
+    }
+
+    return () => {
+      host.style.position = previousPosition;
+      host.style.overflow = previousOverflow;
+      host.style.isolation = previousIsolation;
+    };
+  };
+
+  const retainHost = (host: HTMLElement): (() => void) => {
+    const existing = managedHosts.get(host);
+    if (existing) {
+      existing.count += 1;
+      return () => {
+        const current = managedHosts.get(host);
+        if (!current) return;
+        current.count -= 1;
+        if (current.count <= 0) {
+          current.restore();
+          managedHosts.delete(host);
+        }
+      };
+    }
+
+    const restore = prepareHostStyles(host);
+    managedHosts.set(host, { count: 1, restore });
+    return () => {
+      const current = managedHosts.get(host);
+      if (!current) return;
+      current.count -= 1;
+      if (current.count <= 0) {
+        current.restore();
+        managedHosts.delete(host);
+      }
+    };
+  };
+
+  const detachFxRoot = (fxRoot: FxRoot) => {
+    fxRoot.root.remove();
+    fxRoot.host = null;
+    if (fxRoot.releaseHost) {
+      fxRoot.releaseHost();
+      fxRoot.releaseHost = null;
+    }
+  };
+
+  const attachFxRoot = (fxRoot: FxRoot, nextHost: HTMLElement | null): boolean => {
     if (!nextHost) {
-      const hadHost = !!sceneHost || backFx.root.isConnected || frontFx.root.isConnected;
-      sceneHost = null;
-      backFx.root.remove();
-      frontFx.root.remove();
+      const hadHost = !!fxRoot.host || fxRoot.root.isConnected;
+      detachFxRoot(fxRoot);
       return hadHost;
     }
 
-    if (sceneHost !== nextHost || backFx.root.parentElement !== nextHost || frontFx.root.parentElement !== nextHost) {
-      sceneHost = nextHost;
-      nextHost.appendChild(backFx.root);
-      nextHost.appendChild(frontFx.root);
-      return true;
+    if (fxRoot.host === nextHost && fxRoot.root.parentElement === nextHost) {
+      return false;
     }
 
-    return false;
+    detachFxRoot(fxRoot);
+    fxRoot.host = nextHost;
+    fxRoot.releaseHost = retainHost(nextHost);
+    nextHost.appendChild(fxRoot.root);
+    return true;
+  };
+
+  const attachFxRoots = (): boolean => {
+    hostSyncFrame = null;
+    const nextHosts = resolveSceneHosts();
+    const backChanged = attachFxRoot(backFx, nextHosts.back);
+    const frontChanged = attachFxRoot(frontFx, nextHosts.front);
+    return backChanged || frontChanged;
   };
 
   const queueFxRootAttach = () => {
@@ -462,9 +562,10 @@ export function setup(ctx: SpindleFrontendContext) {
 
   const hostObserver = new MutationObserver(() => {
     if (
-      sceneHost?.isConnected &&
-      backFx.root.parentElement === sceneHost &&
-      frontFx.root.parentElement === sceneHost
+      backFx.host?.isConnected &&
+      frontFx.host?.isConnected &&
+      backFx.root.parentElement === backFx.host &&
+      frontFx.root.parentElement === frontFx.host
     ) {
       return;
     }
@@ -477,8 +578,8 @@ export function setup(ctx: SpindleFrontendContext) {
       hostSyncFrame = null;
     }
     hostObserver.disconnect();
-    backFx.root.remove();
-    frontFx.root.remove();
+    detachFxRoot(backFx);
+    detachFxRoot(frontFx);
   });
 
   let hud = createHudWidget(ctx, currentPrefs.widgetPosition);
@@ -517,14 +618,14 @@ export function setup(ctx: SpindleFrontendContext) {
   const updateScene = () => {
     const reducedMotion = getReducedMotion();
     const layerMode = getEffectiveLayerMode(currentPrefs, currentState);
-    const showEffects = currentPrefs.effectsEnabled && !currentPrefs.pauseEffects && !!sceneHost;
+    const showEffects = currentPrefs.effectsEnabled && !currentPrefs.pauseEffects;
 
     applyHudState(hud, currentPrefs, currentState);
     settingsUI.sync(currentPrefs, currentState);
     applySceneState(backFx, currentState, currentPrefs, reducedMotion);
     applySceneState(frontFx, currentState, currentPrefs, reducedMotion);
-    setFxVisibility(backFx, showEffects && (layerMode === "back" || layerMode === "both"));
-    setFxVisibility(frontFx, showEffects && (layerMode === "front" || layerMode === "both"));
+    setFxVisibility(backFx, showEffects && !!backFx.host && (layerMode === "back" || layerMode === "both"));
+    setFxVisibility(frontFx, showEffects && !!frontFx.host && (layerMode === "front" || layerMode === "both"));
     scheduleStormFlash();
   };
 
@@ -600,7 +701,19 @@ export function setup(ctx: SpindleFrontendContext) {
   });
   cleanups.push(chatChangedUnsub);
 
+  const settingsChangedUnsub = ctx.events.on("SETTINGS_UPDATED", (payload: unknown) => {
+    const nextChatId = readChatIdFromSettingsUpdate(payload);
+    if (typeof nextChatId === "undefined") return;
+    activeChatId = nextChatId;
+    queueFxRootAttach();
+    sendToBackend(ctx, { type: "chat_changed", chatId: nextChatId });
+  });
+  cleanups.push(settingsChangedUnsub);
+
   sendToBackend(ctx, { type: "frontend_ready" });
+  if (activeChatId) {
+    sendToBackend(ctx, { type: "chat_changed", chatId: activeChatId });
+  }
   queueFxRootAttach();
   updateScene();
 

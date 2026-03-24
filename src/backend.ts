@@ -165,6 +165,16 @@ function extractChatId(payload: unknown): string | null {
   return typeof maybeChatId === "string" && maybeChatId.trim() ? maybeChatId : null;
 }
 
+function extractActiveChatSetting(payload: unknown): string | null | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+
+  const key = (payload as { key?: unknown }).key;
+  if (key !== "activeChatId") return undefined;
+
+  const value = (payload as { value?: unknown }).value;
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
 spindle.registerInterceptor(async (messages, context) => {
   const chatId = extractChatId(context);
   const state = chatId ? await loadEffectiveWeatherState(chatId) : null;
@@ -181,6 +191,12 @@ spindle.registerInterceptor(async (messages, context) => {
 spindle.on("CHAT_CHANGED", (payload: unknown) => {
   const chatId = extractChatId(payload);
   if (!chatId) return;
+  void pushActiveChatState(chatId);
+});
+
+spindle.on("SETTINGS_UPDATED", (payload: unknown) => {
+  const chatId = extractActiveChatSetting(payload);
+  if (typeof chatId === "undefined") return;
   void pushActiveChatState(chatId);
 });
 
