@@ -17,7 +17,6 @@ type AppMountHandle = ReturnType<SpindleFrontendContext["ui"]["mountApp"]>;
 type FloatWidgetHandle = ReturnType<SpindleFrontendContext["ui"]["createFloatWidget"]>;
 
 type FxRoot = {
-  mount: AppMountHandle;
   root: HTMLDivElement;
 };
 
@@ -153,18 +152,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
     );
   }
 
-  return { mount: null as unknown as AppMountHandle, root };
-}
-
-function createFxRoot(ctx: SpindleFrontendContext, kind: "back" | "front"): FxRoot {
-  const mount = ctx.ui.mountApp({
-    className: `weather-fx-mount weather-fx-mount-${kind}`,
-    position: kind === "back" ? "start" : "end",
-  });
-  const fx = createFxMarkup(kind);
-  fx.mount = mount;
-  mount.root.appendChild(fx.root);
-  return fx;
+  return { root };
 }
 
 function resolveSceneTokens(state: WeatherState, intensity: number) {
@@ -425,9 +413,15 @@ export function setup(ctx: SpindleFrontendContext) {
   settingsMount.appendChild(settingsUI.root);
   cleanups.push(() => settingsUI.destroy());
 
-  const backFx = createFxRoot(ctx, "back");
-  const frontFx = createFxRoot(ctx, "front");
-  cleanups.push(() => backFx.mount.destroy(), () => frontFx.mount.destroy());
+  const fxMount: AppMountHandle = ctx.ui.mountApp({
+    className: "weather-fx-mount",
+    position: "end",
+  });
+  const backFx = createFxMarkup("back");
+  const frontFx = createFxMarkup("front");
+  fxMount.root.appendChild(backFx.root);
+  fxMount.root.appendChild(frontFx.root);
+  cleanups.push(() => fxMount.destroy());
 
   let hud = createHudWidget(ctx, currentPrefs.widgetPosition);
   cleanups.push(() => hud.widget.destroy());
