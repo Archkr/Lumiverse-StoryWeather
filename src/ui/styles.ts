@@ -35,6 +35,30 @@ export const WEATHER_HUD_CSS = `
   initial-value: rgba(185, 212, 244, 0.28);
 }
 
+@property --weather-cloud-core {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(237, 244, 255, 0.34);
+}
+
+@property --weather-cloud-edge {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(255, 255, 255, 0.12);
+}
+
+@property --weather-fog-color {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(236, 241, 255, 0.18);
+}
+
+@property --weather-mist-color {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(228, 238, 248, 0.24);
+}
+
 @property --weather-sky-opacity {
   syntax: "<number>";
   inherits: true;
@@ -681,7 +705,7 @@ export const WEATHER_HUD_CSS = `
 }
 
 .weather-fx-root[data-kind="back"] {
-  z-index: 1;
+  z-index: 0;
 }
 
 .weather-fx-root[data-kind="front"] {
@@ -717,7 +741,8 @@ export const WEATHER_HUD_CSS = `
 .weather-fx-sky {
   background: linear-gradient(180deg, var(--weather-bg-start) 0%, var(--weather-bg-mid) 46%, var(--weather-bg-end) 100%);
   opacity: var(--weather-sky-opacity);
-  mix-blend-mode: soft-light;
+  mix-blend-mode: normal;
+  filter: saturate(1.08) brightness(1.04);
   animation: weather-sky-shift 24s ease-in-out infinite alternate;
 }
 
@@ -756,6 +781,16 @@ export const WEATHER_HUD_CSS = `
   will-change: transform, opacity;
 }
 
+.weather-fx-clouds::before {
+  content: "";
+  position: absolute;
+  inset: -10% -6% 48%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--weather-cloud-core) 84%, rgba(8, 14, 24, 0.18)) 0%, transparent 100%);
+  opacity: calc(var(--weather-cloud-opacity) * 0.74);
+  filter: blur(34px);
+  transform: translateY(-10%);
+}
+
 .weather-fx-cloud {
   width: var(--cloud-width);
   height: var(--cloud-height);
@@ -763,8 +798,8 @@ export const WEATHER_HUD_CSS = `
   left: var(--cloud-left);
   border-radius: 999px;
   background:
-    radial-gradient(circle at 28% 35%, rgba(255, 255, 255, 0.34), transparent 44%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.03));
+    radial-gradient(circle at 28% 35%, var(--weather-cloud-edge), transparent 44%),
+    linear-gradient(180deg, color-mix(in srgb, var(--weather-cloud-core) 100%, transparent) 0%, color-mix(in srgb, var(--weather-cloud-core) 26%, transparent) 100%);
   filter: blur(var(--cloud-blur));
   opacity: calc(var(--weather-cloud-opacity) * var(--cloud-opacity-scale));
   animation: weather-cloud-drift var(--cloud-duration) linear infinite;
@@ -777,7 +812,7 @@ export const WEATHER_HUD_CSS = `
   top: var(--fog-top);
   left: var(--fog-left);
   border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(236, 241, 255, 0.18), transparent);
+  background: linear-gradient(90deg, transparent, var(--weather-fog-color), transparent);
   filter: blur(20px);
   opacity: calc(var(--weather-fog-opacity) * var(--fog-opacity-scale));
   animation: weather-fog-drift var(--fog-duration) ease-in-out infinite;
@@ -790,7 +825,7 @@ export const WEATHER_HUD_CSS = `
   left: var(--mist-left);
   bottom: var(--mist-bottom);
   border-radius: 999px;
-  background: radial-gradient(circle at center, rgba(228, 238, 248, 0.24), transparent 68%);
+  background: radial-gradient(circle at center, var(--weather-mist-color), transparent 68%);
   filter: blur(22px);
   opacity: calc(var(--weather-mist-opacity) * var(--mist-opacity-scale));
   animation: weather-mist-roll var(--mist-duration) ease-in-out infinite;
@@ -855,6 +890,18 @@ export const WEATHER_HUD_CSS = `
 
 .weather-fx-root.weather-storm-flash .weather-fx-flash {
   animation: weather-flash 220ms ease-out;
+}
+
+.weather-fx-root[data-condition="rain"] .weather-fx-clouds::before,
+.weather-fx-root[data-condition="storm"] .weather-fx-clouds::before {
+  inset: -14% -8% 44%;
+  opacity: calc(var(--weather-cloud-opacity) * 0.9);
+  filter: blur(42px);
+}
+
+.weather-fx-root[data-condition="rain"] .weather-fx-cloud,
+.weather-fx-root[data-condition="storm"] .weather-fx-cloud {
+  transform: translateY(-1.5vh);
 }
 
 .weather-fx-root.weather-reduced-motion .weather-fx-cloud,

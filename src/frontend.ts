@@ -80,6 +80,10 @@ type SceneTokens = {
   glow: string;
   beamColor: string;
   horizonColor: string;
+  cloudCore: string;
+  cloudEdge: string;
+  fogColor: string;
+  mistColor: string;
   skyOpacity: number;
   glowOpacity: number;
   beamOpacity: number;
@@ -344,7 +348,7 @@ function parseTagAttributes(raw: string): Record<string, string> {
 
 function extractWeatherTagFromContent(content: string): { attrs: Record<string, string>; fullMatch: string } | null {
   const tagName = escapeRegex(WEATHER_TAG_NAME);
-  const tagRe = new RegExp(String.raw`<${tagName}\b([^>]*)>([\s\S]*?)<\/${tagName}>`, "ig");
+  const tagRe = new RegExp(String.raw`<${tagName}\b([^>]*?)(?:\/>|>[\s\S]*?<\/${tagName}>)`, "ig");
   let match: RegExpExecArray | null;
   let lastMatch: { attrs: Record<string, string>; fullMatch: string } | null = null;
   while ((match = tagRe.exec(content)) !== null) {
@@ -359,6 +363,62 @@ function extractWeatherTagFromContent(content: string): { attrs: Record<string, 
 function closestByClassFragment(start: Element | null, fragment: string): HTMLElement | null {
   if (!(start instanceof Element)) return null;
   return asHTMLElement(start.closest(`[class*="${fragment}"]`));
+}
+
+function listUsableAncestors(start: HTMLElement | null): HTMLElement[] {
+  const nodes: HTMLElement[] = [];
+  let current = start;
+  while (current && current !== document.body && current !== document.documentElement) {
+    nodes.push(current);
+    current = current.parentElement instanceof HTMLElement ? current.parentElement : null;
+  }
+  return nodes;
+}
+
+function lowestCommonAncestor(...nodes: Array<HTMLElement | null>): HTMLElement | null {
+  const filtered = nodes.filter((node): node is HTMLElement => node instanceof HTMLElement);
+  if (filtered.length === 0) return null;
+  if (filtered.length === 1) return filtered[0];
+
+  const chains = filtered.map((node) => listUsableAncestors(node));
+  for (const candidate of chains[0]) {
+    if (chains.every((chain) => chain.includes(candidate))) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function scoreSceneHost(host: HTMLElement | null): number {
+  if (!(host instanceof HTMLElement)) return -1;
+  const rect = host.getBoundingClientRect();
+  const width = Math.max(0, rect.width || host.clientWidth);
+  const height = Math.max(0, rect.height || host.clientHeight);
+  if (width < 120 || height < 120) return -1;
+  const viewportWidth = Math.max(window.innerWidth, 1);
+  const viewportHeight = Math.max(window.innerHeight, 1);
+  const widthRatio = Math.min(1.25, width / viewportWidth);
+  const heightRatio = Math.min(1.25, height / viewportHeight);
+  const centeredness = 1 - Math.min(1, Math.abs((rect.left + rect.width / 2) - viewportWidth / 2) / viewportWidth);
+  return widthRatio * 4 + heightRatio * 2 + centeredness;
+}
+
+function pickBestSceneHost(candidates: Array<HTMLElement | null>): HTMLElement | null {
+  let best: HTMLElement | null = null;
+  let bestScore = -1;
+  const seen = new Set<HTMLElement>();
+
+  for (const candidate of candidates) {
+    if (!(candidate instanceof HTMLElement) || seen.has(candidate)) continue;
+    seen.add(candidate);
+    const score = scoreSceneHost(candidate);
+    if (score > bestScore) {
+      best = candidate;
+      bestScore = score;
+    }
+  }
+
+  return best;
 }
 
 function resolveInitialChatId(): string | null {
@@ -388,10 +448,18 @@ function resolveSceneHosts(): SceneHostResolution {
       : backgroundLayer?.parentElement instanceof HTMLElement
         ? backgroundLayer.parentElement
         : null);
-  const backHost = sceneContainer ?? sceneBody ?? backgroundLayer?.parentElement ?? chatColumn ?? chatColumnInner ?? scrollRegion;
+  const sceneCommonAncestor = lowestCommonAncestor(backgroundLayer, sceneBody, chatColumn, chatColumnInner, scrollRegion);
+  const backHost = pickBestSceneHost([
+    sceneCommonAncestor,
+    sceneContainer,
+    backgroundLayer?.parentElement instanceof HTMLElement ? backgroundLayer.parentElement : null,
+    textContextLayer?.parentElement instanceof HTMLElement ? textContextLayer.parentElement : null,
+    sceneBody,
+    ...listUsableAncestors(sceneCommonAncestor).slice(0, 4),
+  ]) ?? sceneContainer ?? sceneBody ?? backgroundLayer?.parentElement ?? chatColumn ?? chatColumnInner ?? scrollRegion;
   const preferredBackBefore = textContextLayer ?? sceneBody;
   const backBefore = preferredBackBefore?.parentElement === backHost ? preferredBackBefore : null;
-  const frontHost = chatColumn ?? chatColumnInner ?? sceneBody ?? scrollRegion ?? backgroundLayer;
+  const frontHost = textContextLayer ?? chatColumnInner ?? chatColumn ?? scrollRegion ?? sceneBody ?? backgroundLayer;
 
   return {
     backHost,
@@ -521,13 +589,17 @@ function resolveSceneTokens(state: WeatherState, intensity: number): SceneTokens
 
   const palette = paletteMap[state.palette];
   const baseIntensity = clamp(intensity, 0, 1.5);
+  let cloudCore = "rgba(237, 244, 255, 0.34)";
+  let cloudEdge = "rgba(255, 255, 255, 0.12)";
+  let fogColor = "rgba(236, 241, 255, 0.18)";
+  let mistColor = "rgba(228, 238, 248, 0.24)";
 
   const values = {
-    skyOpacity: 0.05,
-    glowOpacity: 0.1,
-    beamOpacity: 0.12,
-    cloudOpacity: 0.06,
-    horizonOpacity: 0.04,
+    skyOpacity: 0.08,
+    glowOpacity: 0.13,
+    beamOpacity: 0.14,
+    cloudOpacity: 0.1,
+    horizonOpacity: 0.06,
     mistOpacity: 0.03,
     fogOpacity: 0,
     rainOpacity: 0,
@@ -538,62 +610,82 @@ function resolveSceneTokens(state: WeatherState, intensity: number): SceneTokens
 
   switch (state.condition) {
     case "cloudy":
-      values.skyOpacity = 0.1;
-      values.glowOpacity = 0.08;
+      values.skyOpacity = 0.14;
+      values.glowOpacity = 0.09;
       values.beamOpacity = 0.04;
-      values.cloudOpacity = 0.36;
-      values.horizonOpacity = 0.08;
-      values.mistOpacity = 0.05;
+      values.cloudOpacity = 0.5;
+      values.horizonOpacity = 0.1;
+      values.mistOpacity = 0.06;
       values.moteOpacity = 0.02;
+      cloudCore = "rgba(205, 216, 231, 0.34)";
+      cloudEdge = "rgba(238, 244, 255, 0.12)";
+      fogColor = "rgba(210, 223, 239, 0.18)";
+      mistColor = "rgba(217, 227, 239, 0.2)";
       break;
     case "rain":
-      values.skyOpacity = 0.12;
-      values.glowOpacity = 0.05;
-      values.beamOpacity = 0.01;
-      values.cloudOpacity = 0.44;
-      values.horizonOpacity = 0.12;
-      values.mistOpacity = 0.16;
-      values.fogOpacity = 0.08;
-      values.rainOpacity = 0.72;
+      values.skyOpacity = 0.2;
+      values.glowOpacity = 0.06;
+      values.beamOpacity = 0;
+      values.cloudOpacity = 0.7;
+      values.horizonOpacity = 0.16;
+      values.mistOpacity = 0.22;
+      values.fogOpacity = 0.12;
+      values.rainOpacity = 0.82;
       values.moteOpacity = 0;
+      cloudCore = "rgba(87, 106, 128, 0.48)";
+      cloudEdge = "rgba(158, 178, 201, 0.12)";
+      fogColor = "rgba(162, 180, 198, 0.2)";
+      mistColor = "rgba(174, 188, 204, 0.22)";
       break;
     case "storm":
-      values.skyOpacity = 0.15;
-      values.glowOpacity = 0.04;
+      values.skyOpacity = 0.24;
+      values.glowOpacity = 0.05;
       values.beamOpacity = 0;
-      values.cloudOpacity = 0.58;
-      values.horizonOpacity = 0.18;
-      values.mistOpacity = 0.2;
-      values.fogOpacity = 0.12;
-      values.rainOpacity = 0.94;
-      values.flashOpacity = 0.58;
+      values.cloudOpacity = 0.86;
+      values.horizonOpacity = 0.24;
+      values.mistOpacity = 0.28;
+      values.fogOpacity = 0.18;
+      values.rainOpacity = 1.04;
+      values.flashOpacity = 0.64;
       values.moteOpacity = 0;
+      cloudCore = "rgba(56, 73, 93, 0.62)";
+      cloudEdge = "rgba(118, 138, 163, 0.12)";
+      fogColor = "rgba(130, 149, 171, 0.22)";
+      mistColor = "rgba(151, 167, 186, 0.24)";
       break;
     case "snow":
-      values.skyOpacity = 0.11;
-      values.glowOpacity = 0.16;
+      values.skyOpacity = 0.15;
+      values.glowOpacity = 0.2;
       values.beamOpacity = 0.08;
-      values.cloudOpacity = 0.24;
-      values.horizonOpacity = 0.16;
-      values.mistOpacity = 0.08;
-      values.fogOpacity = 0.05;
+      values.cloudOpacity = 0.34;
+      values.horizonOpacity = 0.2;
+      values.mistOpacity = 0.12;
+      values.fogOpacity = 0.08;
       values.snowOpacity = 0.84;
       values.moteOpacity = 0.02;
+      cloudCore = "rgba(232, 238, 247, 0.34)";
+      cloudEdge = "rgba(255, 255, 255, 0.14)";
+      fogColor = "rgba(230, 236, 245, 0.22)";
+      mistColor = "rgba(225, 233, 242, 0.22)";
       break;
     case "fog":
-      values.skyOpacity = 0.08;
+      values.skyOpacity = 0.12;
       values.glowOpacity = 0.08;
       values.beamOpacity = 0.02;
-      values.cloudOpacity = 0.14;
+      values.cloudOpacity = 0.18;
       values.horizonOpacity = 0.22;
-      values.mistOpacity = 0.32;
-      values.fogOpacity = 0.58;
+      values.mistOpacity = 0.38;
+      values.fogOpacity = 0.68;
       values.moteOpacity = 0.01;
+      cloudCore = "rgba(186, 198, 207, 0.28)";
+      cloudEdge = "rgba(232, 239, 244, 0.1)";
+      fogColor = "rgba(223, 230, 236, 0.26)";
+      mistColor = "rgba(217, 224, 231, 0.28)";
       break;
     case "clear":
     default:
       if (state.palette === "night") {
-        values.skyOpacity = 0.04;
+        values.skyOpacity = 0.06;
         values.glowOpacity = 0.08;
         values.beamOpacity = 0.03;
         values.cloudOpacity = 0.02;
@@ -602,8 +694,8 @@ function resolveSceneTokens(state: WeatherState, intensity: number): SceneTokens
       break;
   }
 
-  const detailScale = clamp(0.7 + baseIntensity * 0.26, 0.65, 1.08);
-  const atmosphereScale = clamp(0.8 + baseIntensity * 0.22, 0.75, 1.08);
+  const detailScale = clamp(0.82 + baseIntensity * 0.28, 0.75, 1.18);
+  const atmosphereScale = clamp(0.92 + baseIntensity * 0.24, 0.84, 1.2);
 
   return {
     bgStart: palette.start,
@@ -612,6 +704,10 @@ function resolveSceneTokens(state: WeatherState, intensity: number): SceneTokens
     glow: palette.glow,
     beamColor: palette.beam,
     horizonColor: palette.horizon,
+    cloudCore,
+    cloudEdge,
+    fogColor,
+    mistColor,
     skyOpacity: values.skyOpacity * atmosphereScale,
     glowOpacity: values.glowOpacity * atmosphereScale,
     beamOpacity: values.beamOpacity * atmosphereScale,
@@ -1035,6 +1131,10 @@ function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs,
   root.root.style.setProperty("--weather-glow", tokens.glow);
   root.root.style.setProperty("--weather-beam-color", tokens.beamColor);
   root.root.style.setProperty("--weather-horizon-color", tokens.horizonColor);
+  root.root.style.setProperty("--weather-cloud-core", tokens.cloudCore);
+  root.root.style.setProperty("--weather-cloud-edge", tokens.cloudEdge);
+  root.root.style.setProperty("--weather-fog-color", tokens.fogColor);
+  root.root.style.setProperty("--weather-mist-color", tokens.mistColor);
   root.root.style.setProperty("--weather-sky-opacity", String(isFront ? 0 : tokens.skyOpacity));
   root.root.style.setProperty("--weather-glow-opacity", String(isFront ? 0 : tokens.glowOpacity));
   root.root.style.setProperty("--weather-beam-opacity", String(isFront ? 0 : tokens.beamOpacity));
@@ -1042,8 +1142,8 @@ function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs,
   root.root.style.setProperty("--weather-horizon-opacity", String(isFront ? 0 : tokens.horizonOpacity));
   root.root.style.setProperty("--weather-mist-opacity", String(isFront ? 0 : tokens.mistOpacity));
   root.root.style.setProperty("--weather-fog-opacity", String(isFront ? 0 : tokens.fogOpacity));
-  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (isFront ? 0.95 : 0.42)));
-  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (isFront ? 0.98 : 0.38)));
+  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (isFront ? 0.96 : 0.58)));
+  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (isFront ? 0.98 : 0.54)));
   root.root.style.setProperty("--weather-mote-opacity", String(isFront ? 0 : tokens.moteOpacity));
   root.root.style.setProperty("--weather-flash-opacity", String(tokens.flashOpacity));
   root.root.style.setProperty(
@@ -1063,7 +1163,7 @@ function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs,
 }
 
 export function setup(ctx: SpindleFrontendContext) {
-  console.info("[weather_hud] frontend build 2026-03-24.8");
+  console.info("[weather_hud] frontend build 2026-03-25.1");
 
   const cleanups: Array<() => void> = [];
   const removeStyle = ctx.dom.addStyle(WEATHER_HUD_CSS);
@@ -1383,6 +1483,9 @@ export function setup(ctx: SpindleFrontendContext) {
   const onMotionChange = () => updateScene();
   motionMedia.addEventListener("change", onMotionChange);
   cleanups.push(() => motionMedia.removeEventListener("change", onMotionChange));
+  const onResize = () => queueFxRootAttach();
+  window.addEventListener("resize", onResize);
+  cleanups.push(() => window.removeEventListener("resize", onResize));
 
   const tagUnsub = ctx.messages.registerTagInterceptor(
     { tagName: WEATHER_TAG_NAME, removeFromMessage: true },
@@ -1440,10 +1543,12 @@ export function setup(ctx: SpindleFrontendContext) {
   const messageSentUnsub = ctx.events.on("MESSAGE_SENT", handleCompletedAssistantContent);
   const messageEditedUnsub = ctx.events.on("MESSAGE_EDITED", handleCompletedAssistantContent);
   const messageSwipedUnsub = ctx.events.on("MESSAGE_SWIPED", handleCompletedAssistantContent);
+  const generationStoppedUnsub = ctx.events.on("GENERATION_STOPPED", handleCompletedAssistantContent);
   cleanups.push(generationEndedUnsub);
   cleanups.push(messageSentUnsub);
   cleanups.push(messageEditedUnsub);
   cleanups.push(messageSwipedUnsub);
+  cleanups.push(generationStoppedUnsub);
 
   const settingsChangedUnsub = ctx.events.on("SETTINGS_UPDATED", (payload: unknown) => {
     const nextChatId = readChatIdFromSettingsUpdate(payload);

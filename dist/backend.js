@@ -222,6 +222,9 @@ function normalizePrefs(input) {
 
 // src/backend.ts
 var PREFS_FILE = "weather_prefs.json";
+var WEATHER_FORMAT_MACRO = "story_weather_format";
+var WEATHER_TRACKER_MACRO = "story_weather_tracker";
+var WEATHER_STATE_MACRO = "story_weather_state";
 var activeUserId = null;
 var lastKnownChatId = null;
 function escapeRegex(value) {
@@ -229,7 +232,7 @@ function escapeRegex(value) {
 }
 function buildWeatherTagRegex(flags = "ig") {
   const safeTag = escapeRegex("weather-state");
-  return new RegExp(String.raw`<${safeTag}\b[^>]*>[\s\S]*?<\/${safeTag}>`, flags);
+  return new RegExp(String.raw`<${safeTag}\b[^>]*(?:\/>|>[\s\S]*?<\/${safeTag}>)`, flags);
 }
 function stripWeatherStateTags(content) {
   return content.replace(buildWeatherTagRegex(), "").replace(/\n{3,}/g, `
@@ -314,44 +317,61 @@ async function pushActiveChatState(chatId) {
   const resolvedChatId = await resolveChatId(chatId);
   lastKnownChatId = resolvedChatId;
   if (!resolvedChatId) {
+    pushMacroValues(null);
     send({ type: "active_chat_state", chatId: null, state: null });
     return;
   }
   const state = await loadEffectiveWeatherState(resolvedChatId);
+  pushMacroValues(state);
   send({ type: "active_chat_state", chatId: resolvedChatId, state });
 }
-function buildPromptInstruction(state) {
-  const current = state ? [
-    `- Location: ${state.location}`,
-    `- Date: ${state.date}`,
-    `- Time: ${state.time}`,
-    `- Condition: ${state.condition}`,
-    `- Summary: ${state.summary}`,
-    `- Temperature: ${state.temperature}`,
-    `- Wind: ${state.wind}`,
-    `- Layer: ${state.layer}`,
-    `- Palette: ${state.palette}`
-  ].join(`
-`) : "- No saved weather yet. Establish the scene with a fresh weather-state tag.";
+function buildWeatherTagExample() {
+  return '<weather-state location="Tengu City" date="2026-03-24" time="9:42 PM" condition="rain" summary="Cold spring rain" temperature="61F" intensity="0.65" wind="breezy" layer="both" palette="storm"></weather-state>';
+}
+function summarizeWeatherState(state) {
+  if (!state)
+    return "No saved weather state yet.";
   return [
-    "[Story Weather HUD]",
-    "Keep the visible reply natural and in-character.",
-    "Write the full visible reply first.",
-    "Only after the visible reply is complete, you may place one machine-only control tag on its own final line.",
-    "Never place the control tag before visible prose, and never continue visible prose after the tag.",
-    "If you are unsure or nothing changed, omit the control tag instead of breaking the reply.",
+    `Location: ${state.location}`,
+    `Date: ${state.date}`,
+    `Time: ${state.time}`,
+    `Condition: ${state.condition}`,
+    `Summary: ${state.summary}`,
+    `Temperature: ${state.temperature}`,
+    `Intensity: ${state.intensity.toFixed(2)}`,
+    `Wind: ${state.wind}`,
+    `Layer: ${state.layer}`,
+    `Palette: ${state.palette}`
+  ].join(" | ");
+}
+function buildTrackerMacro(state) {
+  return [
+    "Append one final machine-only weather-state tag after the visible reply.",
+    "Keep all visible prose outside the tag.",
     `Allowed conditions: ${WEATHER_CONDITIONS.join(", ")}`,
     `Allowed layers: ${WEATHER_LAYERS.join(", ")}`,
     `Allowed palettes: ${WEATHER_PALETTES.join(", ")}`,
-    "When you include the tag, use a full state with location, date, time, condition, summary, temperature, intensity, wind, layer, and palette.",
-    "Keep attribute values short plain text only. Do not use double quotes, angle brackets, or line breaks inside attribute values.",
-    "Do not explain the tag or mention it in visible prose.",
-    "",
-    "Current weather state:",
-    current,
-    "",
-    "Final-line tag example:",
-    '<weather-state location="Tengu City" date="2026-03-24" time="9:42 PM" condition="rain" summary="Cold spring rain" temperature="61F" intensity="0.65" wind="breezy" layer="both" palette="storm"></weather-state>'
+    "Use location, date, time, condition, summary, temperature, intensity, wind, layer, and palette.",
+    `Current scene: ${summarizeWeatherState(state)}`,
+    "Example:",
+    buildWeatherTagExample()
+  ].join(`
+`);
+}
+function pushMacroValues(state) {
+  spindle.updateMacroValue(WEATHER_FORMAT_MACRO, buildWeatherTagExample());
+  spindle.updateMacroValue(WEATHER_TRACKER_MACRO, buildTrackerMacro(state));
+  spindle.updateMacroValue(WEATHER_STATE_MACRO, summarizeWeatherState(state));
+}
+function buildPromptInstruction(state) {
+  return [
+    "[Story Weather HUD]",
+    "Keep the visible reply natural and in-character.",
+    "After the visible reply, append exactly one final-line weather-state control tag.",
+    "Never place the tag before visible prose, and never continue visible prose after the tag.",
+    "Do not mention or explain the tag in visible prose.",
+    `Continue scene metadata from: ${summarizeWeatherState(state)}`,
+    `Format: ${buildWeatherTagExample()}`
   ].join(`
 `);
 }
@@ -370,9 +390,32 @@ function extractActiveChatSetting(payload) {
   const value = payload.value;
   return typeof value === "string" && value.trim() ? value : null;
 }
+spindle.registerMacro({
+  name: WEATHER_FORMAT_MACRO,
+  category: "extension:story_weather",
+  description: "Example weather-state tag format",
+  returnType: "string",
+  handler: ""
+});
+spindle.registerMacro({
+  name: WEATHER_TRACKER_MACRO,
+  category: "extension:story_weather",
+  description: "Weather HUD scene tracking instructions",
+  returnType: "string",
+  handler: ""
+});
+spindle.registerMacro({
+  name: WEATHER_STATE_MACRO,
+  category: "extension:story_weather",
+  description: "Current story weather state summary",
+  returnType: "string",
+  handler: ""
+});
+pushMacroValues(null);
 spindle.registerInterceptor(async (messages, context) => {
   const chatId = extractChatId(context);
   const state = chatId ? await loadEffectiveWeatherState(chatId) : null;
+  pushMacroValues(state);
   const cleanedMessages = messages.map((message) => {
     if (!message || typeof message.content !== "string")
       return message;
@@ -388,7 +431,7 @@ spindle.registerInterceptor(async (messages, context) => {
     },
     ...cleanedMessages
   ];
-}, 60);
+}, 90);
 spindle.on("CHAT_CHANGED", (payload) => {
   const chatId = extractChatId(payload);
   if (!chatId)
@@ -425,6 +468,7 @@ spindle.onFrontendMessage(async (raw, userId) => {
         const nextState = normalizeWeatherTag(message.attrs, previousStory);
         await saveStoryWeatherState(chatId, nextState);
         lastKnownChatId = chatId;
+        pushMacroValues(nextState);
         const manualOverride = await loadManualWeatherState(chatId);
         if (!manualOverride) {
           send({ type: "weather_state", chatId, state: nextState });
@@ -441,6 +485,7 @@ spindle.onFrontendMessage(async (raw, userId) => {
         const nextState = normalizeWeatherState({ ...previous, ...message.state, updatedAt: Date.now(), source: "manual" }, previous);
         await saveManualWeatherState(chatId, nextState);
         lastKnownChatId = chatId;
+        pushMacroValues(nextState);
         send({ type: "weather_state", chatId, state: nextState });
         break;
       }
@@ -453,6 +498,7 @@ spindle.onFrontendMessage(async (raw, userId) => {
         await clearManualWeatherState(chatId);
         lastKnownChatId = chatId;
         const restored = await loadStoryWeatherState(chatId) ?? makeDefaultWeatherState();
+        pushMacroValues(restored);
         send({ type: "weather_state", chatId, state: restored });
         break;
       }
