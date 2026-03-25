@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "lumiverse-weather-hud",
+      "name": "lumiverse-story-weather",
       "devDependencies": {
         "lumiverse-spindle-types": "0.1.2",
         "typescript": "^5.7.3",
