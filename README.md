@@ -4,6 +4,10 @@ Story Weather is a Lumiverse extension that adds a draggable weather HUD and ani
 
 It is built for story-driven use, not live forecast data. The model controls the scene by emitting a hidden `<weather-state>` tag, and the extension turns that into HUD updates, layered effects, and per-chat weather state.
 
+<img width="276" height="222" alt="image" src="https://github.com/user-attachments/assets/8bc8c93a-df39-4b86-9d20-596630c92a4a" />
+<img width="280" height="217" alt="image" src="https://github.com/user-attachments/assets/691d98a0-4f1b-4d4c-85ae-9664215d4d65" />
+
+
 ## Features
 
 - Compact draggable HUD with dynamic styling based on story time, palette, and weather
