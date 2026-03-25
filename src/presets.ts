@@ -144,6 +144,7 @@ export function buildPresetWeatherState(
     : formatDate(new Date());
 
   return {
+    location: baseState.location,
     date: fallbackDate,
     ...preset.state,
     source: "manual",

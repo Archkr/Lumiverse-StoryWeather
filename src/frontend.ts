@@ -16,8 +16,8 @@ const GEAR_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 1
 const CHEVRON_DOWN_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>`;
 const CHEVRON_UP_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="m7.41 15.41 4.59-4.58 4.59 4.58L18 14l-6-6-6 6z"/></svg>`;
 
-const HUD_COLLAPSED_SIZE = { width: 268, height: 154 };
-const HUD_EXPANDED_SIZE = { width: 304, height: 342 };
+const HUD_COLLAPSED_SIZE = { width: 268, height: 172 };
+const HUD_EXPANDED_SIZE = { width: 304, height: 360 };
 const DEFAULT_WIDGET_POSITION = { x: 24, y: 96 };
 
 type FloatWidgetHandle = ReturnType<SpindleFrontendContext["ui"]["createFloatWidget"]>;
@@ -27,6 +27,13 @@ type FxRoot = {
   host: HTMLElement | null;
   releaseHost: (() => void) | null;
   kind: "back" | "front";
+};
+
+type SceneHostResolution = {
+  backHost: HTMLElement | null;
+  backBefore: HTMLElement | null;
+  frontHost: HTMLElement | null;
+  frontBefore: HTMLElement | null;
 };
 
 type HudCallbacks = {
@@ -43,6 +50,7 @@ type HudCallbacks = {
 type HudElements = {
   widget: FloatWidgetHandle;
   root: HTMLDivElement;
+  location: HTMLDivElement;
   date: HTMLDivElement;
   time: HTMLDivElement;
   wind: HTMLDivElement;
@@ -318,20 +326,48 @@ function asHTMLElement(element: Element | null): HTMLElement | null {
   return element instanceof HTMLElement ? element : null;
 }
 
+function closestByClassFragment(start: Element | null, fragment: string): HTMLElement | null {
+  if (!(start instanceof Element)) return null;
+  return asHTMLElement(start.closest(`[class*="${fragment}"]`));
+}
+
 function resolveInitialChatId(): string | null {
   const source = [window.location.pathname, window.location.search, window.location.hash].join(" ");
   const match = source.match(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i);
   return match?.[0] ?? null;
 }
 
-function resolveSceneHosts(): { back: HTMLElement | null; front: HTMLElement | null } {
-  const backgroundHost = asHTMLElement(document.querySelector('[class*="sceneBackgroundLayer"]'));
+function resolveSceneHosts(): SceneHostResolution {
+  const backgroundLayer = asHTMLElement(document.querySelector('[class*="sceneBackgroundLayer"]'));
+  const textContextLayer = asHTMLElement(document.querySelector('[class*="sceneTextContextLayer"]'));
   const scrollRegion = asHTMLElement(document.querySelector('[data-chat-scroll="true"]'));
-  const frontHost = scrollRegion?.parentElement instanceof HTMLElement ? scrollRegion.parentElement : scrollRegion;
+  const chatColumnInner =
+    closestByClassFragment(scrollRegion, "chatColumnInner") ??
+    (scrollRegion?.parentElement instanceof HTMLElement ? scrollRegion.parentElement : null);
+  const chatColumn =
+    closestByClassFragment(scrollRegion, "chatColumn") ??
+    (chatColumnInner?.parentElement instanceof HTMLElement ? chatColumnInner.parentElement : chatColumnInner);
+  const sceneBody =
+    closestByClassFragment(scrollRegion, "body") ??
+    (chatColumn?.parentElement instanceof HTMLElement ? chatColumn.parentElement : null);
+  const sceneContainer =
+    closestByClassFragment(backgroundLayer, "container") ??
+    closestByClassFragment(sceneBody, "container") ??
+    (sceneBody?.parentElement instanceof HTMLElement
+      ? sceneBody.parentElement
+      : backgroundLayer?.parentElement instanceof HTMLElement
+        ? backgroundLayer.parentElement
+        : null);
+  const backHost = sceneContainer ?? sceneBody ?? backgroundLayer?.parentElement ?? chatColumn ?? chatColumnInner ?? scrollRegion;
+  const preferredBackBefore = textContextLayer ?? sceneBody;
+  const backBefore = preferredBackBefore?.parentElement === backHost ? preferredBackBefore : null;
+  const frontHost = chatColumn ?? chatColumnInner ?? sceneBody ?? scrollRegion ?? backgroundLayer;
 
   return {
-    back: backgroundHost ?? (frontHost?.parentElement instanceof HTMLElement ? frontHost.parentElement : frontHost ?? null),
-    front: frontHost ?? backgroundHost,
+    backHost,
+    backBefore,
+    frontHost,
+    frontBefore: null,
   };
 }
 
@@ -600,12 +636,15 @@ function createHudWidget(
 
   const left = document.createElement("div");
   left.className = "weather-hud-primary";
+  const location = document.createElement("div");
+  location.className = "weather-hud-location";
   const date = document.createElement("div");
   date.className = "weather-hud-date";
   const time = document.createElement("div");
   time.className = "weather-hud-time";
   const wind = document.createElement("div");
   wind.className = "weather-hud-wind";
+  left.appendChild(location);
   left.appendChild(date);
   left.appendChild(time);
   left.appendChild(wind);
@@ -814,6 +853,7 @@ function createHudWidget(
   return {
     widget,
     root,
+    location,
     date,
     time,
     wind,
@@ -853,6 +893,8 @@ function syncHudState(hud: HudElements, prefs: WeatherPrefs, state: WeatherState
   hud.temp.textContent = state.temperature;
   hud.summary.textContent = state.summary;
   hud.wind.textContent = `Wind • ${state.wind}`;
+  hud.location.textContent = state.location;
+  hud.wind.textContent = `Wind: ${state.wind}`;
   hud.condition.textContent = titleCase(state.condition);
   hud.palette.textContent = titleCase(state.palette);
   hud.layer.textContent = titleCase(getEffectiveLayerMode(prefs, state));
@@ -954,7 +996,7 @@ function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs,
 }
 
 export function setup(ctx: SpindleFrontendContext) {
-  console.info("[weather_hud] frontend build 2026-03-24.6");
+  console.info("[weather_hud] frontend build 2026-03-24.7");
 
   const cleanups: Array<() => void> = [];
   const removeStyle = ctx.dom.addStyle(WEATHER_HUD_CSS);
@@ -1067,29 +1109,37 @@ export function setup(ctx: SpindleFrontendContext) {
     }
   };
 
-  const attachFxRoot = (fxRoot: FxRoot, nextHost: HTMLElement | null): boolean => {
+  const attachFxRoot = (fxRoot: FxRoot, nextHost: HTMLElement | null, before: HTMLElement | null): boolean => {
     if (!nextHost) {
       const hadHost = !!fxRoot.host || fxRoot.root.isConnected;
       detachFxRoot(fxRoot);
       return hadHost;
     }
 
-    if (fxRoot.host === nextHost && fxRoot.root.parentElement === nextHost) {
+    if (
+      fxRoot.host === nextHost &&
+      fxRoot.root.parentElement === nextHost &&
+      (!before || fxRoot.root.nextElementSibling === before)
+    ) {
       return false;
     }
 
     detachFxRoot(fxRoot);
     fxRoot.host = nextHost;
     fxRoot.releaseHost = retainHost(nextHost);
-    nextHost.appendChild(fxRoot.root);
+    if (before && before.parentElement === nextHost) {
+      nextHost.insertBefore(fxRoot.root, before);
+    } else {
+      nextHost.appendChild(fxRoot.root);
+    }
     return true;
   };
 
   const attachFxRoots = (): boolean => {
     hostSyncFrame = null;
     const nextHosts = resolveSceneHosts();
-    const backChanged = attachFxRoot(backFx, nextHosts.back);
-    const frontChanged = attachFxRoot(frontFx, nextHosts.front);
+    const backChanged = attachFxRoot(backFx, nextHosts.backHost, nextHosts.backBefore);
+    const frontChanged = attachFxRoot(frontFx, nextHosts.frontHost, nextHosts.frontBefore);
     return backChanged || frontChanged;
   };
 

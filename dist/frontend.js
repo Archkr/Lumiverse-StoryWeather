@@ -26,6 +26,7 @@ function formatTime(date) {
 function makeDefaultWeatherState(now = Date.now()) {
   const date = new Date(now);
   return {
+    location: "Story setting",
     date: formatDate(date),
     time: formatTime(date),
     condition: "clear",
@@ -166,6 +167,7 @@ function buildPresetWeatherState(presetId, currentState) {
   const baseState = currentState ?? makeDefaultWeatherState();
   const fallbackDate = /^\d{4}-\d{2}-\d{2}$/.test(baseState.date) ? baseState.date : formatDate(new Date);
   return {
+    location: baseState.location,
     date: fallbackDate,
     ...preset.state,
     source: "manual"
@@ -214,6 +216,8 @@ function applyStateToInputs(state, fields) {
     fields.conditionSelect.value = state.condition;
   if (state.palette)
     fields.paletteSelect.value = state.palette;
+  if (state.location)
+    fields.locationInput.value = state.location;
   if (state.date && /^\d{4}-\d{2}-\d{2}$/.test(state.date))
     fields.dateInput.value = state.date;
   if (state.time)
@@ -366,6 +370,10 @@ function createSettingsUI(sendToBackend) {
   const dateInput = document.createElement("input");
   dateInput.type = "date";
   dateInput.className = "weather-settings-input";
+  const locationInput = document.createElement("input");
+  locationInput.type = "text";
+  locationInput.className = "weather-settings-input";
+  locationInput.placeholder = "Tengu City";
   const timeInput = document.createElement("input");
   timeInput.type = "text";
   timeInput.className = "weather-settings-input";
@@ -400,6 +408,7 @@ function createSettingsUI(sendToBackend) {
   const fields = {
     conditionSelect,
     paletteSelect,
+    locationInput,
     dateInput,
     timeInput,
     temperatureInput,
@@ -411,6 +420,7 @@ function createSettingsUI(sendToBackend) {
   };
   let currentState = null;
   const buildManualState = () => ({
+    location: locationInput.value.trim() || currentState?.location,
     date: dateInput.value || currentState?.date,
     time: timeInput.value.trim() || currentState?.time,
     condition: conditionSelect.value,
@@ -461,6 +471,7 @@ function createSettingsUI(sendToBackend) {
   manualGrid.className = "weather-settings-manual-grid";
   manualGrid.appendChild(createLabeledInput("Condition", conditionSelect));
   manualGrid.appendChild(createLabeledInput("Palette", paletteSelect));
+  manualGrid.appendChild(createLabeledInput("Location", locationInput));
   manualGrid.appendChild(createLabeledInput("Story date", dateInput));
   manualGrid.appendChild(createLabeledInput("Story time", timeInput));
   manualGrid.appendChild(createLabeledInput("Temperature", temperatureInput));
@@ -519,6 +530,8 @@ function createSettingsUI(sendToBackend) {
       pauseToggle.checked = prefs.pauseEffects;
       status.textContent = state ? `${state.source === "manual" ? "manual" : "story"} / ${state.condition} ${state.temperature}` : "Waiting for story weather";
       preview.textContent = state ? `${state.date} at ${state.time} • ${state.summary} • ${state.wind} • layer ${prefs.layerMode === "auto" ? state.layer : prefs.layerMode}` : "The HUD will wake up as soon as the model emits its first weather-state tag.";
+      const effectiveLayer = prefs.layerMode === "auto" ? state?.layer : prefs.layerMode;
+      preview.textContent = state ? `${state.location} | ${state.date} at ${state.time} | ${state.summary} | ${state.wind} | layer ${effectiveLayer}` : "The HUD will wake up as soon as the model emits its first weather-state tag.";
       manualModePill.textContent = state?.source === "manual" ? "Manual lock" : "Story sync";
       manualModePill.dataset.mode = state?.source === "manual" ? "manual" : "story";
       manualToggle.checked = state?.source === "manual";
@@ -527,6 +540,7 @@ function createSettingsUI(sendToBackend) {
       } else {
         conditionSelect.value = "clear";
         paletteSelect.value = "day";
+        locationInput.value = "";
         dateInput.value = "";
         timeInput.value = "";
         temperatureInput.value = "";
@@ -1043,11 +1057,22 @@ var WEATHER_HUD_CSS = `
 
 .weather-hud-primary {
   display: grid;
-  gap: 4px;
+  gap: 3px;
+}
+
+.weather-hud-location {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: rgba(245, 248, 255, 0.92);
+  max-width: 156px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .weather-hud-date {
-  font-size: 11px;
+  font-size: 10px;
   color: rgba(232, 238, 255, 0.76);
 }
 
@@ -1217,11 +1242,11 @@ var WEATHER_HUD_CSS = `
 }
 
 .weather-fx-root[data-kind="back"] {
-  z-index: 0;
+  z-index: 1;
 }
 
 .weather-fx-root[data-kind="front"] {
-  z-index: 12;
+  z-index: 24;
   mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.55) 46%, #000 78%);
 }
 
@@ -1492,8 +1517,8 @@ var WEATHER_HUD_CSS = `
 var GEAR_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 12.98a7.79 7.79 0 000-1.96l2.03-1.58a.5.5 0 00.12-.64l-1.92-3.32a.5.5 0 00-.6-.22l-2.39.96a7.88 7.88 0 00-1.69-.98l-.36-2.54a.5.5 0 00-.49-.42h-3.84a.5.5 0 00-.49.42l-.36 2.54c-.6.24-1.16.56-1.69.98l-2.39-.96a.5.5 0 00-.6.22L2.43 8.8a.5.5 0 00.12.64l2.03 1.58a7.79 7.79 0 000 1.96L2.55 14.56a.5.5 0 00-.12.64l1.92 3.32a.5.5 0 00.6.22l2.39-.96c.53.42 1.09.74 1.69.98l.36 2.54a.5.5 0 00.49.42h3.84a.5.5 0 00.49-.42l.36-2.54c.6-.24 1.16-.56 1.69-.98l2.39.96a.5.5 0 00.6-.22l1.92-3.32a.5.5 0 00-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1112 8a3.5 3.5 0 010 7.5z"/></svg>`;
 var CHEVRON_DOWN_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>`;
 var CHEVRON_UP_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="m7.41 15.41 4.59-4.58 4.59 4.58L18 14l-6-6-6 6z"/></svg>`;
-var HUD_COLLAPSED_SIZE = { width: 268, height: 154 };
-var HUD_EXPANDED_SIZE = { width: 304, height: 342 };
+var HUD_COLLAPSED_SIZE = { width: 268, height: 172 };
+var HUD_EXPANDED_SIZE = { width: 304, height: 360 };
 var DEFAULT_WIDGET_POSITION = { x: 24, y: 96 };
 function conditionIcon(condition) {
   switch (condition) {
@@ -1681,18 +1706,33 @@ function createFxMarkup(kind) {
 function asHTMLElement(element) {
   return element instanceof HTMLElement ? element : null;
 }
+function closestByClassFragment(start, fragment) {
+  if (!(start instanceof Element))
+    return null;
+  return asHTMLElement(start.closest(`[class*="${fragment}"]`));
+}
 function resolveInitialChatId() {
   const source = [window.location.pathname, window.location.search, window.location.hash].join(" ");
   const match = source.match(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i);
   return match?.[0] ?? null;
 }
 function resolveSceneHosts() {
-  const backgroundHost = asHTMLElement(document.querySelector('[class*="sceneBackgroundLayer"]'));
+  const backgroundLayer = asHTMLElement(document.querySelector('[class*="sceneBackgroundLayer"]'));
+  const textContextLayer = asHTMLElement(document.querySelector('[class*="sceneTextContextLayer"]'));
   const scrollRegion = asHTMLElement(document.querySelector('[data-chat-scroll="true"]'));
-  const frontHost = scrollRegion?.parentElement instanceof HTMLElement ? scrollRegion.parentElement : scrollRegion;
+  const chatColumnInner = closestByClassFragment(scrollRegion, "chatColumnInner") ?? (scrollRegion?.parentElement instanceof HTMLElement ? scrollRegion.parentElement : null);
+  const chatColumn = closestByClassFragment(scrollRegion, "chatColumn") ?? (chatColumnInner?.parentElement instanceof HTMLElement ? chatColumnInner.parentElement : chatColumnInner);
+  const sceneBody = closestByClassFragment(scrollRegion, "body") ?? (chatColumn?.parentElement instanceof HTMLElement ? chatColumn.parentElement : null);
+  const sceneContainer = closestByClassFragment(backgroundLayer, "container") ?? closestByClassFragment(sceneBody, "container") ?? (sceneBody?.parentElement instanceof HTMLElement ? sceneBody.parentElement : backgroundLayer?.parentElement instanceof HTMLElement ? backgroundLayer.parentElement : null);
+  const backHost = sceneContainer ?? sceneBody ?? backgroundLayer?.parentElement ?? chatColumn ?? chatColumnInner ?? scrollRegion;
+  const preferredBackBefore = textContextLayer ?? sceneBody;
+  const backBefore = preferredBackBefore?.parentElement === backHost ? preferredBackBefore : null;
+  const frontHost = chatColumn ?? chatColumnInner ?? sceneBody ?? scrollRegion ?? backgroundLayer;
   return {
-    back: backgroundHost ?? (frontHost?.parentElement instanceof HTMLElement ? frontHost.parentElement : frontHost ?? null),
-    front: frontHost ?? backgroundHost
+    backHost,
+    backBefore,
+    frontHost,
+    frontBefore: null
   };
 }
 function readChatIdFromSettingsUpdate(payload) {
@@ -1929,12 +1969,15 @@ function createHudWidget(ctx, initialPosition, expanded, callbacks) {
   body.className = "weather-hud-body";
   const left = document.createElement("div");
   left.className = "weather-hud-primary";
+  const location = document.createElement("div");
+  location.className = "weather-hud-location";
   const date = document.createElement("div");
   date.className = "weather-hud-date";
   const time = document.createElement("div");
   time.className = "weather-hud-time";
   const wind = document.createElement("div");
   wind.className = "weather-hud-wind";
+  left.appendChild(location);
   left.appendChild(date);
   left.appendChild(time);
   left.appendChild(wind);
@@ -2115,6 +2158,7 @@ function createHudWidget(ctx, initialPosition, expanded, callbacks) {
   return {
     widget,
     root,
+    location,
     date,
     time,
     wind,
@@ -2152,6 +2196,8 @@ function syncHudState(hud, prefs, state, expanded) {
   hud.temp.textContent = state.temperature;
   hud.summary.textContent = state.summary;
   hud.wind.textContent = `Wind • ${state.wind}`;
+  hud.location.textContent = state.location;
+  hud.wind.textContent = `Wind: ${state.wind}`;
   hud.condition.textContent = titleCase(state.condition);
   hud.palette.textContent = titleCase(state.palette);
   hud.layer.textContent = titleCase(getEffectiveLayerMode(prefs, state));
@@ -2230,7 +2276,7 @@ function applySceneState(root, state, prefs, reducedMotion) {
   root.root.style.setProperty("--weather-particle-opacity-static", state.condition === "snow" ? String(clamp(tokens.snowOpacity * 0.2, 0.04, 0.22)) : String(clamp(tokens.rainOpacity * 0.12, 0.03, 0.18)));
 }
 function setup(ctx) {
-  console.info("[weather_hud] frontend build 2026-03-24.6");
+  console.info("[weather_hud] frontend build 2026-03-24.7");
   const cleanups = [];
   const removeStyle = ctx.dom.addStyle(WEATHER_HUD_CSS);
   cleanups.push(removeStyle);
@@ -2328,26 +2374,30 @@ function setup(ctx) {
       fxRoot.releaseHost = null;
     }
   };
-  const attachFxRoot = (fxRoot, nextHost) => {
+  const attachFxRoot = (fxRoot, nextHost, before) => {
     if (!nextHost) {
       const hadHost = !!fxRoot.host || fxRoot.root.isConnected;
       detachFxRoot(fxRoot);
       return hadHost;
     }
-    if (fxRoot.host === nextHost && fxRoot.root.parentElement === nextHost) {
+    if (fxRoot.host === nextHost && fxRoot.root.parentElement === nextHost && (!before || fxRoot.root.nextElementSibling === before)) {
       return false;
     }
     detachFxRoot(fxRoot);
     fxRoot.host = nextHost;
     fxRoot.releaseHost = retainHost(nextHost);
-    nextHost.appendChild(fxRoot.root);
+    if (before && before.parentElement === nextHost) {
+      nextHost.insertBefore(fxRoot.root, before);
+    } else {
+      nextHost.appendChild(fxRoot.root);
+    }
     return true;
   };
   const attachFxRoots = () => {
     hostSyncFrame = null;
     const nextHosts = resolveSceneHosts();
-    const backChanged = attachFxRoot(backFx, nextHosts.back);
-    const frontChanged = attachFxRoot(frontFx, nextHosts.front);
+    const backChanged = attachFxRoot(backFx, nextHosts.backHost, nextHosts.backBefore);
+    const frontChanged = attachFxRoot(frontFx, nextHosts.frontHost, nextHosts.frontBefore);
     return backChanged || frontChanged;
   };
   const queueFxRootAttach = () => {

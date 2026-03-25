@@ -496,11 +496,22 @@ export const WEATHER_HUD_CSS = `
 
 .weather-hud-primary {
   display: grid;
-  gap: 4px;
+  gap: 3px;
+}
+
+.weather-hud-location {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: rgba(245, 248, 255, 0.92);
+  max-width: 156px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .weather-hud-date {
-  font-size: 11px;
+  font-size: 10px;
   color: rgba(232, 238, 255, 0.76);
 }
 
@@ -670,11 +681,11 @@ export const WEATHER_HUD_CSS = `
 }
 
 .weather-fx-root[data-kind="back"] {
-  z-index: 0;
+  z-index: 1;
 }
 
 .weather-fx-root[data-kind="front"] {
-  z-index: 12;
+  z-index: 24;
   mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.55) 46%, #000 78%);
 }
 

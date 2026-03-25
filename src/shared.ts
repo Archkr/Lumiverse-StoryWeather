@@ -175,6 +175,7 @@ function derivePalette(condition: WeatherCondition, dateValue: string, timeValue
 export function makeDefaultWeatherState(now = Date.now()): WeatherState {
   const date = new Date(now);
   return {
+    location: "Story setting",
     date: formatDate(date),
     time: formatTime(date),
     condition: "clear",
@@ -202,6 +203,7 @@ export function normalizeWeatherState(input: unknown, previous?: WeatherState | 
   const updatedAt = parseNumeric(source.updatedAt) ?? Date.now();
 
   return {
+    location: normalizeText(source.location, fallback.location, 72),
     date,
     time,
     condition,

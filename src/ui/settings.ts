@@ -51,6 +51,7 @@ function applyStateToInputs(
   fields: {
     conditionSelect: HTMLSelectElement;
     paletteSelect: HTMLSelectElement;
+    locationInput: HTMLInputElement;
     dateInput: HTMLInputElement;
     timeInput: HTMLInputElement;
     temperatureInput: HTMLInputElement;
@@ -63,6 +64,7 @@ function applyStateToInputs(
 ): void {
   if (state.condition) fields.conditionSelect.value = state.condition;
   if (state.palette) fields.paletteSelect.value = state.palette;
+  if (state.location) fields.locationInput.value = state.location;
   if (state.date && /^\d{4}-\d{2}-\d{2}$/.test(state.date)) fields.dateInput.value = state.date;
   if (state.time) fields.timeInput.value = state.time;
   if (state.temperature) fields.temperatureInput.value = state.temperature;
@@ -248,6 +250,11 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   dateInput.type = "date";
   dateInput.className = "weather-settings-input";
 
+  const locationInput = document.createElement("input");
+  locationInput.type = "text";
+  locationInput.className = "weather-settings-input";
+  locationInput.placeholder = "Tengu City";
+
   const timeInput = document.createElement("input");
   timeInput.type = "text";
   timeInput.className = "weather-settings-input";
@@ -287,6 +294,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   const fields = {
     conditionSelect,
     paletteSelect,
+    locationInput,
     dateInput,
     timeInput,
     temperatureInput,
@@ -300,6 +308,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   let currentState: WeatherState | null = null;
 
   const buildManualState = (): Partial<WeatherState> => ({
+    location: locationInput.value.trim() || currentState?.location,
     date: dateInput.value || currentState?.date,
     time: timeInput.value.trim() || currentState?.time,
     condition: conditionSelect.value as WeatherCondition,
@@ -354,6 +363,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   manualGrid.className = "weather-settings-manual-grid";
   manualGrid.appendChild(createLabeledInput("Condition", conditionSelect));
   manualGrid.appendChild(createLabeledInput("Palette", paletteSelect));
+  manualGrid.appendChild(createLabeledInput("Location", locationInput));
   manualGrid.appendChild(createLabeledInput("Story date", dateInput));
   manualGrid.appendChild(createLabeledInput("Story time", timeInput));
   manualGrid.appendChild(createLabeledInput("Temperature", temperatureInput));
@@ -429,6 +439,11 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
         ? `${state.date} at ${state.time} • ${state.summary} • ${state.wind} • layer ${prefs.layerMode === "auto" ? state.layer : prefs.layerMode}`
         : "The HUD will wake up as soon as the model emits its first weather-state tag.";
 
+      const effectiveLayer = prefs.layerMode === "auto" ? state?.layer : prefs.layerMode;
+      preview.textContent = state
+        ? `${state.location} | ${state.date} at ${state.time} | ${state.summary} | ${state.wind} | layer ${effectiveLayer}`
+        : "The HUD will wake up as soon as the model emits its first weather-state tag.";
+
       manualModePill.textContent = state?.source === "manual" ? "Manual lock" : "Story sync";
       manualModePill.dataset.mode = state?.source === "manual" ? "manual" : "story";
       manualToggle.checked = state?.source === "manual";
@@ -438,6 +453,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
       } else {
         conditionSelect.value = "clear";
         paletteSelect.value = "day";
+        locationInput.value = "";
         dateInput.value = "";
         timeInput.value = "";
         temperatureInput.value = "";

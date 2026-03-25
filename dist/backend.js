@@ -159,6 +159,7 @@ function derivePalette(condition, dateValue, timeValue) {
 function makeDefaultWeatherState(now = Date.now()) {
   const date = new Date(now);
   return {
+    location: "Story setting",
     date: formatDate(date),
     time: formatTime(date),
     condition: "clear",
@@ -184,6 +185,7 @@ function normalizeWeatherState(input, previous) {
   const intensity = clamp(parseNumeric(source.intensity) ?? fallback.intensity, 0, 1);
   const updatedAt = parseNumeric(source.updatedAt) ?? Date.now();
   return {
+    location: normalizeText(source.location, fallback.location, 72),
     date,
     time,
     condition,
@@ -308,6 +310,7 @@ async function pushActiveChatState(chatId) {
 }
 function buildPromptInstruction(state) {
   const current = state ? [
+    `- Location: ${state.location}`,
     `- Date: ${state.date}`,
     `- Time: ${state.time}`,
     `- Condition: ${state.condition}`,
@@ -325,14 +328,14 @@ function buildPromptInstruction(state) {
     `Allowed conditions: ${WEATHER_CONDITIONS.join(", ")}`,
     `Allowed layers: ${WEATHER_LAYERS.join(", ")}`,
     `Allowed palettes: ${WEATHER_PALETTES.join(", ")}`,
-    "Use a full state tag every reply with date, time, condition, summary, temperature, intensity, wind, layer, and palette.",
+    "Use a full state tag every reply with location, date, time, condition, summary, temperature, intensity, wind, layer, and palette.",
     "Do not explain the tag or mention it in visible prose.",
     "",
     "Current weather state:",
     current,
     "",
     "Required tag format:",
-    '<weather-state date="2026-03-24" time="9:42 PM" condition="rain" summary="Cold spring rain" temperature="61F" intensity="0.65" wind="breezy" layer="both" palette="storm"></weather-state>'
+    '<weather-state location="Tengu City" date="2026-03-24" time="9:42 PM" condition="rain" summary="Cold spring rain" temperature="61F" intensity="0.65" wind="breezy" layer="both" palette="storm"></weather-state>'
   ].join(`
 `);
 }

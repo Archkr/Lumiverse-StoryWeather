@@ -11,6 +11,7 @@ export interface WidgetPosition {
 }
 
 export interface WeatherState {
+  location: string;
   date: string;
   time: string;
   condition: WeatherCondition;
