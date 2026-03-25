@@ -1864,7 +1864,7 @@ function resolveSceneHosts() {
   ]) ?? sceneContainer ?? sceneBody ?? backgroundLayer?.parentElement ?? chatColumn ?? chatColumnInner ?? scrollRegion;
   const preferredBackBefore = textContextLayer ?? sceneBody;
   const backBefore = preferredBackBefore?.parentElement === backHost ? preferredBackBefore : null;
-  const frontHost = textContextLayer ?? chatColumnInner ?? chatColumn ?? scrollRegion ?? sceneBody ?? backgroundLayer;
+  const frontHost = chatColumn ?? chatColumnInner ?? scrollRegion ?? textContextLayer ?? sceneBody ?? backgroundLayer;
   return {
     backHost,
     backBefore,
@@ -1961,7 +1961,21 @@ function resolveSceneTokens(state, intensity) {
       horizon: "rgba(229, 238, 248, 0.4)"
     }
   };
-  const palette = paletteMap[state.palette];
+  const basePalette = paletteMap[state.palette];
+  const palette = state.condition === "storm" ? paletteMap.storm : state.condition === "rain" ? {
+    start: state.palette === "night" ? "#07131f" : "#102032",
+    mid: state.palette === "night" ? "#1d3148" : "#324b67",
+    end: state.palette === "night" ? "#41566e" : "#61748b",
+    glow: "rgba(176, 206, 240, 0.22)",
+    beam: "rgba(135, 165, 198, 0.1)",
+    horizon: "rgba(120, 147, 174, 0.24)"
+  } : state.condition === "cloudy" && (state.palette === "dawn" || state.palette === "dusk") ? {
+    ...basePalette,
+    end: state.palette === "dawn" ? "#9baec3" : "#7f90a6",
+    glow: "rgba(214, 224, 238, 0.24)",
+    beam: "rgba(176, 191, 209, 0.12)",
+    horizon: "rgba(154, 169, 187, 0.24)"
+  } : basePalette;
   const baseIntensity = clamp(intensity, 0, 1.5);
   let cloudCore = "rgba(237, 244, 255, 0.34)";
   let cloudEdge = "rgba(255, 255, 255, 0.12)";
@@ -2464,7 +2478,7 @@ function applySceneState(root, state, prefs, reducedMotion) {
   root.root.style.setProperty("--weather-particle-opacity-static", state.condition === "snow" ? String(clamp(tokens.snowOpacity * 0.2, 0.04, 0.22)) : String(clamp(tokens.rainOpacity * 0.12, 0.03, 0.18)));
 }
 function setup(ctx) {
-  console.info("[weather_hud] frontend build 2026-03-25.1");
+  console.info("[weather_hud] frontend build 2026-03-25.2");
   const cleanups = [];
   const removeStyle = ctx.dom.addStyle(WEATHER_HUD_CSS);
   cleanups.push(removeStyle);
