@@ -184,6 +184,8 @@ function matchWeatherScenePreset(state) {
 // src/render/assets.ts
 var readySprites = new Map;
 var pendingSprites = new Map;
+var pendingReadyCallbacks = new Map;
+var spriteSvgCache = new Map;
 function svgToDataUri(svg) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
@@ -608,16 +610,31 @@ function loadSprite(key, svg) {
     image.onload = () => {
       readySprites.set(key, image);
       pendingSprites.delete(key);
+      const callbacks = pendingReadyCallbacks.get(key);
+      pendingReadyCallbacks.delete(key);
+      if (callbacks) {
+        for (const callback of callbacks)
+          callback();
+      }
       resolve(image);
     };
     image.onerror = () => {
       pendingSprites.delete(key);
+      pendingReadyCallbacks.delete(key);
       reject(new Error(`Failed to load weather sprite: ${key}`));
     };
     image.src = svgToDataUri(svg);
   });
   pendingSprites.set(key, promise);
   return promise;
+}
+function queueReadyCallback(key, onReady) {
+  const callbacks = pendingReadyCallbacks.get(key);
+  if (callbacks) {
+    callbacks.add(onReady);
+    return;
+  }
+  pendingReadyCallbacks.set(key, new Set([onReady]));
 }
 function buildKey(kind, colors) {
   return [
@@ -635,13 +652,16 @@ function requestWeatherSprite(kind, colors, onReady) {
   const ready = readySprites.get(key);
   if (ready)
     return ready;
-  const svg = buildSpriteSvg(kind, colors);
-  const pending = loadSprite(key, svg);
   if (onReady) {
-    pending.then(() => onReady()).catch(() => {
-      return;
-    });
+    queueReadyCallback(key, onReady);
   }
+  if (pendingSprites.has(key))
+    return null;
+  const svg = spriteSvgCache.get(key) ?? buildSpriteSvg(kind, colors);
+  spriteSvgCache.set(key, svg);
+  loadSprite(key, svg).catch(() => {
+    return;
+  });
   return null;
 }
 
@@ -650,6 +670,7 @@ var WEATHER_QUALITY_BUDGETS = {
   performance: {
     resolutionScale: 0.85,
     maxDevicePixelRatio: 1.2,
+    maxPixelCount: 900000,
     stars: 18,
     motes: 8,
     cloudLayers: 2,
@@ -701,6 +722,7 @@ var WEATHER_QUALITY_BUDGETS = {
   lite: {
     resolutionScale: 1,
     maxDevicePixelRatio: 1.45,
+    maxPixelCount: 1500000,
     stars: 34,
     motes: 16,
     cloudLayers: 3,
@@ -752,6 +774,7 @@ var WEATHER_QUALITY_BUDGETS = {
   standard: {
     resolutionScale: 1.1,
     maxDevicePixelRatio: 1.8,
+    maxPixelCount: 2400000,
     stars: 64,
     motes: 28,
     cloudLayers: 4,
@@ -803,6 +826,7 @@ var WEATHER_QUALITY_BUDGETS = {
   cinematic: {
     resolutionScale: 1.3,
     maxDevicePixelRatio: 2.25,
+    maxPixelCount: 3200000,
     stars: 112,
     motes: 44,
     cloudLayers: 6,
@@ -2095,6 +2119,11 @@ class CanvasWeatherRenderer {
   glassOverlay;
   resizeObserver;
   onAssetReady = () => this.drawOnce();
+  onWindowResize = () => {
+    if (this.resizeCanvas()) {
+      this.drawOnce();
+    }
+  };
   composition = null;
   prefs = DEFAULT_PREFS;
   state = makeDefaultWeatherState();
@@ -2107,6 +2136,7 @@ class CanvasWeatherRenderer {
   height = 1;
   dpr = 1;
   lightningEvents = [];
+  failed = false;
   constructor(kind) {
     this.kind = kind;
     this.root = document.createElement("div");
@@ -2117,7 +2147,11 @@ class CanvasWeatherRenderer {
     this.canvas = document.createElement("canvas");
     this.canvas.className = "weather-fx-canvas";
     this.root.appendChild(this.canvas);
-    this.context = this.canvas.getContext("2d", { alpha: true });
+    const context = this.canvas.getContext("2d", { alpha: true }) ?? this.canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Weather renderer could not acquire a 2D canvas context.");
+    }
+    this.context = context;
     if (kind === "back") {
       this.glassOverlay = document.createElement("div");
       this.glassOverlay.className = "weather-fx-glass";
@@ -2125,14 +2159,22 @@ class CanvasWeatherRenderer {
     } else {
       this.glassOverlay = null;
     }
-    this.resizeObserver = new ResizeObserver(() => {
-      if (this.resizeCanvas()) {
-        this.drawOnce();
-      }
-    });
-    this.resizeObserver.observe(this.root);
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(() => {
+        if (this.resizeCanvas()) {
+          this.drawOnce();
+        }
+      });
+      observer.observe(this.root);
+      this.resizeObserver = observer;
+    } else {
+      this.resizeObserver = null;
+      window.addEventListener("resize", this.onWindowResize);
+    }
   }
   setScene(state, prefs, reducedMotion) {
+    if (this.failed)
+      return;
     this.state = state;
     this.prefs = prefs;
     this.reducedMotion = reducedMotion;
@@ -2149,6 +2191,11 @@ class CanvasWeatherRenderer {
     this.refreshLoop();
   }
   setVisible(visible) {
+    if (this.failed) {
+      this.root.classList.add("weather-hidden");
+      this.root.classList.remove("weather-visible");
+      return;
+    }
     this.visible = visible;
     this.root.classList.toggle("weather-hidden", !visible);
     this.root.classList.toggle("weather-visible", visible);
@@ -2156,11 +2203,15 @@ class CanvasWeatherRenderer {
     this.refreshLoop();
   }
   refreshLayout() {
+    if (this.failed)
+      return;
     if (this.resizeCanvas()) {
       this.drawOnce();
     }
   }
   triggerLightning() {
+    if (this.failed)
+      return;
     if (!this.visible || this.state.condition !== "storm" || this.reducedMotion || this.prefs.pauseEffects || !this.composition) {
       return;
     }
@@ -2190,7 +2241,10 @@ class CanvasWeatherRenderer {
   }
   destroy() {
     this.stopLoop();
-    this.resizeObserver.disconnect();
+    this.resizeObserver?.disconnect();
+    if (!this.resizeObserver) {
+      window.removeEventListener("resize", this.onWindowResize);
+    }
     this.root.remove();
   }
   syncGlassOverlay() {
@@ -2214,7 +2268,10 @@ class CanvasWeatherRenderer {
     const nextWidth = Math.max(1, Math.round(rect.width));
     const nextHeight = Math.max(1, Math.round(rect.height));
     const budget = getQualityBudget(this.prefs.qualityMode);
-    const nextDpr = clamp(window.devicePixelRatio * budget.resolutionScale, 1, budget.maxDevicePixelRatio);
+    const viewportPixels = Math.max(1, nextWidth * nextHeight);
+    const desiredDpr = Math.max(0.65, window.devicePixelRatio * budget.resolutionScale);
+    const maxPixelDpr = Math.max(0.65, Math.sqrt(budget.maxPixelCount / viewportPixels));
+    const nextDpr = Math.min(desiredDpr, budget.maxDevicePixelRatio, maxPixelDpr);
     const pixelWidth = Math.max(1, Math.round(nextWidth * nextDpr));
     const pixelHeight = Math.max(1, Math.round(nextHeight * nextDpr));
     if (this.width === nextWidth && this.height === nextHeight && this.dpr === nextDpr)
@@ -2229,6 +2286,10 @@ class CanvasWeatherRenderer {
     return true;
   }
   refreshLoop() {
+    if (this.failed) {
+      this.stopLoop();
+      return;
+    }
     const shouldRun = this.visible && this.root.isConnected && !this.reducedMotion && !this.prefs.pauseEffects && !!this.composition;
     if (shouldRun) {
       if (this.rafId === null) {
@@ -2258,14 +2319,23 @@ class CanvasWeatherRenderer {
     const delta = Math.min(0.06, Math.max(0, (now - this.lastFrameAt) / 1000));
     this.lastFrameAt = now;
     this.animationTime += delta;
-    this.render(this.animationTime);
+    try {
+      this.render(this.animationTime);
+    } catch (error) {
+      this.handleFatalError(error);
+      return;
+    }
     this.refreshLoop();
   };
   drawOnce() {
-    if (!this.composition)
+    if (this.failed || !this.composition)
       return;
-    this.resizeCanvas();
-    this.render(this.animationTime);
+    try {
+      this.resizeCanvas();
+      this.render(this.animationTime);
+    } catch (error) {
+      this.handleFatalError(error);
+    }
   }
   clearCanvas() {
     this.context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
@@ -2761,9 +2831,46 @@ class CanvasWeatherRenderer {
       drawSprite(ctx, "lightning-fork", palette, bolt.x * this.width, bolt.y * this.height, bolt.width, bolt.height, bolt.alpha, bolt.rotation, this.onAssetReady);
     }
   }
+  handleFatalError(error) {
+    if (this.failed)
+      return;
+    this.failed = true;
+    this.stopLoop();
+    this.visible = false;
+    this.root.classList.add("weather-hidden");
+    this.root.classList.remove("weather-visible");
+    this.root.dataset.failed = "true";
+    console.error("[weather_hud] renderer disabled after runtime error", error);
+  }
 }
 function createWeatherRenderer(kind) {
-  const renderer = new CanvasWeatherRenderer(kind);
+  let renderer;
+  try {
+    renderer = new CanvasWeatherRenderer(kind);
+  } catch (error) {
+    console.error(`[weather_hud] failed to initialize ${kind} renderer`, error);
+    const root = document.createElement("div");
+    root.className = "weather-fx-root weather-fx-renderer-root weather-hidden";
+    root.dataset.kind = kind;
+    root.dataset.failed = "true";
+    root.setAttribute("aria-hidden", "true");
+    return {
+      root,
+      destroy: () => root.remove(),
+      refreshLayout: () => {
+        return;
+      },
+      setScene: () => {
+        return;
+      },
+      setVisible: () => {
+        return;
+      },
+      triggerLightning: () => {
+        return;
+      }
+    };
+  }
   return {
     root: renderer.root,
     destroy: () => renderer.destroy(),
@@ -5790,8 +5897,8 @@ function setup(ctx) {
   let activeChatId = resolveInitialChatId();
   let hudExpanded = false;
   const processedWeatherTags = new Map;
-  const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const getReducedMotion = () => currentPrefs.reducedMotion === "always" || currentPrefs.reducedMotion === "system" && motionMedia.matches;
+  const motionMedia = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+  const getReducedMotion = () => currentPrefs.reducedMotion === "always" || currentPrefs.reducedMotion === "system" && !!motionMedia?.matches;
   const sendManualState = (state) => {
     sendToBackend(ctx, { type: "set_manual_state", chatId: activeChatId, state });
   };
@@ -5940,19 +6047,25 @@ function setup(ctx) {
       }
     });
   };
-  const hostObserver = new MutationObserver(() => {
-    if (backFx.host?.isConnected && frontFx.host?.isConnected && backFx.root.parentElement === backFx.host && frontFx.root.parentElement === frontFx.host) {
-      return;
+  let hostObserver = null;
+  if (typeof MutationObserver !== "undefined") {
+    hostObserver = new MutationObserver(() => {
+      if (backFx.host?.isConnected && frontFx.host?.isConnected && backFx.root.parentElement === backFx.host && frontFx.root.parentElement === frontFx.host) {
+        return;
+      }
+      queueFxRootAttach();
+    });
+    const observerTarget = document.body ?? document.documentElement;
+    if (observerTarget) {
+      hostObserver.observe(observerTarget, { childList: true, subtree: true });
     }
-    queueFxRootAttach();
-  });
-  hostObserver.observe(document.body, { childList: true, subtree: true });
+  }
   cleanups.push(() => {
     if (hostSyncFrame !== null) {
       window.cancelAnimationFrame(hostSyncFrame);
       hostSyncFrame = null;
     }
-    hostObserver.disconnect();
+    hostObserver?.disconnect();
     detachFxRoot(backFx);
     detachFxRoot(frontFx);
     backFx.renderer.destroy();
@@ -6055,8 +6168,15 @@ function setup(ctx) {
   }, 1000);
   cleanups.push(() => window.clearInterval(clockTimer));
   const onMotionChange = () => updateScene();
-  motionMedia.addEventListener("change", onMotionChange);
-  cleanups.push(() => motionMedia.removeEventListener("change", onMotionChange));
+  if (motionMedia) {
+    if (typeof motionMedia.addEventListener === "function") {
+      motionMedia.addEventListener("change", onMotionChange);
+      cleanups.push(() => motionMedia.removeEventListener("change", onMotionChange));
+    } else if (typeof motionMedia.addListener === "function") {
+      motionMedia.addListener(onMotionChange);
+      cleanups.push(() => motionMedia.removeListener(onMotionChange));
+    }
+  }
   const onResize = () => queueFxRootAttach();
   window.addEventListener("resize", onResize);
   cleanups.push(() => window.removeEventListener("resize", onResize));

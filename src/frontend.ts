@@ -1483,10 +1483,10 @@ export function setup(ctx: SpindleFrontendContext) {
   let hudExpanded = false;
   const processedWeatherTags = new Map<string, string>();
 
-  const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const motionMedia = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
   const getReducedMotion = () =>
     currentPrefs.reducedMotion === "always" ||
-    (currentPrefs.reducedMotion === "system" && motionMedia.matches);
+    (currentPrefs.reducedMotion === "system" && !!motionMedia?.matches);
 
   const sendManualState = (state: Partial<WeatherState>) => {
     sendToBackend(ctx, { type: "set_manual_state", chatId: activeChatId, state });
@@ -1659,24 +1659,30 @@ export function setup(ctx: SpindleFrontendContext) {
     });
   };
 
-  const hostObserver = new MutationObserver(() => {
-    if (
-      backFx.host?.isConnected &&
-      frontFx.host?.isConnected &&
-      backFx.root.parentElement === backFx.host &&
-      frontFx.root.parentElement === frontFx.host
-    ) {
-      return;
+  let hostObserver: MutationObserver | null = null;
+  if (typeof MutationObserver !== "undefined") {
+    hostObserver = new MutationObserver(() => {
+      if (
+        backFx.host?.isConnected &&
+        frontFx.host?.isConnected &&
+        backFx.root.parentElement === backFx.host &&
+        frontFx.root.parentElement === frontFx.host
+      ) {
+        return;
+      }
+      queueFxRootAttach();
+    });
+    const observerTarget = document.body ?? document.documentElement;
+    if (observerTarget) {
+      hostObserver.observe(observerTarget, { childList: true, subtree: true });
     }
-    queueFxRootAttach();
-  });
-  hostObserver.observe(document.body, { childList: true, subtree: true });
+  }
   cleanups.push(() => {
     if (hostSyncFrame !== null) {
       window.cancelAnimationFrame(hostSyncFrame);
       hostSyncFrame = null;
     }
-    hostObserver.disconnect();
+    hostObserver?.disconnect();
     detachFxRoot(backFx);
     detachFxRoot(frontFx);
     backFx.renderer.destroy();
@@ -1802,8 +1808,15 @@ export function setup(ctx: SpindleFrontendContext) {
   cleanups.push(() => window.clearInterval(clockTimer));
 
   const onMotionChange = () => updateScene();
-  motionMedia.addEventListener("change", onMotionChange);
-  cleanups.push(() => motionMedia.removeEventListener("change", onMotionChange));
+  if (motionMedia) {
+    if (typeof motionMedia.addEventListener === "function") {
+      motionMedia.addEventListener("change", onMotionChange);
+      cleanups.push(() => motionMedia.removeEventListener("change", onMotionChange));
+    } else if (typeof motionMedia.addListener === "function") {
+      motionMedia.addListener(onMotionChange);
+      cleanups.push(() => motionMedia.removeListener(onMotionChange));
+    }
+  }
   const onResize = () => queueFxRootAttach();
   window.addEventListener("resize", onResize);
   cleanups.push(() => window.removeEventListener("resize", onResize));
