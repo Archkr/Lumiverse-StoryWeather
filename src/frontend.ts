@@ -1282,7 +1282,7 @@ function createHudWidget(
     qualityText.textContent = "Quality";
     qualitySelect = document.createElement("select");
     qualitySelect.className = "weather-hud-select";
-    qualitySelect.title = "Lite is the recommended default for smooth everyday use. Performance trims the renderer hardest, Standard adds fuller depth, and Cinematic stays the richest tier while still using capped frame and pixel budgets.";
+    qualitySelect.title = "Higher quality adds more scene depth, cloud layering, horizon silhouettes, curtains, mist, and back-glass detail. Cinematic pushes the strongest framing and dimensionality.";
     qualitySelect.innerHTML = WEATHER_QUALITY_OPTIONS.map((option) => `<option value="${option.value}">${option.label}</option>`).join("");
     protectInteractive(qualitySelect);
     qualitySelect.addEventListener("change", (event) => {

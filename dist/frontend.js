@@ -4,7 +4,7 @@ var DEFAULT_PREFS = {
   effectsEnabled: true,
   layerMode: "auto",
   intensity: 1,
-  qualityMode: "lite",
+  qualityMode: "standard",
   reducedMotion: "never",
   pauseEffects: false,
   widgetPosition: null
@@ -668,25 +668,23 @@ function requestWeatherSprite(kind, colors, onReady) {
 // src/render/quality.ts
 var WEATHER_QUALITY_BUDGETS = {
   performance: {
-    resolutionScale: 0.72,
+    resolutionScale: 0.8,
     maxDevicePixelRatio: 1,
-    maxPixelCount: 540000,
-    frameIntervalMs: 1000 / 24,
-    slowPassIntervalMs: 250,
-    stars: 10,
-    motes: 0,
+    maxPixelCount: 700000,
+    stars: 12,
+    motes: 4,
     cloudLayers: 1,
-    cloudSprites: 3,
+    cloudSprites: 4,
     frontCloudSprites: 0,
-    fogWisps: 1,
-    frontMistWisps: 0,
+    fogWisps: 3,
+    frontMistWisps: 1,
     anchorBands: 1,
     scudLayers: 0,
     shadowPasses: 1,
     horizonGlowPasses: 1,
-    rainBack: 24,
-    rainFront: 16,
-    rainCurtains: 0,
+    rainBack: 48,
+    rainFront: 80,
+    rainCurtains: 1,
     curtainTextures: 0,
     contactBands: 0,
     impactBursts: 0,
@@ -696,21 +694,21 @@ var WEATHER_QUALITY_BUDGETS = {
     fogCreepBands: 0,
     shadowSweepPasses: 0,
     distortionPasses: 0,
-    snowBack: 20,
-    snowFront: 20,
-    snowGusts: 0,
+    snowBack: 40,
+    snowFront: 64,
+    snowGusts: 1,
     glassBeads: 0,
     glassRivulets: 0,
     lightningBranches: 1,
     lightningForks: 0,
-    lightningGlow: 0.64,
+    lightningGlow: 0.72,
     flags: {
       stars: true,
       motes: false,
       layeredClouds: false,
       frontCloudBank: false,
       deepOvercast: false,
-      distantCurtains: false,
+      distantCurtains: true,
       texturedCurtains: false,
       glassOverlay: false,
       glassDroplets: false,
@@ -722,132 +720,22 @@ var WEATHER_QUALITY_BUDGETS = {
     }
   },
   lite: {
-    resolutionScale: 0.82,
-    maxDevicePixelRatio: 1,
-    maxPixelCount: 760000,
-    frameIntervalMs: 1000 / 30,
-    slowPassIntervalMs: 250,
-    stars: 16,
-    motes: 2,
-    cloudLayers: 1,
-    cloudSprites: 4,
-    frontCloudSprites: 0,
-    fogWisps: 2,
-    frontMistWisps: 1,
+    resolutionScale: 0.9,
+    maxDevicePixelRatio: 1.15,
+    maxPixelCount: 1e6,
+    stars: 22,
+    motes: 10,
+    cloudLayers: 2,
+    cloudSprites: 6,
+    frontCloudSprites: 1,
+    fogWisps: 4,
+    frontMistWisps: 2,
     anchorBands: 2,
     scudLayers: 1,
     shadowPasses: 1,
-    horizonGlowPasses: 1,
-    rainBack: 36,
-    rainFront: 24,
-    rainCurtains: 1,
-    curtainTextures: 0,
-    contactBands: 0,
-    impactBursts: 0,
-    runoffSheets: 0,
-    accumulationBands: 0,
-    condensationBlooms: 0,
-    fogCreepBands: 0,
-    shadowSweepPasses: 0,
-    distortionPasses: 0,
-    snowBack: 28,
-    snowFront: 28,
-    snowGusts: 1,
-    glassBeads: 0,
-    glassRivulets: 0,
-    lightningBranches: 1,
-    lightningForks: 0,
-    lightningGlow: 0.72,
-    flags: {
-      stars: true,
-      motes: true,
-      layeredClouds: true,
-      frontCloudBank: false,
-      deepOvercast: false,
-      distantCurtains: true,
-      texturedCurtains: false,
-      glassOverlay: false,
-      glassDroplets: false,
-      frostOverlay: false,
-      lightningForks: false,
-      relightAnchors: false,
-      horizonPoles: false,
-      multiFlash: false
-    }
-  },
-  standard: {
-    resolutionScale: 0.9,
-    maxDevicePixelRatio: 1.15,
-    maxPixelCount: 980000,
-    frameIntervalMs: 1000 / 30,
-    slowPassIntervalMs: 180,
-    stars: 24,
-    motes: 4,
-    cloudLayers: 2,
-    cloudSprites: 5,
-    frontCloudSprites: 0,
-    fogWisps: 2,
-    frontMistWisps: 1,
-    anchorBands: 3,
-    scudLayers: 1,
-    shadowPasses: 2,
     horizonGlowPasses: 2,
-    rainBack: 52,
-    rainFront: 32,
-    rainCurtains: 1,
-    curtainTextures: 0,
-    contactBands: 0,
-    impactBursts: 0,
-    runoffSheets: 0,
-    accumulationBands: 0,
-    condensationBlooms: 0,
-    fogCreepBands: 0,
-    shadowSweepPasses: 0,
-    distortionPasses: 1,
-    snowBack: 40,
-    snowFront: 36,
-    snowGusts: 1,
-    glassBeads: 3,
-    glassRivulets: 1,
-    lightningBranches: 1,
-    lightningForks: 1,
-    lightningGlow: 0.9,
-    flags: {
-      stars: true,
-      motes: true,
-      layeredClouds: true,
-      frontCloudBank: false,
-      deepOvercast: true,
-      distantCurtains: true,
-      texturedCurtains: false,
-      glassOverlay: true,
-      glassDroplets: true,
-      frostOverlay: false,
-      lightningForks: true,
-      relightAnchors: true,
-      horizonPoles: true,
-      multiFlash: false
-    }
-  },
-  cinematic: {
-    resolutionScale: 1,
-    maxDevicePixelRatio: 1.3,
-    maxPixelCount: 1280000,
-    frameIntervalMs: 1000 / 36,
-    slowPassIntervalMs: 120,
-    stars: 34,
-    motes: 6,
-    cloudLayers: 2,
-    cloudSprites: 6,
-    frontCloudSprites: 0,
-    fogWisps: 3,
-    frontMistWisps: 2,
-    anchorBands: 4,
-    scudLayers: 1,
-    shadowPasses: 2,
-    horizonGlowPasses: 3,
     rainBack: 72,
-    rainFront: 40,
+    rainFront: 120,
     rainCurtains: 2,
     curtainTextures: 1,
     contactBands: 0,
@@ -858,12 +746,64 @@ var WEATHER_QUALITY_BUDGETS = {
     fogCreepBands: 0,
     shadowSweepPasses: 0,
     distortionPasses: 1,
-    snowBack: 56,
-    snowFront: 44,
+    snowBack: 72,
+    snowFront: 112,
     snowGusts: 2,
-    glassBeads: 5,
-    glassRivulets: 2,
+    glassBeads: 6,
+    glassRivulets: 3,
     lightningBranches: 1,
+    lightningForks: 0,
+    lightningGlow: 0.86,
+    flags: {
+      stars: true,
+      motes: true,
+      layeredClouds: true,
+      frontCloudBank: false,
+      deepOvercast: false,
+      distantCurtains: true,
+      texturedCurtains: false,
+      glassOverlay: true,
+      glassDroplets: false,
+      frostOverlay: true,
+      lightningForks: false,
+      relightAnchors: true,
+      horizonPoles: false,
+      multiFlash: false
+    }
+  },
+  standard: {
+    resolutionScale: 0.98,
+    maxDevicePixelRatio: 1.35,
+    maxPixelCount: 1400000,
+    stars: 42,
+    motes: 18,
+    cloudLayers: 3,
+    cloudSprites: 8,
+    frontCloudSprites: 2,
+    fogWisps: 6,
+    frontMistWisps: 3,
+    anchorBands: 3,
+    scudLayers: 2,
+    shadowPasses: 2,
+    horizonGlowPasses: 3,
+    rainBack: 96,
+    rainFront: 160,
+    rainCurtains: 3,
+    curtainTextures: 2,
+    contactBands: 0,
+    impactBursts: 0,
+    runoffSheets: 0,
+    accumulationBands: 0,
+    condensationBlooms: 0,
+    fogCreepBands: 0,
+    shadowSweepPasses: 0,
+    distortionPasses: 2,
+    snowBack: 108,
+    snowFront: 168,
+    snowGusts: 3,
+    glassBeads: 12,
+    glassRivulets: 5,
+    lightningBranches: 2,
     lightningForks: 1,
     lightningGlow: 1,
     flags: {
@@ -875,12 +815,64 @@ var WEATHER_QUALITY_BUDGETS = {
       distantCurtains: true,
       texturedCurtains: true,
       glassOverlay: true,
-      glassDroplets: true,
-      frostOverlay: false,
+      glassDroplets: false,
+      frostOverlay: true,
       lightningForks: true,
       relightAnchors: true,
       horizonPoles: true,
       multiFlash: false
+    }
+  },
+  cinematic: {
+    resolutionScale: 1.06,
+    maxDevicePixelRatio: 1.55,
+    maxPixelCount: 1900000,
+    stars: 72,
+    motes: 28,
+    cloudLayers: 4,
+    cloudSprites: 12,
+    frontCloudSprites: 3,
+    fogWisps: 9,
+    frontMistWisps: 4,
+    anchorBands: 4,
+    scudLayers: 2,
+    shadowPasses: 3,
+    horizonGlowPasses: 4,
+    rainBack: 140,
+    rainFront: 220,
+    rainCurtains: 4,
+    curtainTextures: 3,
+    contactBands: 0,
+    impactBursts: 0,
+    runoffSheets: 0,
+    accumulationBands: 0,
+    condensationBlooms: 0,
+    fogCreepBands: 0,
+    shadowSweepPasses: 0,
+    distortionPasses: 2,
+    snowBack: 160,
+    snowFront: 260,
+    snowGusts: 4,
+    glassBeads: 20,
+    glassRivulets: 8,
+    lightningBranches: 3,
+    lightningForks: 2,
+    lightningGlow: 1.08,
+    flags: {
+      stars: true,
+      motes: true,
+      layeredClouds: true,
+      frontCloudBank: true,
+      deepOvercast: true,
+      distantCurtains: true,
+      texturedCurtains: true,
+      glassOverlay: true,
+      glassDroplets: true,
+      frostOverlay: true,
+      lightningForks: true,
+      relightAnchors: true,
+      horizonPoles: true,
+      multiFlash: true
     }
   }
 };
@@ -1034,16 +1026,6 @@ function resolvePhase(state) {
   if (hour < 21)
     return "dusk";
   return "night";
-}
-function resolveEffectiveLayerMode(state, prefs) {
-  return prefs.layerMode === "auto" ? state.layer : prefs.layerMode;
-}
-function trimArray(items, count) {
-  if (count <= 0)
-    return [];
-  if (count >= items.length)
-    return items;
-  return items.slice(0, count);
 }
 function buildSceneProfile(state, effectiveIntensity) {
   const phase = resolvePhase(state);
@@ -1826,18 +1808,10 @@ function createCurtainTextures(rng, condition, profile, budget) {
     };
   });
 }
-function createRainParticles(rng, state, prefs, profile, budget, kind) {
+function createRainParticles(rng, profile, budget, kind) {
   if (profile.precipitation <= 0.04)
     return [];
-  const effectiveLayer = resolveEffectiveLayerMode(state, prefs);
-  let target = kind === "front" ? budget.rainFront : budget.rainBack;
-  if (kind === "front") {
-    if (effectiveLayer === "both")
-      target *= 0.5;
-    if (state.condition === "storm") {
-      target = Math.min(target, getQualityBudget("lite").rainFront);
-    }
-  }
+  const target = kind === "front" ? budget.rainFront : budget.rainBack;
   if (target <= 0)
     return [];
   const count = Math.round(target * clamp(profile.precipitation, 0.18, 1.15));
@@ -1853,14 +1827,10 @@ function createRainParticles(rng, state, prefs, profile, budget, kind) {
     phase: rng() * Math.PI * 2
   }));
 }
-function createSnowParticles(rng, state, prefs, profile, budget, kind) {
+function createSnowParticles(rng, profile, budget, kind) {
   if (profile.precipitation <= 0.04)
     return [];
-  const effectiveLayer = resolveEffectiveLayerMode(state, prefs);
-  let target = kind === "front" ? budget.snowFront : budget.snowBack;
-  if (kind === "front" && effectiveLayer === "both") {
-    target *= 0.5;
-  }
+  const target = kind === "front" ? budget.snowFront : budget.snowBack;
   if (target <= 0)
     return [];
   const count = Math.round(target * clamp(profile.precipitation, 0.22, 1.1));
@@ -1879,10 +1849,7 @@ function createSnowParticles(rng, state, prefs, profile, budget, kind) {
 function createCurtains(rng, profile, budget, condition) {
   if (!budget.flags.distantCurtains || profile.curtainAlpha <= 0.02)
     return [];
-  const base = condition === "snow" ? budget.snowGusts : budget.rainCurtains;
-  if (base <= 0)
-    return [];
-  const count = Math.max(1, Math.round(base * clamp(profile.precipitation, 0.25, 1)));
+  const count = condition === "snow" ? Math.max(1, Math.round(budget.snowGusts * clamp(profile.precipitation, 0.25, 1))) : Math.max(1, Math.round(budget.rainCurtains * clamp(profile.precipitation, 0.25, 1)));
   return Array.from({ length: count }, () => ({
     x: rng(),
     width: 0.12 + rng() * 0.2,
@@ -2009,7 +1976,7 @@ function createFogCreepLayers(rng, condition, profile, budget) {
   });
 }
 function createCondensationBlooms(rng, profile, budget, condition) {
-  if (!budget.flags.glassOverlay || condition !== "rain" && condition !== "storm" || profile.condensationAlpha <= 0.01 || budget.condensationBlooms <= 0) {
+  if (!budget.flags.glassOverlay || condition !== "rain" && condition !== "storm" && condition !== "snow" && condition !== "fog" || profile.condensationAlpha <= 0.01 || budget.condensationBlooms <= 0) {
     return [];
   }
   const count = Math.max(1, Math.round(budget.condensationBlooms * clamp(profile.windowOpacity, 0.3, 1)));
@@ -2032,14 +1999,14 @@ function createCondensationBlooms(rng, profile, budget, condition) {
   });
 }
 function createGlassParticles(rng, profile, budget, condition) {
-  if (!budget.flags.glassOverlay || profile.windowOpacity <= 0.02 || condition !== "rain" && condition !== "storm") {
+  if (!budget.flags.glassOverlay || profile.windowOpacity <= 0.02) {
     return { beads: [], rivulets: [] };
   }
-  const conditionScale = condition === "storm" ? 1.16 : 1;
+  const conditionScale = condition === "storm" ? 1.16 : condition === "rain" ? 1 : condition === "snow" ? 0.7 : condition === "fog" ? 0.56 : 0;
   const moistureScale = clamp(profile.windowOpacity + profile.condensationAlpha * 0.5, 0.2, 1.2);
   const beadCount = budget.flags.glassDroplets ? Math.round(budget.glassBeads * moistureScale * conditionScale) : 0;
   const rivuletCount = budget.flags.glassDroplets ? Math.round(budget.glassRivulets * moistureScale * conditionScale) : 0;
-  const condensationScale = 1;
+  const condensationScale = condition === "snow" || condition === "fog" ? 0.55 : 1;
   return {
     beads: Array.from({ length: beadCount }, () => ({
       x: rng(),
@@ -2047,7 +2014,7 @@ function createGlassParticles(rng, profile, budget, condition) {
       width: 10 + rng() * 24,
       height: 12 + rng() * 28,
       alpha: profile.windowOpacity * condensationScale * (0.36 + rng() * 0.54),
-      speed: 0.06 + rng() * 0.12,
+      speed: condition === "fog" ? 0.02 + rng() * 0.04 : 0.06 + rng() * 0.12,
       drift: (rng() - 0.5) * 0.015,
       phase: rng() * Math.PI * 2
     })),
@@ -2057,7 +2024,7 @@ function createGlassParticles(rng, profile, budget, condition) {
       width: 8 + rng() * 10,
       height: 120 + rng() * 260,
       alpha: profile.windowOpacity * (0.3 + rng() * 0.5),
-      speed: 0.08 + rng() * 0.1,
+      speed: condition === "snow" || condition === "fog" ? 0.03 + rng() * 0.04 : 0.08 + rng() * 0.1,
       drift: (rng() - 0.5) * 0.02,
       phase: rng() * Math.PI * 2
     }))
@@ -2067,18 +2034,16 @@ function buildComposition(kind, state, prefs) {
   const effectiveIntensity = clamp(state.intensity * prefs.intensity, 0.2, 1.5);
   const profile = buildSceneProfile(state, effectiveIntensity);
   const budget = getQualityBudget(prefs.qualityMode);
-  const effectiveLayer = resolveEffectiveLayerMode(state, prefs);
   const signature = buildSceneSignature(kind, state, prefs, profile.phase, effectiveIntensity);
   const rng = createRng(hashString(signature));
   const anchors = kind === "back" ? createAnchorLayers(rng, state.condition, profile, budget) : [];
   const clouds = kind === "back" ? createCloudLayers(rng, state.condition, profile, budget, "back") : [];
   const scud = kind === "back" ? createScudLayers(rng, state.condition, profile, budget) : [];
-  const frontClouds = [];
+  const frontClouds = kind === "front" && budget.flags.frontCloudBank ? createCloudLayers(rng, state.condition, profile, budget, "front") : [];
   const fogWisps = kind === "back" ? createFogWisps(rng, profile, budget, "back") : [];
-  const rawFrontMist = kind === "front" ? createFogWisps(rng, profile, budget, "front") : [];
-  const frontMist = kind === "front" ? trimArray(rawFrontMist, effectiveLayer === "both" ? Math.ceil(rawFrontMist.length * 0.5) : rawFrontMist.length) : [];
-  const rain = state.condition === "rain" || state.condition === "storm" ? createRainParticles(rng, state, prefs, profile, budget, kind) : [];
-  const snow = state.condition === "snow" ? createSnowParticles(rng, state, prefs, profile, budget, kind) : [];
+  const frontMist = kind === "front" ? createFogWisps(rng, profile, budget, "front") : [];
+  const rain = state.condition === "rain" || state.condition === "storm" ? createRainParticles(rng, profile, budget, kind) : [];
+  const snow = state.condition === "snow" ? createSnowParticles(rng, profile, budget, kind) : [];
   const curtains = kind === "back" ? createCurtains(rng, profile, budget, state.condition) : [];
   const curtainTextures = kind === "back" ? createCurtainTextures(rng, state.condition, profile, budget) : [];
   const contactBands = kind === "back" ? createContactBands(rng, state.condition, profile, budget) : [];
@@ -2131,23 +2096,13 @@ class CanvasWeatherRenderer {
   kind;
   canvas;
   context;
-  staticCanvas;
-  staticContext;
-  slowCanvas;
-  slowContext;
   glassOverlay;
   resizeObserver;
-  onAssetReady = () => this.handleAssetReady();
+  onAssetReady = () => this.drawOnce();
   onWindowResize = () => {
     if (this.resizeCanvas()) {
       this.drawOnce();
     }
-  };
-  onVisibilityChange = () => {
-    if (document.visibilityState === "visible" && this.visible) {
-      this.drawOnce();
-    }
-    this.refreshLoop();
   };
   composition = null;
   prefs = DEFAULT_PREFS;
@@ -2155,19 +2110,13 @@ class CanvasWeatherRenderer {
   reducedMotion = false;
   visible = false;
   rafId = null;
-  timeoutId = null;
-  assetRefreshId = null;
   animationTime = 0;
   lastFrameAt = null;
-  lastRenderAt = null;
-  lastSlowPassAt = Number.NEGATIVE_INFINITY;
   width = 1;
   height = 1;
   dpr = 1;
   lightningEvents = [];
   failed = false;
-  staticCacheDirty = true;
-  slowCacheDirty = true;
   constructor(kind) {
     this.kind = kind;
     this.root = document.createElement("div");
@@ -2183,22 +2132,6 @@ class CanvasWeatherRenderer {
       throw new Error("Weather renderer could not acquire a 2D canvas context.");
     }
     this.context = context;
-    if (kind === "back") {
-      this.staticCanvas = document.createElement("canvas");
-      this.slowCanvas = document.createElement("canvas");
-      const staticContext = this.staticCanvas.getContext("2d", { alpha: true }) ?? this.staticCanvas.getContext("2d");
-      const slowContext = this.slowCanvas.getContext("2d", { alpha: true }) ?? this.slowCanvas.getContext("2d");
-      if (!staticContext || !slowContext) {
-        throw new Error("Weather renderer could not acquire cache canvas contexts.");
-      }
-      this.staticContext = staticContext;
-      this.slowContext = slowContext;
-    } else {
-      this.staticCanvas = null;
-      this.slowCanvas = null;
-      this.staticContext = null;
-      this.slowContext = null;
-    }
     if (kind === "back") {
       this.glassOverlay = document.createElement("div");
       this.glassOverlay.className = "weather-fx-glass";
@@ -2218,7 +2151,6 @@ class CanvasWeatherRenderer {
       this.resizeObserver = null;
       window.addEventListener("resize", this.onWindowResize);
     }
-    document.addEventListener("visibilitychange", this.onVisibilityChange);
   }
   setScene(state, prefs, reducedMotion) {
     if (this.failed)
@@ -2235,12 +2167,7 @@ class CanvasWeatherRenderer {
     this.root.classList.toggle("weather-paused", prefs.pauseEffects);
     this.root.classList.toggle("weather-reduced-motion", reducedMotion);
     this.syncGlassOverlay();
-    this.staticCacheDirty = true;
-    this.slowCacheDirty = true;
-    this.lastSlowPassAt = Number.NEGATIVE_INFINITY;
-    if (this.visible && this.root.isConnected) {
-      this.drawOnce();
-    }
+    this.drawOnce();
     this.refreshLoop();
   }
   setVisible(visible) {
@@ -2252,18 +2179,14 @@ class CanvasWeatherRenderer {
     this.visible = visible;
     this.root.classList.toggle("weather-hidden", !visible);
     this.root.classList.toggle("weather-visible", visible);
-    if (visible && this.root.isConnected) {
-      this.drawOnce();
-    }
+    this.drawOnce();
     this.refreshLoop();
   }
   refreshLayout() {
     if (this.failed)
       return;
     if (this.resizeCanvas()) {
-      if (this.visible) {
-        this.drawOnce();
-      }
+      this.drawOnce();
     }
   }
   triggerLightning() {
@@ -2298,21 +2221,16 @@ class CanvasWeatherRenderer {
   }
   destroy() {
     this.stopLoop();
-    if (this.assetRefreshId !== null) {
-      window.cancelAnimationFrame(this.assetRefreshId);
-      this.assetRefreshId = null;
-    }
     this.resizeObserver?.disconnect();
     if (!this.resizeObserver) {
       window.removeEventListener("resize", this.onWindowResize);
     }
-    document.removeEventListener("visibilitychange", this.onVisibilityChange);
     this.root.remove();
   }
   syncGlassOverlay() {
     if (!this.glassOverlay || !this.composition)
       return;
-    const variant = !this.composition.budget.flags.glassOverlay ? "none" : this.state.condition === "rain" || this.state.condition === "storm" ? this.composition.glassBeads.length || this.composition.glassRivulets.length || this.composition.condensationBlooms.length ? this.state.condition : "none" : "none";
+    const variant = !this.composition.budget.flags.glassOverlay ? "none" : this.state.condition === "rain" || this.state.condition === "storm" ? "rain" : this.state.condition === "snow" ? "snow" : this.state.condition === "fog" ? "fog" : "none";
     this.root.dataset.glass = variant;
     this.root.style.setProperty("--weather-glass-opacity", this.composition.profile.windowOpacity.toFixed(3));
     this.root.style.setProperty("--weather-glass-blur", this.composition.profile.glassBlur.toFixed(2));
@@ -2345,15 +2263,6 @@ class CanvasWeatherRenderer {
     this.canvas.height = pixelHeight;
     this.canvas.style.width = `${nextWidth}px`;
     this.canvas.style.height = `${nextHeight}px`;
-    if (this.staticCanvas && this.slowCanvas) {
-      this.staticCanvas.width = pixelWidth;
-      this.staticCanvas.height = pixelHeight;
-      this.slowCanvas.width = pixelWidth;
-      this.slowCanvas.height = pixelHeight;
-      this.staticCacheDirty = true;
-      this.slowCacheDirty = true;
-      this.lastSlowPassAt = Number.NEGATIVE_INFINITY;
-    }
     return true;
   }
   refreshLoop() {
@@ -2363,8 +2272,9 @@ class CanvasWeatherRenderer {
     }
     const shouldRun = this.visible && this.root.isConnected && !this.reducedMotion && !this.prefs.pauseEffects && !!this.composition;
     if (shouldRun) {
-      if (this.rafId === null && this.timeoutId === null) {
-        this.scheduleNextFrame();
+      if (this.rafId === null) {
+        this.lastFrameAt = null;
+        this.rafId = window.requestAnimationFrame(this.step);
       }
       return;
     }
@@ -2375,28 +2285,10 @@ class CanvasWeatherRenderer {
       window.cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
-    if (this.timeoutId !== null) {
-      window.clearTimeout(this.timeoutId);
-      this.timeoutId = null;
-    }
     this.lastFrameAt = null;
-    this.lastRenderAt = null;
-  }
-  scheduleNextFrame() {
-    if (!this.composition)
-      return;
-    if (typeof document.visibilityState === "string" && document.visibilityState === "hidden") {
-      this.timeoutId = window.setTimeout(() => {
-        this.timeoutId = null;
-        this.step(performance.now());
-      }, Math.max(16, Math.round(this.composition?.budget.frameIntervalMs ?? 33)));
-      return;
-    }
-    this.rafId = window.requestAnimationFrame(this.step);
   }
   step = (now) => {
     this.rafId = null;
-    this.timeoutId = null;
     if (!this.composition || !this.visible || !this.root.isConnected || this.reducedMotion || this.prefs.pauseEffects) {
       this.stopLoop();
       return;
@@ -2407,14 +2299,8 @@ class CanvasWeatherRenderer {
     const delta = Math.min(0.06, Math.max(0, (now - this.lastFrameAt) / 1000));
     this.lastFrameAt = now;
     this.animationTime += delta;
-    const shouldRender = this.lastRenderAt === null || this.staticCacheDirty || this.slowCacheDirty || this.lightningEvents.length > 0 || now - this.lastRenderAt >= this.composition.budget.frameIntervalMs;
-    if (!shouldRender) {
-      this.refreshLoop();
-      return;
-    }
     try {
       this.render(this.animationTime);
-      this.lastRenderAt = now;
     } catch (error) {
       this.handleFatalError(error);
       return;
@@ -2422,7 +2308,7 @@ class CanvasWeatherRenderer {
     this.refreshLoop();
   };
   drawOnce() {
-    if (this.failed || !this.composition || !this.root.isConnected)
+    if (this.failed || !this.composition)
       return;
     try {
       this.resizeCanvas();
@@ -2432,26 +2318,8 @@ class CanvasWeatherRenderer {
     }
   }
   clearCanvas() {
-    this.clearTarget(this.context);
-  }
-  clearTarget(ctx) {
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.clearRect(0, 0, this.width, this.height);
-  }
-  handleAssetReady() {
-    if (this.kind === "back") {
-      this.staticCacheDirty = true;
-      this.slowCacheDirty = true;
-      this.lastSlowPassAt = Number.NEGATIVE_INFINITY;
-    }
-    if (this.failed || !this.visible || this.rafId !== null || this.timeoutId !== null)
-      return;
-    if (this.assetRefreshId !== null)
-      return;
-    this.assetRefreshId = window.requestAnimationFrame(() => {
-      this.assetRefreshId = null;
-      this.drawOnce();
-    });
+    this.context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.context.clearRect(0, 0, this.width, this.height);
   }
   render(time) {
     if (!this.composition || this.width <= 0 || this.height <= 0)
@@ -2466,67 +2334,24 @@ class CanvasWeatherRenderer {
   drawBack(time) {
     if (!this.composition)
       return;
-    const { profile, anchors, condensationBlooms, rain, snow, glassBeads, glassRivulets } = this.composition;
+    const ctx = this.context;
+    const {
+      profile,
+      stars,
+      motes,
+      anchors,
+      clouds,
+      scud,
+      fogWisps,
+      curtains,
+      curtainTextures,
+      condensationBlooms,
+      rain,
+      snow,
+      glassBeads,
+      glassRivulets
+    } = this.composition;
     const lightning = this.resolveLightningState(time);
-    this.renderBackStaticCache();
-    this.renderBackSlowCache(time);
-    if (this.staticCanvas) {
-      this.context.drawImage(this.staticCanvas, 0, 0, this.width, this.height);
-    }
-    if (this.slowCanvas) {
-      this.context.drawImage(this.slowCanvas, 0, 0, this.width, this.height);
-    }
-    if (lightning.flash > 0.01) {
-      this.drawAnchorLayers(time, anchors, profile, lightning.flash, this.context, true);
-    }
-    this.drawRain(time, rain, profile, "back");
-    this.drawSnow(time, snow, profile, "back");
-    this.drawGlass(profile, time, glassRivulets, glassBeads, condensationBlooms, lightning.flash);
-    this.drawVignette(profile);
-    this.drawLightningState(profile, lightning);
-  }
-  drawFront(time) {
-    if (!this.composition)
-      return;
-    const { profile, frontMist, rain, snow } = this.composition;
-    const lightning = this.resolveLightningState(time);
-    this.drawFrontAtmosphere(profile);
-    this.drawFogWisps(time, frontMist);
-    this.drawRain(time, rain, profile, "front");
-    this.drawSnow(time, snow, profile, "front");
-    this.drawLightningState(profile, lightning);
-  }
-  renderBackStaticCache() {
-    if (!this.composition || !this.staticCanvas || !this.staticContext || !this.staticCacheDirty)
-      return;
-    const { profile, anchors } = this.composition;
-    this.clearTarget(this.staticContext);
-    this.drawSkyBackdrop(profile, this.staticContext);
-    this.drawCelestialOrb(profile, this.staticContext);
-    this.drawAtmosphericDepth(profile, 0, this.staticContext);
-    this.drawAnchorLayers(0, anchors, profile, 0, this.staticContext);
-    this.drawHorizon(profile, 0, this.staticContext);
-    this.staticCacheDirty = false;
-  }
-  renderBackSlowCache(time) {
-    if (!this.composition || !this.slowCanvas || !this.slowContext)
-      return;
-    const needsRefresh = this.slowCacheDirty || this.lastSlowPassAt === Number.NEGATIVE_INFINITY || time - this.lastSlowPassAt >= this.composition.budget.slowPassIntervalMs / 1000;
-    if (!needsRefresh)
-      return;
-    const { profile, stars, clouds, scud, curtainTextures, curtains, fogWisps, motes } = this.composition;
-    this.clearTarget(this.slowContext);
-    this.drawStars(time, stars, profile, this.slowContext);
-    this.drawCloudLayers(time, clouds, this.slowContext);
-    this.drawCloudLayers(time, scud, this.slowContext);
-    this.drawCurtainTextures(time, curtainTextures, this.slowContext);
-    this.drawCurtains(time, curtains, profile, this.slowContext);
-    this.drawFogWisps(time, fogWisps, this.slowContext);
-    this.drawMotes(time, motes, profile, this.slowContext);
-    this.lastSlowPassAt = time;
-    this.slowCacheDirty = false;
-  }
-  drawSkyBackdrop(profile, ctx = this.context) {
     const sky = ctx.createLinearGradient(0, 0, 0, this.height);
     sky.addColorStop(0, profile.skyTop);
     sky.addColorStop(0.52, profile.skyMid);
@@ -2538,19 +2363,47 @@ class CanvasWeatherRenderer {
     skyGlow.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = skyGlow;
     ctx.fillRect(0, 0, this.width, this.height);
+    this.drawCelestialOrb(profile);
+    this.drawStars(time, stars, profile);
+    this.drawAtmosphericDepth(profile, lightning.flash);
+    this.drawAnchorLayers(time, anchors, profile, lightning.flash);
+    this.drawCloudLayers(time, clouds);
+    this.drawCloudLayers(time, scud);
+    this.drawCurtainTextures(time, curtainTextures);
+    this.drawCurtains(time, curtains, profile);
+    this.drawFogWisps(time, fogWisps);
+    this.drawRain(time, rain, profile, "back");
+    this.drawSnow(time, snow, profile, "back");
+    this.drawMotes(time, motes, profile);
+    this.drawHorizon(profile, lightning.flash);
+    this.drawGlass(profile, time, glassRivulets, glassBeads, condensationBlooms, lightning.flash);
+    this.drawVignette(profile);
+    this.drawLightningState(profile, lightning);
   }
-  drawFrontAtmosphere(profile) {
+  drawFront(time) {
+    if (!this.composition)
+      return;
     const ctx = this.context;
-    const canopy = ctx.createLinearGradient(0, 0, 0, this.height * 0.54);
-    canopy.addColorStop(0, rgba(profile.cloudShadow, 0.08 + profile.haze * 0.14));
-    canopy.addColorStop(0.32, rgba(profile.cloudMid, 0.05 + profile.frontMistAlpha * 0.12));
-    canopy.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = canopy;
-    ctx.fillRect(0, 0, this.width, this.height * 0.56);
+    const { profile, frontClouds, frontMist, rain, snow } = this.composition;
+    const lightning = this.resolveLightningState(time);
+    if (profile.frontCloudAlpha > 0.02) {
+      const topShadow = ctx.createLinearGradient(0, 0, 0, this.height * 0.5);
+      topShadow.addColorStop(0, rgba(profile.cloudShadow, 0.26 + profile.frontCloudAlpha * 0.34));
+      topShadow.addColorStop(0.34, rgba(profile.cloudMid, profile.frontCloudAlpha * 0.18));
+      topShadow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = topShadow;
+      ctx.fillRect(0, 0, this.width, this.height * 0.54);
+    }
+    this.drawCloudLayers(time, frontClouds);
+    this.drawFogWisps(time, frontMist);
+    this.drawRain(time, rain, profile, "front");
+    this.drawSnow(time, snow, profile, "front");
+    this.drawLightningState(profile, lightning);
   }
-  drawCelestialOrb(profile, ctx = this.context) {
+  drawCelestialOrb(profile) {
     if (profile.celestialAlpha <= 0.02)
       return;
+    const ctx = this.context;
     const celestial = buildCelestialPosition(profile.phase, this.width, this.height);
     const coreColor = profile.isNight ? profile.moonColor : profile.sunColor;
     const glow = ctx.createRadialGradient(celestial.x, celestial.y, celestial.radius * 0.24, celestial.x, celestial.y, celestial.radius * 4.4);
@@ -2581,9 +2434,10 @@ class CanvasWeatherRenderer {
       ctx.restore();
     }
   }
-  drawStars(time, stars, profile, ctx = this.context) {
+  drawStars(time, stars, profile) {
     if (stars.length === 0 || profile.starAlpha <= 0.01)
       return;
+    const ctx = this.context;
     for (const star of stars) {
       const twinkle = 0.58 + 0.42 * Math.sin(time * star.twinkleSpeed * 2.3 + star.phase);
       const alpha = profile.starAlpha * star.alpha * twinkle;
@@ -2602,9 +2456,10 @@ class CanvasWeatherRenderer {
       ctx.restore();
     }
   }
-  drawAtmosphericDepth(profile, lightningFlash, ctx = this.context) {
+  drawAtmosphericDepth(profile, lightningFlash) {
     if (!this.composition)
       return;
+    const ctx = this.context;
     const glowPasses = Math.max(1, this.composition.budget.horizonGlowPasses);
     const shadowPasses = Math.max(1, this.composition.budget.shadowPasses);
     for (let index = 0;index < glowPasses; index += 1) {
@@ -2631,19 +2486,18 @@ class CanvasWeatherRenderer {
     ctx.fillStyle = horizonMist;
     ctx.fillRect(0, this.height * 0.48, this.width, this.height * 0.52);
   }
-  drawAnchorLayers(time, anchors, profile, lightningFlash, ctx = this.context, relightOnly = false) {
+  drawAnchorLayers(time, anchors, profile, lightningFlash) {
     if (!anchors.length)
       return;
+    const ctx = this.context;
     for (const anchor of anchors) {
       const travel = this.width * anchor.parallax;
       const x = anchor.x * this.width + Math.sin(time * 0.02 + anchor.depth) * travel;
       const y = anchor.y * this.height;
-      if (!relightOnly) {
-        ctx.save();
-        ctx.filter = `blur(${anchor.blur}px)`;
-        drawSprite(ctx, anchor.sprite, anchor.palette, x, y, anchor.width, anchor.height, anchor.alpha, 0, this.onAssetReady);
-        ctx.restore();
-      }
+      ctx.save();
+      ctx.filter = `blur(${anchor.blur}px)`;
+      drawSprite(ctx, anchor.sprite, anchor.palette, x, y, anchor.width, anchor.height, anchor.alpha, 0, this.onAssetReady);
+      ctx.restore();
       if (this.composition?.budget.flags.relightAnchors && lightningFlash > 0.01) {
         ctx.save();
         ctx.globalAlpha = lightningFlash * profile.relightAlpha * anchor.relight;
@@ -2656,9 +2510,10 @@ class CanvasWeatherRenderer {
       }
     }
   }
-  drawMotes(time, motes, profile, ctx = this.context) {
+  drawMotes(time, motes, profile) {
     if (motes.length === 0)
       return;
+    const ctx = this.context;
     for (const mote of motes) {
       const x = (mote.x + Math.sin(time * mote.speed + mote.phase) * mote.driftX) * this.width;
       const y = (mote.y + Math.cos(time * mote.speed * 0.7 + mote.phase) * mote.driftY) * this.height;
@@ -2751,7 +2606,7 @@ class CanvasWeatherRenderer {
       ctx.fillRect(0, this.height * 0.78, this.width, this.height * 0.22);
     }
   }
-  drawCloudLayers(time, layers, ctx = this.context) {
+  drawCloudLayers(time, layers) {
     if (layers.length === 0 || !this.composition)
       return;
     for (const layer of layers) {
@@ -2759,10 +2614,10 @@ class CanvasWeatherRenderer {
       const offset = (layer.x * travel + time * layer.speed * (0.45 + this.composition.profile.wind)) % travel;
       const x = offset - layer.width * 0.8;
       const y = layer.y * this.height + Math.sin(time * 0.14 + layer.phase) * layer.driftY;
-      drawSprite(ctx, layer.sprite, layer.palette, x, y, layer.width, layer.height, layer.alpha, layer.rotation + Math.sin(time * 0.05 + layer.phase) * 1.1, this.onAssetReady);
+      drawSprite(this.context, layer.sprite, layer.palette, x, y, layer.width, layer.height, layer.alpha, layer.rotation + Math.sin(time * 0.05 + layer.phase) * 1.1, this.onAssetReady);
     }
   }
-  drawFogWisps(time, wisps, ctx = this.context) {
+  drawFogWisps(time, wisps) {
     if (wisps.length === 0 || !this.composition)
       return;
     for (const wisp of wisps) {
@@ -2770,10 +2625,10 @@ class CanvasWeatherRenderer {
       const offset = (wisp.x * travel + time * wisp.speed * (0.28 + this.composition.profile.wind * 0.5)) % travel;
       const x = offset - wisp.width * 0.6;
       const y = wisp.y * this.height + Math.sin(time * 0.12 + wisp.phase) * wisp.driftY;
-      drawSprite(ctx, wisp.sprite, wisp.palette, x, y, wisp.width, wisp.height, wisp.alpha, wisp.rotation, this.onAssetReady);
+      drawSprite(this.context, wisp.sprite, wisp.palette, x, y, wisp.width, wisp.height, wisp.alpha, wisp.rotation, this.onAssetReady);
     }
   }
-  drawCurtainTextures(time, textures, ctx = this.context) {
+  drawCurtainTextures(time, textures) {
     if (textures.length === 0 || !this.composition)
       return;
     for (const texture of textures) {
@@ -2781,12 +2636,13 @@ class CanvasWeatherRenderer {
       const offset = (texture.x * travel + time * texture.speed * (0.16 + this.composition.profile.wind * 0.22)) % travel;
       const x = offset - texture.width * 0.3;
       const y = texture.y * this.height + Math.sin(time * 0.08 + texture.phase) * texture.driftY;
-      drawSprite(ctx, texture.sprite, texture.palette, x, y, texture.width, texture.height, texture.alpha, texture.rotation, this.onAssetReady);
+      drawSprite(this.context, texture.sprite, texture.palette, x, y, texture.width, texture.height, texture.alpha, texture.rotation, this.onAssetReady);
     }
   }
-  drawCurtains(time, curtains, profile, ctx = this.context) {
+  drawCurtains(time, curtains, profile) {
     if (curtains.length === 0)
       return;
+    const ctx = this.context;
     for (const curtain of curtains) {
       const drift = (curtain.x + time * curtain.speed * 0.005) % 1 * this.width;
       const width = curtain.width * this.width;
@@ -2817,35 +2673,25 @@ class CanvasWeatherRenderer {
   getParticleStride(kind, densityBias = 1) {
     const baselinePixels = 1280 * 720;
     const areaScale = Math.sqrt(baselinePixels / Math.max(1, this.width * this.height));
-    const qualityScale = this.prefs.qualityMode === "cinematic" ? 0.9 : this.prefs.qualityMode === "standard" ? 0.78 : this.prefs.qualityMode === "lite" ? 0.68 : 0.58;
-    const frontPenalty = kind === "front" ? 0.68 : 1;
-    const drawScale = clamp(areaScale * qualityScale * frontPenalty * densityBias, 0.26, 1);
+    const qualityScale = this.prefs.qualityMode === "cinematic" ? 1 : this.prefs.qualityMode === "standard" ? 0.88 : this.prefs.qualityMode === "lite" ? 0.76 : 0.64;
+    const frontPenalty = kind === "front" ? 0.86 : 1;
+    const drawScale = clamp(areaScale * qualityScale * frontPenalty * densityBias, 0.34, 1);
     return Math.max(1, Math.ceil(1 / drawScale));
-  }
-  getParticleDrawLimit(total, kind, densityBias = 1) {
-    const baselinePixels = 1280 * 720;
-    const areaScale = Math.sqrt(baselinePixels / Math.max(1, this.width * this.height));
-    const qualityScale = this.prefs.qualityMode === "cinematic" ? 0.92 : this.prefs.qualityMode === "standard" ? 0.82 : this.prefs.qualityMode === "lite" ? 0.7 : 0.58;
-    const frontPenalty = kind === "front" ? 0.64 : 1;
-    const scale = clamp(areaScale * qualityScale * frontPenalty * densityBias, 0.2, 1);
-    return Math.max(1, Math.min(total, Math.round(total * scale)));
   }
   drawRain(time, particles, profile, kind) {
     if (particles.length === 0)
       return;
     const ctx = this.context;
     const stride = this.getParticleStride(kind, 0.94);
-    const activeCount = this.getParticleDrawLimit(particles.length, kind, 0.9);
-    const mainAlpha = (kind === "front" ? 0.34 : 0.22) * clamp(profile.nearPrecipAlpha + profile.distantPrecipAlpha * 0.4, 0.4, 1.05);
-    const lengthScale = kind === "front" ? 0.86 : 0.6;
+    const mainAlpha = (kind === "front" ? 0.38 : 0.24) * clamp(profile.nearPrecipAlpha + profile.distantPrecipAlpha * 0.4, 0.4, 1.05);
+    const lengthScale = kind === "front" ? 0.72 : 0.56;
     const slantScale = 0.08 + profile.wind * (kind === "front" ? 0.1 : 0.07);
     ctx.save();
     ctx.strokeStyle = rgba(profile.rainColor, mainAlpha);
     ctx.lineWidth = kind === "front" ? 1.4 : 1;
     ctx.lineCap = "round";
     ctx.beginPath();
-    let drawn = 0;
-    for (let index = 0;index < particles.length && drawn < activeCount; index += stride, drawn += 1) {
+    for (let index = 0;index < particles.length; index += stride) {
       const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x = (particle.x + progress * particle.drift + Math.sin(time * 2.2 + particle.phase) * particle.sway) * this.width;
@@ -2860,9 +2706,7 @@ class CanvasWeatherRenderer {
     ctx.strokeStyle = rgba("#ffffff", kind === "front" ? mainAlpha * 0.72 : mainAlpha * 0.44);
     ctx.lineWidth = kind === "front" ? 0.8 : 0.55;
     ctx.beginPath();
-    const highlightCount = Math.max(1, Math.round(activeCount / (kind === "front" ? 3 : 5)));
-    drawn = 0;
-    for (let index = 0;index < particles.length && drawn < highlightCount; index += highlightStride, drawn += 1) {
+    for (let index = 0;index < particles.length; index += highlightStride) {
       const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x = (particle.x + progress * particle.drift + Math.sin(time * 2.2 + particle.phase) * particle.sway) * this.width;
@@ -2880,13 +2724,11 @@ class CanvasWeatherRenderer {
       return;
     const ctx = this.context;
     const stride = this.getParticleStride(kind, 1.08);
-    const activeCount = this.getParticleDrawLimit(particles.length, kind, 1.02);
-    const baseRadiusScale = kind === "front" ? 0.26 : 0.2;
+    const baseRadiusScale = kind === "front" ? 0.22 : 0.18;
     ctx.save();
-    ctx.fillStyle = rgba(profile.snowColor, kind === "front" ? 0.38 : 0.26);
+    ctx.fillStyle = rgba(profile.snowColor, kind === "front" ? 0.42 : 0.28);
     ctx.beginPath();
-    let drawn = 0;
-    for (let index = 0;index < particles.length && drawn < activeCount; index += stride, drawn += 1) {
+    for (let index = 0;index < particles.length; index += stride) {
       const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x = (particle.x + Math.sin(time * particle.sway + particle.phase) * particle.drift + progress * particle.drift * 0.18) * this.width;
@@ -2897,11 +2739,9 @@ class CanvasWeatherRenderer {
     }
     ctx.fill();
     const highlightStride = stride * (kind === "front" ? 4 : 6);
-    ctx.fillStyle = rgba("#ffffff", kind === "front" ? 0.3 : 0.18);
+    ctx.fillStyle = rgba("#ffffff", kind === "front" ? 0.34 : 0.22);
     ctx.beginPath();
-    const highlightCount = Math.max(1, Math.round(activeCount / (kind === "front" ? 4 : 6)));
-    drawn = 0;
-    for (let index = 0;index < particles.length && drawn < highlightCount; index += highlightStride, drawn += 1) {
+    for (let index = 0;index < particles.length; index += highlightStride) {
       const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x = (particle.x + Math.sin(time * particle.sway + particle.phase) * particle.drift + progress * particle.drift * 0.18) * this.width;
@@ -2913,7 +2753,8 @@ class CanvasWeatherRenderer {
     ctx.fill();
     ctx.restore();
   }
-  drawHorizon(profile, lightningFlash, ctx = this.context) {
+  drawHorizon(profile, lightningFlash) {
+    const ctx = this.context;
     const gradient = ctx.createLinearGradient(0, this.height * 0.44, 0, this.height);
     gradient.addColorStop(0, "rgba(0,0,0,0)");
     gradient.addColorStop(0.68, rgba(profile.surfaceLight, profile.horizonGlintAlpha * 0.08 + lightningFlash * 0.03));
@@ -2938,7 +2779,7 @@ class CanvasWeatherRenderer {
     this.context.fillRect(0, 0, this.width, this.height);
   }
   drawGlass(profile, time, rivulets, beads, condensationBlooms, lightningFlash) {
-    if (!this.composition?.budget.flags.glassOverlay || this.kind !== "back" || this.state.condition !== "rain" && this.state.condition !== "storm" || profile.windowOpacity <= 0.02 || !rivulets.length && !beads.length && condensationBlooms.length === 0 && profile.condensationAlpha <= 0.01) {
+    if (!this.composition?.budget.flags.glassOverlay || this.kind !== "back" || profile.windowOpacity <= 0.02 || !rivulets.length && !beads.length && condensationBlooms.length === 0 && profile.condensationAlpha <= 0.01) {
       return;
     }
     const palette = buildGlassPalette(profile);
@@ -2989,7 +2830,7 @@ class CanvasWeatherRenderer {
       drawSprite(ctx, "glass-rivulet", palette, x, y, rivulet.width, rivulet.height, rivulet.alpha, 0, this.onAssetReady);
     }
     for (const bead of beads) {
-      const offset = time * bead.speed;
+      const offset = this.state.condition === "fog" ? Math.sin(time * bead.speed + bead.phase) * 0.01 : time * bead.speed;
       const x = (bead.x + Math.cos(time * 0.2 + bead.phase) * bead.drift) * this.width;
       const y = (bead.y + offset) * this.height;
       drawSprite(ctx, "glass-drop", palette, x, y, bead.width, bead.height, bead.alpha, 0, this.onAssetReady);
@@ -3248,7 +3089,7 @@ function createSettingsUI(sendToBackend) {
   qualityLabel.appendChild(qualitySelect);
   const qualityHint = document.createElement("p");
   qualityHint.className = "weather-settings-section-copy";
-  qualityHint.textContent = "Lite is the recommended default for smooth everyday use. Performance trims the renderer hardest, Standard adds fuller depth, and Cinematic stays the richest tier while still using capped frame and pixel budgets.";
+  qualityHint.textContent = "Performance and Lite keep the renderer restrained. Standard adds fuller horizon layering and cloud depth, while Cinematic pushes the richest framing, silhouettes, curtains, mist, and back-glass detail.";
   const motionLabel = document.createElement("label");
   motionLabel.className = "weather-settings-label";
   motionLabel.textContent = "Reduced motion";
@@ -5409,11 +5250,14 @@ var WEATHER_HUD_CSS = `
   opacity: var(--weather-glass-opacity, 0);
   transition: opacity 280ms ease;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, calc(0.004 + var(--weather-glass-condensation, 0) * 0.02)), transparent 12%, transparent 84%, rgba(255, 255, 255, calc(0.01 + var(--weather-glass-edge-opacity, 0) * 0.03)) 100%),
-    linear-gradient(90deg, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.035)), transparent 8%, transparent 92%, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.035)));
+    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-edge-opacity, 0) * 0.08)), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, calc(0.01 + var(--weather-glass-condensation, 0) * 0.04)), transparent 10%, transparent 70%, rgba(255, 255, 255, calc(0.02 + var(--weather-glass-edge-opacity, 0) * 0.05)) 100%),
+    linear-gradient(90deg, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.05)), transparent 10%, transparent 90%, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.05))),
+    radial-gradient(circle at 84% 16%, var(--weather-glass-glow, rgba(216, 232, 255, 0.2)), transparent 30%);
   backdrop-filter:
-    blur(calc(var(--weather-glass-blur, 0) * 0.32px + var(--weather-glass-distortion, 0) * 0.28px))
-    saturate(calc(101% + var(--weather-glass-distortion, 0) * 3%));
+    blur(calc(var(--weather-glass-blur, 0) * 0.9px + var(--weather-glass-distortion, 0) * 0.6px))
+    saturate(calc(104% + var(--weather-glass-distortion, 0) * 8%))
+    contrast(calc(100% + var(--weather-glass-condensation, 0) * 3%));
   mix-blend-mode: normal;
 }
 
@@ -5426,18 +5270,19 @@ var WEATHER_HUD_CSS = `
 }
 
 .weather-fx-glass::before {
-  opacity: calc(var(--weather-frost-opacity, 0) * 0.4 + var(--weather-glass-condensation, 0) * 0.04);
+  opacity: calc(var(--weather-frost-opacity, 0) * 0.72 + var(--weather-glass-condensation, 0) * 0.08);
   background:
-    radial-gradient(circle at 12% 10%, rgba(255, 255, 255, calc(0.016 + var(--weather-glass-condensation, 0) * 0.04)), transparent 18%),
-    radial-gradient(circle at 82% 16%, rgba(255, 255, 255, calc(0.014 + var(--weather-glass-condensation, 0) * 0.03)), transparent 16%),
-    linear-gradient(180deg, rgba(255, 255, 255, calc(0.01 + var(--weather-frost-opacity, 0) * 0.02)), transparent 14%, transparent 78%, rgba(255, 255, 255, calc(0.015 + var(--weather-glass-edge-opacity, 0) * 0.03)) 100%);
+    radial-gradient(circle at 12% 10%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-condensation, 0) * 0.08)), transparent 18%),
+    radial-gradient(circle at 78% 18%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-condensation, 0) * 0.06)), transparent 16%),
+    linear-gradient(180deg, rgba(255, 255, 255, calc(0.02 + var(--weather-frost-opacity, 0) * 0.04)), transparent 16%, transparent 62%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-edge-opacity, 0) * 0.06)) 100%);
 }
 
 .weather-fx-glass::after {
   background:
-    radial-gradient(circle at 50% 108%, rgba(255, 255, 255, calc(0.014 + var(--weather-glass-edge-opacity, 0) * 0.04)), transparent 36%),
-    linear-gradient(180deg, transparent 76%, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.035)) 100%);
-  opacity: calc(0.08 + var(--weather-glass-edge-opacity, 0) * 0.08);
+    radial-gradient(circle at 50% 108%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-edge-opacity, 0) * 0.08)), transparent 38%),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, calc(0.01 + var(--weather-glass-distortion, 0) * 0.03)) 50%, transparent),
+    linear-gradient(180deg, transparent 72%, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.06)) 100%);
+  opacity: calc(0.16 + var(--weather-glass-edge-opacity, 0) * 0.12);
 }
 
 .weather-fx-renderer-root[data-glass="none"] .weather-fx-glass {
@@ -5447,7 +5292,12 @@ var WEATHER_HUD_CSS = `
 
 .weather-fx-renderer-root[data-glass="rain"] .weather-fx-glass,
 .weather-fx-renderer-root[data-glass="storm"] .weather-fx-glass {
-  opacity: calc(var(--weather-glass-opacity, 0) * 0.44);
+  opacity: calc(var(--weather-glass-opacity, 0) * 0.72);
+}
+
+.weather-fx-renderer-root[data-glass="snow"] .weather-fx-glass,
+.weather-fx-renderer-root[data-glass="fog"] .weather-fx-glass {
+  opacity: calc(var(--weather-glass-opacity, 0) * 0.64);
 }
 `;
 
@@ -5913,7 +5763,7 @@ function createHudWidget(ctx, initialPosition, expanded, callbacks) {
     qualityText.textContent = "Quality";
     qualitySelect = document.createElement("select");
     qualitySelect.className = "weather-hud-select";
-    qualitySelect.title = "Lite is the recommended default for smooth everyday use. Performance trims the renderer hardest, Standard adds fuller depth, and Cinematic stays the richest tier while still using capped frame and pixel budgets.";
+    qualitySelect.title = "Higher quality adds more scene depth, cloud layering, horizon silhouettes, curtains, mist, and back-glass detail. Cinematic pushes the strongest framing and dimensionality.";
     qualitySelect.innerHTML = WEATHER_QUALITY_OPTIONS.map((option) => `<option value="${option.value}">${option.label}</option>`).join("");
     protectInteractive(qualitySelect);
     qualitySelect.addEventListener("change", (event) => {

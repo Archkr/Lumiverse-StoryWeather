@@ -11,7 +11,7 @@ var DEFAULT_PREFS = {
   effectsEnabled: true,
   layerMode: "auto",
   intensity: 1,
-  qualityMode: "lite",
+  qualityMode: "standard",
   reducedMotion: "never",
   pauseEffects: false,
   widgetPosition: null

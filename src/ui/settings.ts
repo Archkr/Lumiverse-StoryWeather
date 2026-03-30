@@ -226,7 +226,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   const qualityHint = document.createElement("p");
   qualityHint.className = "weather-settings-section-copy";
   qualityHint.textContent =
-    "Lite is the recommended default for smooth everyday use. Performance trims the renderer hardest, Standard adds fuller depth, and Cinematic stays the richest tier while still using capped frame and pixel budgets.";
+    "Performance and Lite keep the renderer restrained. Standard adds fuller horizon layering and cloud depth, while Cinematic pushes the richest framing, silhouettes, curtains, mist, and back-glass detail.";
 
   const motionLabel = document.createElement("label");
   motionLabel.className = "weather-settings-label";
