@@ -1957,7 +1957,6 @@ class CanvasWeatherRenderer {
       !!this.composition;
     if (shouldRun) {
       if (this.rafId === null && this.timeoutId === null) {
-        this.lastFrameAt = null;
         this.scheduleNextFrame();
       }
       return;

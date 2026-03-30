@@ -2364,7 +2364,6 @@ class CanvasWeatherRenderer {
     const shouldRun = this.visible && this.root.isConnected && !this.reducedMotion && !this.prefs.pauseEffects && !!this.composition;
     if (shouldRun) {
       if (this.rafId === null && this.timeoutId === null) {
-        this.lastFrameAt = null;
         this.scheduleNextFrame();
       }
       return;
