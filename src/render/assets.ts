@@ -33,6 +33,8 @@ export interface WeatherSpritePalette {
 
 const readySprites = new Map<string, HTMLImageElement>();
 const pendingSprites = new Map<string, Promise<HTMLImageElement>>();
+const pendingReadyCallbacks = new Map<string, Set<() => void>>();
+const spriteSvgCache = new Map<string, string>();
 
 function svgToDataUri(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
@@ -571,10 +573,18 @@ function loadSprite(key: string, svg: string): Promise<HTMLImageElement> {
     image.onload = () => {
       readySprites.set(key, image);
       pendingSprites.delete(key);
+      const callbacks = pendingReadyCallbacks.get(key);
+      pendingReadyCallbacks.delete(key);
+      if (callbacks) {
+        for (const callback of callbacks) {
+          callback();
+        }
+      }
       resolve(image);
     };
     image.onerror = () => {
       pendingSprites.delete(key);
+      pendingReadyCallbacks.delete(key);
       reject(new Error(`Failed to load weather sprite: ${key}`));
     };
     image.src = svgToDataUri(svg);
@@ -582,6 +592,15 @@ function loadSprite(key: string, svg: string): Promise<HTMLImageElement> {
 
   pendingSprites.set(key, promise);
   return promise;
+}
+
+function queueReadyCallback(key: string, onReady: () => void): void {
+  const callbacks = pendingReadyCallbacks.get(key);
+  if (callbacks) {
+    callbacks.add(onReady);
+    return;
+  }
+  pendingReadyCallbacks.set(key, new Set([onReady]));
 }
 
 function buildKey(kind: WeatherSpriteKind, colors: WeatherSpritePalette): string {
@@ -605,10 +624,15 @@ export function requestWeatherSprite(
   const ready = readySprites.get(key);
   if (ready) return ready;
 
-  const svg = buildSpriteSvg(kind, colors);
-  const pending = loadSprite(key, svg);
   if (onReady) {
-    pending.then(() => onReady()).catch(() => undefined);
+    queueReadyCallback(key, onReady);
   }
+
+  const pending = pendingSprites.get(key);
+  if (pending) return null;
+
+  const svg = spriteSvgCache.get(key) ?? buildSpriteSvg(kind, colors);
+  spriteSvgCache.set(key, svg);
+  loadSprite(key, svg).catch(() => undefined);
   return null;
 }
