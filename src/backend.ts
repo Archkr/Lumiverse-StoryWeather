@@ -192,6 +192,14 @@ async function saveStoryWeatherState(chatId: string, state: WeatherState): Promi
   await spindle.variables.local.set(chatId, WEATHER_STATE_VAR, JSON.stringify(state));
 }
 
+async function clearStoryWeatherState(chatId: string): Promise<void> {
+  try {
+    await spindle.variables.local.delete(chatId, WEATHER_STATE_VAR);
+  } catch {
+    // ignore missing story weather state
+  }
+}
+
 async function loadManualWeatherState(chatId: string): Promise<WeatherState | null> {
   try {
     const raw = await spindle.variables.local.get(chatId, WEATHER_MANUAL_STATE_VAR);
@@ -418,6 +426,7 @@ async function appendWeatherTagViaFallback(chatId: string, messageId: string): P
     if (!recentMessages.length) return;
 
     const result = await spindle.generate.raw({
+      type: "raw",
       messages: [
         {
           role: "user",
@@ -544,6 +553,20 @@ spindle.onFrontendMessage(async (raw, userId) => {
         const restored = (await loadStoryWeatherState(chatId)) ?? makeDefaultWeatherState();
         pushMacroValues(restored);
         send({ type: "weather_state", chatId, state: restored });
+        break;
+      }
+
+      case "clear_weather_state": {
+        const chatId = await resolveChatId(message.chatId);
+        if (!chatId) {
+          send({ type: "error", message: "Saved weather state could not be cleared because no chat is active." });
+          break;
+        }
+
+        await clearManualWeatherState(chatId);
+        await clearStoryWeatherState(chatId);
+        lastKnownChatId = chatId;
+        await pushActiveChatState(chatId);
         break;
       }
 

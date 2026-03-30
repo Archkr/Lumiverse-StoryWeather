@@ -47,6 +47,7 @@ export type FrontendToBackend =
     }
   | { type: "set_manual_state"; chatId?: string | null; state: Partial<WeatherState> }
   | { type: "clear_manual_override"; chatId?: string | null }
+  | { type: "clear_weather_state"; chatId?: string | null }
   | { type: "save_prefs"; prefs: Partial<WeatherPrefs> }
   | { type: "reset_widget_position" };
 

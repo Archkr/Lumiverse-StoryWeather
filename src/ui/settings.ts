@@ -436,8 +436,25 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
     sendToBackend({ type: "clear_manual_override" });
   });
 
+  const clearSceneButton = document.createElement("button");
+  clearSceneButton.className = "weather-settings-button weather-settings-button-danger weather-settings-button-wide";
+  clearSceneButton.textContent = "Clear saved weather";
+  clearSceneButton.addEventListener("click", () => {
+    if (!window.confirm("Clear the saved weather state for this chat? This removes both story sync data and any manual lock.")) {
+      return;
+    }
+    manualToggle.checked = false;
+    sendToBackend({ type: "clear_weather_state" });
+  });
+
   manualActions.appendChild(applyButton);
   manualActions.appendChild(resumeButton);
+  manualActions.appendChild(clearSceneButton);
+
+  const storageHint = document.createElement("p");
+  storageHint.className = "weather-settings-manual-hint weather-settings-storage-hint";
+  storageHint.textContent =
+    "Use clear saved weather if a tagged assistant message was deleted and you want the extension to forget the current scene for this chat.";
 
   manualCard.appendChild(manualHeader);
   manualCard.appendChild(manualHint);
@@ -446,6 +463,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   manualCard.appendChild(manualGrid);
   manualCard.appendChild(sceneIntensityLabel);
   manualCard.appendChild(manualActions);
+  manualCard.appendChild(storageHint);
 
   const resetButton = document.createElement("button");
   resetButton.className = "weather-settings-button";

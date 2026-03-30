@@ -125,6 +125,30 @@ export const WEATHER_HUD_CSS = `
   initial-value: 0.26;
 }
 
+@property --weather-star-opacity {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --weather-front-cloud-opacity {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --weather-front-mist-opacity {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --weather-rain-sheet-opacity {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
 .weather-settings-card {
   width: 100%;
   border: 1px solid var(--lumiverse-border);
@@ -271,6 +295,16 @@ export const WEATHER_HUD_CSS = `
   background: color-mix(in srgb, var(--lumiverse-primary, #82a8ff) 18%, var(--lumiverse-fill-subtle));
 }
 
+.weather-settings-button-danger {
+  border-color: color-mix(in srgb, #ff9f83 26%, var(--lumiverse-border));
+  background: color-mix(in srgb, #ff9f83 12%, var(--lumiverse-fill));
+  color: var(--lumiverse-text);
+}
+
+.weather-settings-button-danger:hover {
+  background: color-mix(in srgb, #ff9f83 18%, var(--lumiverse-fill-subtle));
+}
+
 .weather-settings-checkbox {
   width: 18px;
   height: 18px;
@@ -371,12 +405,22 @@ export const WEATHER_HUD_CSS = `
 }
 
 .weather-settings-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .weather-settings-actions .weather-settings-button {
-  flex: 1 1 0;
+  width: 100%;
+}
+
+.weather-settings-button-wide {
+  grid-column: 1 / -1;
+}
+
+.weather-settings-storage-hint {
+  padding-top: 2px;
+  border-top: 1px dashed color-mix(in srgb, var(--lumiverse-border) 70%, transparent);
 }
 
 .weather-hud-widget {
@@ -645,6 +689,16 @@ export const WEATHER_HUD_CSS = `
   border-color: color-mix(in srgb, var(--weather-hud-accent) 34%, rgba(255, 255, 255, 0.18));
 }
 
+.weather-hud-control-danger {
+  border-color: color-mix(in srgb, #ffab8f 28%, rgba(255, 255, 255, 0.16));
+  background: color-mix(in srgb, #ffab8f 16%, rgba(255, 255, 255, 0.04));
+}
+
+.weather-hud-control-danger:hover {
+  border-color: color-mix(in srgb, #ffb79c 42%, rgba(255, 255, 255, 0.18));
+  background: color-mix(in srgb, #ffb79c 22%, rgba(255, 255, 255, 0.06));
+}
+
 .weather-hud-control-icon,
 .weather-hud-gear svg,
 .weather-hud-icon svg {
@@ -800,6 +854,10 @@ export const WEATHER_HUD_CSS = `
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.weather-hud-action-wide {
+  grid-column: 1 / -1;
+}
+
 .weather-hud-chip,
 .weather-hud-preset {
   min-height: 35px;
@@ -907,6 +965,10 @@ export const WEATHER_HUD_CSS = `
     --weather-rain-opacity 600ms ease,
     --weather-snow-opacity 600ms ease,
     --weather-mote-opacity 600ms ease,
+    --weather-star-opacity 800ms ease,
+    --weather-front-cloud-opacity 800ms ease,
+    --weather-front-mist-opacity 800ms ease,
+    --weather-rain-sheet-opacity 600ms ease,
     --weather-flash-opacity 300ms ease;
 }
 
@@ -920,7 +982,7 @@ export const WEATHER_HUD_CSS = `
 
 .weather-fx-root[data-kind="front"] {
   z-index: 24;
-  mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.55) 46%, #000 78%);
+  mask-image: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.78) 12%, #000 34%, #000 100%);
 }
 
 .weather-fx-root.weather-hidden {
@@ -934,13 +996,19 @@ export const WEATHER_HUD_CSS = `
 }
 
 .weather-fx-sky,
+.weather-fx-stars,
 .weather-fx-glow,
 .weather-fx-beams,
+.weather-fx-cloud-shadows,
 .weather-fx-clouds,
 .weather-fx-horizon,
 .weather-fx-mist,
 .weather-fx-fog,
 .weather-fx-motes,
+.weather-fx-front-haze,
+.weather-fx-front-clouds,
+.weather-fx-front-mist,
+.weather-fx-rain-sheet,
 .weather-fx-rain,
 .weather-fx-snow,
 .weather-fx-flash {
@@ -949,17 +1017,62 @@ export const WEATHER_HUD_CSS = `
 }
 
 .weather-fx-sky {
-  background: linear-gradient(180deg, var(--weather-bg-start) 0%, var(--weather-bg-mid) 46%, var(--weather-bg-end) 100%);
+  background:
+    radial-gradient(circle at 50% -12%, color-mix(in srgb, var(--weather-glow) 26%, transparent), transparent 36%),
+    linear-gradient(180deg, var(--weather-bg-start) 0%, var(--weather-bg-mid) 42%, var(--weather-bg-end) 100%);
   opacity: var(--weather-sky-opacity);
   mix-blend-mode: normal;
-  filter: saturate(1.08) brightness(1.04);
-  animation: weather-sky-shift 24s ease-in-out infinite alternate;
+  filter: saturate(1.1) brightness(1.04);
+  animation: weather-sky-shift 28s ease-in-out infinite alternate;
+}
+
+.weather-fx-sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 26%),
+    repeating-linear-gradient(112deg, rgba(255, 255, 255, 0.014) 0 2px, transparent 2px 18px);
+  opacity: calc(var(--weather-sky-opacity) * 0.48);
+  mix-blend-mode: soft-light;
+}
+
+.weather-fx-stars {
+  mix-blend-mode: screen;
+}
+
+.weather-fx-stars::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(214, 232, 255, 0.2), transparent 26%),
+    radial-gradient(circle at 22% 14%, rgba(190, 218, 255, 0.12), transparent 20%);
+  opacity: calc(var(--weather-star-opacity) * 0.46);
+  filter: blur(28px);
+}
+
+.weather-fx-star {
+  position: absolute;
+  left: var(--star-left);
+  top: var(--star-top);
+  width: var(--star-size);
+  height: var(--star-size);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.98) 0%, rgba(213, 229, 255, 0.64) 44%, transparent 72%);
+  box-shadow:
+    0 0 10px rgba(202, 224, 255, 0.36),
+    0 0 18px rgba(202, 224, 255, 0.16);
+  opacity: calc(var(--weather-star-opacity) * var(--star-opacity-scale));
+  animation: weather-star-twinkle var(--star-duration) ease-in-out infinite;
+  animation-delay: var(--star-delay);
 }
 
 .weather-fx-glow {
   background:
     radial-gradient(circle at 18% 18%, var(--weather-glow), transparent 34%),
-    radial-gradient(circle at 82% 22%, color-mix(in srgb, var(--weather-glow) 74%, white 14%), transparent 30%);
+    radial-gradient(circle at 82% 22%, color-mix(in srgb, var(--weather-glow) 74%, white 14%), transparent 30%),
+    radial-gradient(circle at 56% 10%, color-mix(in srgb, var(--weather-glow) 26%, transparent), transparent 28%);
   opacity: var(--weather-glow-opacity);
   mix-blend-mode: screen;
   animation: weather-glow-drift 18s ease-in-out infinite alternate;
@@ -974,10 +1087,31 @@ export const WEATHER_HUD_CSS = `
   animation: weather-beam-sway 14s ease-in-out infinite alternate;
 }
 
+.weather-fx-cloud-shadows {
+  opacity: calc(var(--weather-cloud-opacity) * 0.9);
+  mix-blend-mode: multiply;
+}
+
+.weather-fx-cloud-shadow-band {
+  position: absolute;
+  width: var(--shadow-width);
+  height: var(--shadow-height);
+  top: var(--shadow-top);
+  left: var(--shadow-left);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(8, 13, 22, 0.42) 0%, transparent 72%);
+  filter: blur(26px);
+  opacity: var(--shadow-opacity-scale);
+  animation: weather-shadow-drift var(--shadow-duration) linear infinite;
+  animation-delay: var(--shadow-delay);
+}
+
 .weather-fx-horizon {
-  background: linear-gradient(180deg, transparent 0%, transparent 48%, var(--weather-horizon-color) 100%);
+  background:
+    linear-gradient(180deg, transparent 0%, transparent 44%, var(--weather-horizon-color) 100%),
+    radial-gradient(circle at 50% 118%, color-mix(in srgb, var(--weather-horizon-color) 78%, transparent), transparent 54%);
   opacity: var(--weather-horizon-opacity);
-  filter: blur(20px);
+  filter: blur(24px);
   transform: translateY(6%);
 }
 
@@ -985,6 +1119,7 @@ export const WEATHER_HUD_CSS = `
 .weather-fx-fog-band,
 .weather-fx-mist-plume,
 .weather-fx-mote,
+.weather-fx-rain-sheet-line,
 .weather-fx-rain-drop,
 .weather-fx-snow-flake {
   position: absolute;
@@ -994,11 +1129,24 @@ export const WEATHER_HUD_CSS = `
 .weather-fx-clouds::before {
   content: "";
   position: absolute;
-  inset: -10% -6% 48%;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--weather-cloud-core) 84%, rgba(8, 14, 24, 0.18)) 0%, transparent 100%);
-  opacity: calc(var(--weather-cloud-opacity) * 0.74);
-  filter: blur(34px);
+  inset: -14% -10% 42%;
+  background:
+    radial-gradient(circle at 18% 28%, color-mix(in srgb, var(--weather-cloud-edge) 70%, transparent), transparent 30%),
+    linear-gradient(180deg, color-mix(in srgb, var(--weather-cloud-core) 86%, rgba(8, 14, 24, 0.18)) 0%, transparent 100%);
+  opacity: calc(var(--weather-cloud-opacity) * 0.62);
+  filter: blur(38px);
   transform: translateY(-10%);
+}
+
+.weather-fx-clouds::after {
+  content: "";
+  position: absolute;
+  inset: 20% -8% 18%;
+  background:
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--weather-cloud-core) 16%, rgba(8, 14, 24, 0.24)) 62%, transparent 100%),
+    radial-gradient(circle at 42% 72%, color-mix(in srgb, var(--weather-cloud-core) 18%, rgba(8, 14, 24, 0.22)), transparent 42%);
+  opacity: calc(var(--weather-cloud-opacity) * 0.34);
+  filter: blur(44px);
 }
 
 .weather-fx-cloud {
@@ -1006,14 +1154,75 @@ export const WEATHER_HUD_CSS = `
   height: var(--cloud-height);
   top: var(--cloud-top);
   left: var(--cloud-left);
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 28% 35%, var(--weather-cloud-edge), transparent 44%),
-    linear-gradient(180deg, color-mix(in srgb, var(--weather-cloud-core) 100%, transparent) 0%, color-mix(in srgb, var(--weather-cloud-core) 26%, transparent) 100%);
   filter: blur(var(--cloud-blur));
   opacity: calc(var(--weather-cloud-opacity) * var(--cloud-opacity-scale));
   animation: weather-cloud-drift var(--cloud-duration) linear infinite;
   animation-delay: var(--cloud-delay);
+}
+
+.weather-fx-cloud-front {
+  opacity: calc(var(--weather-front-cloud-opacity) * var(--cloud-opacity-scale));
+  mix-blend-mode: screen;
+}
+
+.weather-fx-cloud-core,
+.weather-fx-cloud-shadow,
+.weather-fx-cloud-highlight,
+.weather-fx-cloud-lobe {
+  position: absolute;
+}
+
+.weather-fx-cloud-shadow {
+  inset: 40% 6% 0;
+  border-radius: 48% 52% 50% 50% / 58% 58% 42% 42%;
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--weather-cloud-core) 16%, rgba(8, 14, 24, 0.78)) 72%);
+  opacity: 0.84;
+  filter: blur(16px);
+}
+
+.weather-fx-cloud-core {
+  inset: 24% 8% 12%;
+  border-radius: 46% 54% 40% 60% / 50% 44% 56% 50%;
+  background:
+    radial-gradient(circle at 30% 26%, color-mix(in srgb, var(--weather-cloud-edge) 84%, white 8%), transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--weather-cloud-edge) 22%, transparent) 0%, color-mix(in srgb, var(--weather-cloud-core) 94%, rgba(8, 14, 24, 0.24)) 76%, transparent 100%);
+  opacity: 0.9;
+}
+
+.weather-fx-cloud-highlight {
+  inset: 12% 16% auto 12%;
+  height: 42%;
+  background: radial-gradient(ellipse at 30% 50%, rgba(255, 255, 255, 0.52) 0%, transparent 66%);
+  opacity: 0.72;
+  filter: blur(8px);
+  mix-blend-mode: screen;
+}
+
+.weather-fx-cloud-lobe {
+  width: var(--cloud-lobe-width);
+  height: var(--cloud-lobe-height);
+  left: var(--cloud-lobe-left);
+  top: var(--cloud-lobe-top);
+  border-radius: 47% 53% 46% 54% / 54% 48% 52% 46%;
+  background:
+    radial-gradient(circle at 32% 26%, color-mix(in srgb, var(--weather-cloud-edge) 82%, white 4%), transparent 54%),
+    linear-gradient(180deg, color-mix(in srgb, var(--weather-cloud-edge) 58%, transparent) 0%, color-mix(in srgb, var(--weather-cloud-core) 100%, transparent) 72%, color-mix(in srgb, var(--weather-cloud-core) 22%, rgba(10, 16, 28, 0.28)) 100%);
+  opacity: var(--cloud-lobe-opacity);
+  box-shadow:
+    inset 0 -12px 20px rgba(0, 0, 0, 0.08),
+    inset 0 8px 16px rgba(255, 255, 255, 0.04);
+  transform: rotate(var(--cloud-lobe-rotate));
+}
+
+.weather-fx-front-clouds::before {
+  content: "";
+  position: absolute;
+  inset: -8% -18% 36%;
+  background:
+    radial-gradient(circle at 22% 24%, color-mix(in srgb, var(--weather-cloud-edge) 54%, transparent), transparent 26%),
+    radial-gradient(circle at 76% 12%, color-mix(in srgb, var(--weather-cloud-core) 34%, transparent), transparent 28%);
+  opacity: calc(var(--weather-front-cloud-opacity) * 0.48);
+  filter: blur(34px);
 }
 
 .weather-fx-fog-band {
@@ -1022,8 +1231,10 @@ export const WEATHER_HUD_CSS = `
   top: var(--fog-top);
   left: var(--fog-left);
   border-radius: 999px;
-  background: linear-gradient(90deg, transparent, var(--weather-fog-color), transparent);
-  filter: blur(20px);
+  background:
+    linear-gradient(90deg, transparent, var(--weather-fog-color), transparent),
+    radial-gradient(circle at 40% 50%, color-mix(in srgb, var(--weather-fog-color) 88%, white 4%), transparent 62%);
+  filter: blur(24px);
   opacity: calc(var(--weather-fog-opacity) * var(--fog-opacity-scale));
   animation: weather-fog-drift var(--fog-duration) ease-in-out infinite;
   animation-delay: var(--fog-delay);
@@ -1035,11 +1246,29 @@ export const WEATHER_HUD_CSS = `
   left: var(--mist-left);
   bottom: var(--mist-bottom);
   border-radius: 999px;
-  background: radial-gradient(circle at center, var(--weather-mist-color), transparent 68%);
-  filter: blur(22px);
+  background:
+    radial-gradient(circle at 28% 42%, color-mix(in srgb, var(--weather-mist-color) 92%, white 8%), transparent 58%),
+    radial-gradient(circle at center, var(--weather-mist-color), transparent 70%);
+  filter: blur(26px);
   opacity: calc(var(--weather-mist-opacity) * var(--mist-opacity-scale));
   animation: weather-mist-roll var(--mist-duration) ease-in-out infinite;
   animation-delay: var(--mist-delay);
+}
+
+.weather-fx-front-haze {
+  background:
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--weather-mist-color) 12%, transparent) 54%, color-mix(in srgb, var(--weather-mist-color) 34%, transparent) 100%),
+    radial-gradient(circle at 50% 118%, color-mix(in srgb, var(--weather-mist-color) 54%, transparent), transparent 48%);
+  opacity: calc(var(--weather-front-mist-opacity) * 0.78);
+  filter: blur(18px);
+  mix-blend-mode: screen;
+  animation: weather-front-haze-drift 16s ease-in-out infinite alternate;
+}
+
+.weather-fx-mist-plume-front {
+  opacity: calc(var(--weather-front-mist-opacity) * var(--mist-opacity-scale));
+  mix-blend-mode: screen;
+  filter: blur(32px);
 }
 
 .weather-fx-mote {
@@ -1055,18 +1284,42 @@ export const WEATHER_HUD_CSS = `
   animation-delay: var(--mote-delay);
 }
 
+.weather-fx-rain-sheet-line {
+  top: var(--sheet-top);
+  left: var(--sheet-left);
+  width: var(--sheet-width);
+  height: var(--sheet-length);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), color-mix(in srgb, var(--weather-rain-color) 92%, white 8%) 26%, rgba(255, 255, 255, 0));
+  opacity: calc(var(--weather-rain-sheet-opacity) * var(--sheet-opacity-scale));
+  filter: blur(1.6px) drop-shadow(0 0 10px rgba(206, 228, 255, 0.18));
+  transform: rotate(13deg);
+  animation: weather-rain-sheet-fall var(--sheet-duration) linear infinite;
+  animation-delay: var(--sheet-delay);
+}
+
 .weather-fx-rain-drop {
   top: var(--drop-top);
   left: var(--drop-left);
   width: var(--drop-width);
   height: var(--drop-length);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), var(--weather-rain-color));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), color-mix(in srgb, var(--weather-rain-color) 96%, white 6%) 24%, color-mix(in srgb, var(--weather-rain-color) 18%, transparent) 100%);
   border-radius: 999px;
   opacity: calc(var(--weather-rain-opacity) * var(--drop-opacity-scale));
   transform: rotate(11deg);
   filter: drop-shadow(0 0 6px rgba(191, 221, 255, 0.26));
   animation: weather-rain-fall var(--drop-duration) linear infinite;
   animation-delay: var(--drop-delay);
+}
+
+.weather-fx-rain-drop::after {
+  content: "";
+  position: absolute;
+  inset: 16% auto 10% 28%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.42);
+  border-radius: 999px;
+  opacity: 0.7;
 }
 
 .weather-fx-rain-drop-front {
@@ -1084,6 +1337,20 @@ export const WEATHER_HUD_CSS = `
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
   animation: weather-snow-fall var(--flake-duration) linear infinite;
   animation-delay: var(--flake-delay);
+}
+
+.weather-fx-snow-flake::before,
+.weather-fx-snow-flake::after {
+  content: "";
+  position: absolute;
+  inset: 45% -36%;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--weather-snow-color) 82%, white 18%);
+  opacity: 0.34;
+}
+
+.weather-fx-snow-flake::after {
+  transform: rotate(90deg);
 }
 
 .weather-fx-snow-flake-front {
@@ -1105,19 +1372,33 @@ export const WEATHER_HUD_CSS = `
 .weather-fx-root[data-condition="rain"] .weather-fx-clouds::before,
 .weather-fx-root[data-condition="storm"] .weather-fx-clouds::before {
   inset: -14% -8% 44%;
-  opacity: calc(var(--weather-cloud-opacity) * 0.9);
+  opacity: calc(var(--weather-cloud-opacity) * 0.86);
   filter: blur(42px);
 }
 
-.weather-fx-root[data-condition="rain"] .weather-fx-cloud,
-.weather-fx-root[data-condition="storm"] .weather-fx-cloud {
-  transform: translateY(-1.5vh);
+.weather-fx-root[data-condition="storm"] .weather-fx-front-clouds,
+.weather-fx-root[data-condition="rain"] .weather-fx-front-clouds {
+  mix-blend-mode: screen;
+}
+
+.weather-fx-root[data-condition="fog"] .weather-fx-front-haze,
+.weather-fx-root[data-condition="snow"] .weather-fx-front-haze {
+  opacity: calc(var(--weather-front-mist-opacity) * 0.9);
+}
+
+.weather-fx-root[data-kind="front"] .weather-fx-rain,
+.weather-fx-root[data-kind="front"] .weather-fx-snow,
+.weather-fx-root[data-kind="front"] .weather-fx-rain-sheet {
+  mix-blend-mode: screen;
 }
 
 .weather-fx-root.weather-reduced-motion .weather-fx-cloud,
+.weather-fx-root.weather-reduced-motion .weather-fx-cloud-shadow-band,
 .weather-fx-root.weather-reduced-motion .weather-fx-fog-band,
 .weather-fx-root.weather-reduced-motion .weather-fx-mist-plume,
 .weather-fx-root.weather-reduced-motion .weather-fx-mote,
+.weather-fx-root.weather-reduced-motion .weather-fx-star,
+.weather-fx-root.weather-reduced-motion .weather-fx-rain-sheet-line,
 .weather-fx-root.weather-reduced-motion .weather-fx-rain-drop,
 .weather-fx-root.weather-reduced-motion .weather-fx-snow-flake {
   animation-duration: 0.001ms;
@@ -1126,11 +1407,13 @@ export const WEATHER_HUD_CSS = `
 
 .weather-fx-root.weather-reduced-motion .weather-fx-sky,
 .weather-fx-root.weather-reduced-motion .weather-fx-glow,
-.weather-fx-root.weather-reduced-motion .weather-fx-beams {
+.weather-fx-root.weather-reduced-motion .weather-fx-beams,
+.weather-fx-root.weather-reduced-motion .weather-fx-front-haze {
   animation: none;
 }
 
 .weather-fx-root.weather-reduced-motion .weather-fx-rain-drop,
+.weather-fx-root.weather-reduced-motion .weather-fx-rain-sheet-line,
 .weather-fx-root.weather-reduced-motion .weather-fx-snow-flake {
   opacity: var(--weather-particle-opacity-static, 0.08);
 }
@@ -1138,6 +1421,11 @@ export const WEATHER_HUD_CSS = `
 @keyframes weather-sky-shift {
   0% { transform: scale(1) translate3d(0, 0, 0); }
   100% { transform: scale(1.04) translate3d(0, -1.6vh, 0); }
+}
+
+@keyframes weather-star-twinkle {
+  0%, 100% { transform: scale(0.92); opacity: calc(var(--weather-star-opacity) * var(--star-opacity-scale)); }
+  50% { transform: scale(1.16); opacity: calc(var(--weather-star-opacity) * var(--star-opacity-scale)); }
 }
 
 @keyframes weather-glow-drift {
@@ -1150,9 +1438,14 @@ export const WEATHER_HUD_CSS = `
   100% { transform: translate3d(1vw, -0.6vh, 0) rotate(1deg); }
 }
 
+@keyframes weather-shadow-drift {
+  0% { transform: translate3d(-12vw, 0, 0); }
+  100% { transform: translate3d(14vw, -1.4vh, 0); }
+}
+
 @keyframes weather-cloud-drift {
-  0% { transform: translateX(-12vw); }
-  100% { transform: translateX(18vw); }
+  0% { transform: translate3d(-18vw, 0, 0) scale(var(--cloud-depth, 1)); }
+  100% { transform: translate3d(18vw, var(--cloud-rise, 0), 0) scale(var(--cloud-depth, 1)); }
 }
 
 @keyframes weather-fog-drift {
@@ -1165,9 +1458,20 @@ export const WEATHER_HUD_CSS = `
   50% { transform: translate3d(2vw, -1vh, 0); }
 }
 
+@keyframes weather-front-haze-drift {
+  0% { transform: translate3d(-2vw, 0.6vh, 0) scale(1); }
+  100% { transform: translate3d(2vw, -0.8vh, 0) scale(1.04); }
+}
+
 @keyframes weather-mote-drift {
   0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); }
   50% { transform: translate3d(var(--mote-drift-x), var(--mote-drift-y), 0) scale(1.12); }
+}
+
+@keyframes weather-rain-sheet-fall {
+  0% { transform: translate3d(0, 0, 0) rotate(13deg); opacity: 0; }
+  14% { opacity: calc(var(--weather-rain-sheet-opacity) * var(--sheet-opacity-scale)); }
+  100% { transform: translate3d(var(--sheet-drift), 118vh, 0) rotate(13deg); opacity: 0; }
 }
 
 @keyframes weather-rain-fall {
