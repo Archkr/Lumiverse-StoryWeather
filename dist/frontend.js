@@ -190,7 +190,14 @@ function svgToDataUri(svg) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 function buildSvgDocument(viewBox, defs, body) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" fill="none">${defs}${body}</svg>`;
+  const parts = viewBox.trim().split(/\s+/).map((value) => Number.parseFloat(value));
+  if (parts.length !== 4 || parts.some((value) => !Number.isFinite(value))) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" fill="none" overflow="visible">${defs}${body}</svg>`;
+  }
+  const [x, y, width, height] = parts;
+  const pad = Math.max(8, Math.max(width, height) * 0.08);
+  const paddedViewBox = `${x - pad} ${y - pad} ${width + pad * 2} ${height + pad * 2}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${paddedViewBox}" fill="none" overflow="visible">${defs}${body}</svg>`;
 }
 function buildCloudWispSvg(colors) {
   return buildSvgDocument("0 0 720 280", `<defs>
@@ -668,22 +675,76 @@ function requestWeatherSprite(kind, colors, onReady) {
 // src/render/quality.ts
 var WEATHER_QUALITY_BUDGETS = {
   performance: {
-    resolutionScale: 0.8,
+    resolutionScale: 0.78,
     maxDevicePixelRatio: 1,
-    maxPixelCount: 700000,
-    stars: 12,
+    maxPixelCount: 650000,
+    frameIntervalMs: 1000 / 24,
+    stars: 10,
+    motes: 0,
+    cloudLayers: 1,
+    cloudSprites: 3,
+    frontCloudSprites: 0,
+    fogWisps: 1,
+    frontMistWisps: 0,
+    anchorBands: 1,
+    scudLayers: 0,
+    shadowPasses: 1,
+    horizonGlowPasses: 1,
+    rainBack: 30,
+    rainFront: 42,
+    rainCurtains: 0,
+    curtainTextures: 0,
+    contactBands: 0,
+    impactBursts: 0,
+    runoffSheets: 0,
+    accumulationBands: 0,
+    condensationBlooms: 0,
+    fogCreepBands: 0,
+    shadowSweepPasses: 0,
+    distortionPasses: 0,
+    snowBack: 28,
+    snowFront: 40,
+    snowGusts: 0,
+    glassBeads: 0,
+    glassRivulets: 0,
+    lightningBranches: 0,
+    lightningForks: 0,
+    lightningGlow: 0.68,
+    flags: {
+      stars: true,
+      motes: false,
+      layeredClouds: false,
+      frontCloudBank: false,
+      deepOvercast: false,
+      distantCurtains: false,
+      texturedCurtains: false,
+      glassOverlay: false,
+      glassDroplets: false,
+      frostOverlay: false,
+      lightningForks: false,
+      relightAnchors: false,
+      horizonPoles: false,
+      multiFlash: false
+    }
+  },
+  lite: {
+    resolutionScale: 0.86,
+    maxDevicePixelRatio: 1.05,
+    maxPixelCount: 900000,
+    frameIntervalMs: 1000 / 28,
+    stars: 16,
     motes: 4,
     cloudLayers: 1,
     cloudSprites: 4,
     frontCloudSprites: 0,
-    fogWisps: 3,
+    fogWisps: 2,
     frontMistWisps: 1,
     anchorBands: 1,
     scudLayers: 0,
     shadowPasses: 1,
     horizonGlowPasses: 1,
-    rainBack: 48,
-    rainFront: 80,
+    rainBack: 44,
+    rainFront: 64,
     rainCurtains: 1,
     curtainTextures: 0,
     contactBands: 0,
@@ -695,17 +756,17 @@ var WEATHER_QUALITY_BUDGETS = {
     shadowSweepPasses: 0,
     distortionPasses: 0,
     snowBack: 40,
-    snowFront: 64,
+    snowFront: 56,
     snowGusts: 1,
     glassBeads: 0,
     glassRivulets: 0,
-    lightningBranches: 1,
+    lightningBranches: 0,
     lightningForks: 0,
-    lightningGlow: 0.72,
+    lightningGlow: 0.78,
     flags: {
       stars: true,
-      motes: false,
-      layeredClouds: false,
+      motes: true,
+      layeredClouds: true,
       frontCloudBank: false,
       deepOvercast: false,
       distantCurtains: true,
@@ -719,22 +780,76 @@ var WEATHER_QUALITY_BUDGETS = {
       multiFlash: false
     }
   },
-  lite: {
-    resolutionScale: 0.9,
-    maxDevicePixelRatio: 1.15,
-    maxPixelCount: 1e6,
-    stars: 22,
-    motes: 10,
+  standard: {
+    resolutionScale: 0.92,
+    maxDevicePixelRatio: 1.2,
+    maxPixelCount: 1150000,
+    frameIntervalMs: 1000 / 30,
+    stars: 28,
+    motes: 8,
     cloudLayers: 2,
-    cloudSprites: 6,
-    frontCloudSprites: 1,
-    fogWisps: 4,
-    frontMistWisps: 2,
+    cloudSprites: 5,
+    frontCloudSprites: 0,
+    fogWisps: 3,
+    frontMistWisps: 1,
     anchorBands: 2,
     scudLayers: 1,
     shadowPasses: 1,
     horizonGlowPasses: 2,
-    rainBack: 72,
+    rainBack: 64,
+    rainFront: 88,
+    rainCurtains: 1,
+    curtainTextures: 1,
+    contactBands: 0,
+    impactBursts: 0,
+    runoffSheets: 0,
+    accumulationBands: 0,
+    condensationBlooms: 0,
+    fogCreepBands: 0,
+    shadowSweepPasses: 0,
+    distortionPasses: 0,
+    snowBack: 56,
+    snowFront: 84,
+    snowGusts: 1,
+    glassBeads: 0,
+    glassRivulets: 0,
+    lightningBranches: 0,
+    lightningForks: 0,
+    lightningGlow: 0.92,
+    flags: {
+      stars: true,
+      motes: true,
+      layeredClouds: true,
+      frontCloudBank: false,
+      deepOvercast: true,
+      distantCurtains: true,
+      texturedCurtains: false,
+      glassOverlay: false,
+      glassDroplets: false,
+      frostOverlay: false,
+      lightningForks: false,
+      relightAnchors: true,
+      horizonPoles: true,
+      multiFlash: false
+    }
+  },
+  cinematic: {
+    resolutionScale: 1,
+    maxDevicePixelRatio: 1.35,
+    maxPixelCount: 1450000,
+    frameIntervalMs: 1000 / 34,
+    stars: 40,
+    motes: 12,
+    cloudLayers: 2,
+    cloudSprites: 7,
+    frontCloudSprites: 0,
+    fogWisps: 4,
+    frontMistWisps: 1,
+    anchorBands: 3,
+    scudLayers: 1,
+    shadowPasses: 2,
+    horizonGlowPasses: 3,
+    rainBack: 90,
     rainFront: 120,
     rainCurtains: 2,
     curtainTextures: 1,
@@ -746,65 +861,13 @@ var WEATHER_QUALITY_BUDGETS = {
     fogCreepBands: 0,
     shadowSweepPasses: 0,
     distortionPasses: 1,
-    snowBack: 72,
+    snowBack: 78,
     snowFront: 112,
     snowGusts: 2,
-    glassBeads: 6,
+    glassBeads: 8,
     glassRivulets: 3,
-    lightningBranches: 1,
+    lightningBranches: 0,
     lightningForks: 0,
-    lightningGlow: 0.86,
-    flags: {
-      stars: true,
-      motes: true,
-      layeredClouds: true,
-      frontCloudBank: false,
-      deepOvercast: false,
-      distantCurtains: true,
-      texturedCurtains: false,
-      glassOverlay: true,
-      glassDroplets: false,
-      frostOverlay: true,
-      lightningForks: false,
-      relightAnchors: true,
-      horizonPoles: false,
-      multiFlash: false
-    }
-  },
-  standard: {
-    resolutionScale: 0.98,
-    maxDevicePixelRatio: 1.35,
-    maxPixelCount: 1400000,
-    stars: 42,
-    motes: 18,
-    cloudLayers: 3,
-    cloudSprites: 8,
-    frontCloudSprites: 2,
-    fogWisps: 6,
-    frontMistWisps: 3,
-    anchorBands: 3,
-    scudLayers: 2,
-    shadowPasses: 2,
-    horizonGlowPasses: 3,
-    rainBack: 96,
-    rainFront: 160,
-    rainCurtains: 3,
-    curtainTextures: 2,
-    contactBands: 0,
-    impactBursts: 0,
-    runoffSheets: 0,
-    accumulationBands: 0,
-    condensationBlooms: 0,
-    fogCreepBands: 0,
-    shadowSweepPasses: 0,
-    distortionPasses: 2,
-    snowBack: 108,
-    snowFront: 168,
-    snowGusts: 3,
-    glassBeads: 12,
-    glassRivulets: 5,
-    lightningBranches: 2,
-    lightningForks: 1,
     lightningGlow: 1,
     flags: {
       stars: true,
@@ -815,64 +878,12 @@ var WEATHER_QUALITY_BUDGETS = {
       distantCurtains: true,
       texturedCurtains: true,
       glassOverlay: true,
-      glassDroplets: false,
-      frostOverlay: true,
-      lightningForks: true,
+      glassDroplets: true,
+      frostOverlay: false,
+      lightningForks: false,
       relightAnchors: true,
       horizonPoles: true,
       multiFlash: false
-    }
-  },
-  cinematic: {
-    resolutionScale: 1.06,
-    maxDevicePixelRatio: 1.55,
-    maxPixelCount: 1900000,
-    stars: 72,
-    motes: 28,
-    cloudLayers: 4,
-    cloudSprites: 12,
-    frontCloudSprites: 3,
-    fogWisps: 9,
-    frontMistWisps: 4,
-    anchorBands: 4,
-    scudLayers: 2,
-    shadowPasses: 3,
-    horizonGlowPasses: 4,
-    rainBack: 140,
-    rainFront: 220,
-    rainCurtains: 4,
-    curtainTextures: 3,
-    contactBands: 0,
-    impactBursts: 0,
-    runoffSheets: 0,
-    accumulationBands: 0,
-    condensationBlooms: 0,
-    fogCreepBands: 0,
-    shadowSweepPasses: 0,
-    distortionPasses: 2,
-    snowBack: 160,
-    snowFront: 260,
-    snowGusts: 4,
-    glassBeads: 20,
-    glassRivulets: 8,
-    lightningBranches: 3,
-    lightningForks: 2,
-    lightningGlow: 1.08,
-    flags: {
-      stars: true,
-      motes: true,
-      layeredClouds: true,
-      frontCloudBank: true,
-      deepOvercast: true,
-      distantCurtains: true,
-      texturedCurtains: true,
-      glassOverlay: true,
-      glassDroplets: true,
-      frostOverlay: true,
-      lightningForks: true,
-      relightAnchors: true,
-      horizonPoles: true,
-      multiFlash: true
     }
   }
 };
@@ -1026,6 +1037,9 @@ function resolvePhase(state) {
   if (hour < 21)
     return "dusk";
   return "night";
+}
+function resolveEffectiveLayerMode(state, prefs) {
+  return prefs.layerMode === "auto" ? state.layer : prefs.layerMode;
 }
 function buildSceneProfile(state, effectiveIntensity) {
   const phase = resolvePhase(state);
@@ -1491,16 +1505,6 @@ function buildGlassPalette(profile) {
     glow: profile.glassGlow
   };
 }
-function buildLightningPalette(profile) {
-  return {
-    primary: profile.lightningColor,
-    secondary: profile.lightningColor,
-    shadow: rgba(profile.lightningGlow, 0.12),
-    highlight: "#ffffff",
-    accent: profile.lightningGlow,
-    glow: rgba(profile.lightningGlow, 0.55)
-  };
-}
 function buildAnchorPalette(profile, depth) {
   const primary = mixHex(profile.anchorNearColor, profile.anchorFarColor, depth);
   const secondary = mixHex(primary, profile.anchorFarColor, 0.4);
@@ -1808,10 +1812,16 @@ function createCurtainTextures(rng, condition, profile, budget) {
     };
   });
 }
-function createRainParticles(rng, profile, budget, kind) {
+function createRainParticles(rng, profile, budget, kind, effectiveLayer, condition) {
   if (profile.precipitation <= 0.04)
     return [];
-  const target = kind === "front" ? budget.rainFront : budget.rainBack;
+  let target = kind === "front" ? budget.rainFront : budget.rainBack;
+  if (kind === "front") {
+    target *= effectiveLayer === "both" ? 0.32 : 0.58;
+    if (condition === "storm") {
+      target *= effectiveLayer === "both" ? 0.82 : 0.9;
+    }
+  }
   if (target <= 0)
     return [];
   const count = Math.round(target * clamp(profile.precipitation, 0.18, 1.15));
@@ -1827,10 +1837,13 @@ function createRainParticles(rng, profile, budget, kind) {
     phase: rng() * Math.PI * 2
   }));
 }
-function createSnowParticles(rng, profile, budget, kind) {
+function createSnowParticles(rng, profile, budget, kind, effectiveLayer) {
   if (profile.precipitation <= 0.04)
     return [];
-  const target = kind === "front" ? budget.snowFront : budget.snowBack;
+  let target = kind === "front" ? budget.snowFront : budget.snowBack;
+  if (kind === "front") {
+    target *= effectiveLayer === "both" ? 0.36 : 0.62;
+  }
   if (target <= 0)
     return [];
   const count = Math.round(target * clamp(profile.precipitation, 0.22, 1.1));
@@ -2034,16 +2047,17 @@ function buildComposition(kind, state, prefs) {
   const effectiveIntensity = clamp(state.intensity * prefs.intensity, 0.2, 1.5);
   const profile = buildSceneProfile(state, effectiveIntensity);
   const budget = getQualityBudget(prefs.qualityMode);
+  const effectiveLayer = resolveEffectiveLayerMode(state, prefs);
   const signature = buildSceneSignature(kind, state, prefs, profile.phase, effectiveIntensity);
   const rng = createRng(hashString(signature));
   const anchors = kind === "back" ? createAnchorLayers(rng, state.condition, profile, budget) : [];
   const clouds = kind === "back" ? createCloudLayers(rng, state.condition, profile, budget, "back") : [];
   const scud = kind === "back" ? createScudLayers(rng, state.condition, profile, budget) : [];
-  const frontClouds = kind === "front" && budget.flags.frontCloudBank ? createCloudLayers(rng, state.condition, profile, budget, "front") : [];
+  const frontClouds = [];
   const fogWisps = kind === "back" ? createFogWisps(rng, profile, budget, "back") : [];
-  const frontMist = kind === "front" ? createFogWisps(rng, profile, budget, "front") : [];
-  const rain = state.condition === "rain" || state.condition === "storm" ? createRainParticles(rng, profile, budget, kind) : [];
-  const snow = state.condition === "snow" ? createSnowParticles(rng, profile, budget, kind) : [];
+  const frontMist = kind === "front" ? createFogWisps(rng, profile, budget, "front").slice(0, effectiveLayer === "both" ? 1 : budget.frontMistWisps) : [];
+  const rain = state.condition === "rain" || state.condition === "storm" ? createRainParticles(rng, profile, budget, kind, effectiveLayer, state.condition) : [];
+  const snow = state.condition === "snow" ? createSnowParticles(rng, profile, budget, kind, effectiveLayer) : [];
   const curtains = kind === "back" ? createCurtains(rng, profile, budget, state.condition) : [];
   const curtainTextures = kind === "back" ? createCurtainTextures(rng, state.condition, profile, budget) : [];
   const contactBands = kind === "back" ? createContactBands(rng, state.condition, profile, budget) : [];
@@ -2112,6 +2126,7 @@ class CanvasWeatherRenderer {
   rafId = null;
   animationTime = 0;
   lastFrameAt = null;
+  lastRenderAt = null;
   width = 1;
   height = 1;
   dpr = 1;
@@ -2198,23 +2213,11 @@ class CanvasWeatherRenderer {
     const budget = this.composition.budget;
     const flashCount = budget.flags.multiFlash ? 2 + (Math.random() > 0.65 ? 1 : 0) : 1;
     for (let flashIndex = 0;flashIndex < flashCount; flashIndex += 1) {
-      const bolts = [];
-      const boltCount = budget.flags.lightningForks ? Math.max(1, budget.lightningForks - flashIndex) : 0;
-      for (let index = 0;index < boltCount; index += 1) {
-        bolts.push({
-          x: 0.12 + Math.random() * 0.72,
-          y: 0.04 + Math.random() * 0.18,
-          width: this.kind === "front" ? 90 + Math.random() * 120 : 70 + Math.random() * 90,
-          height: this.kind === "front" ? 200 + Math.random() * 210 : 140 + Math.random() * 180,
-          alpha: 0.68 + Math.random() * 0.3,
-          rotation: -16 + Math.random() * 32
-        });
-      }
       this.lightningEvents.push({
         start: this.animationTime + flashIndex * (0.08 + Math.random() * 0.08),
         duration: 0.18 + Math.random() * 0.08,
         flash: (0.58 + Math.random() * 0.34) * budget.lightningGlow,
-        bolts
+        bolts: []
       });
     }
     this.refreshLoop();
@@ -2285,6 +2288,7 @@ class CanvasWeatherRenderer {
       this.rafId = null;
     }
     this.lastFrameAt = null;
+    this.lastRenderAt = null;
   }
   step = (now) => {
     this.rafId = null;
@@ -2298,8 +2302,13 @@ class CanvasWeatherRenderer {
     const delta = Math.min(0.06, Math.max(0, (now - this.lastFrameAt) / 1000));
     this.lastFrameAt = now;
     this.animationTime += delta;
+    if (this.lastRenderAt !== null && this.composition && now - this.lastRenderAt < this.composition.budget.frameIntervalMs) {
+      this.refreshLoop();
+      return;
+    }
     try {
       this.render(this.animationTime);
+      this.lastRenderAt = now;
     } catch (error) {
       this.handleFatalError(error);
       return;
@@ -2383,17 +2392,16 @@ class CanvasWeatherRenderer {
     if (!this.composition)
       return;
     const ctx = this.context;
-    const { profile, frontClouds, frontMist, rain, snow } = this.composition;
+    const { profile, frontMist, rain, snow } = this.composition;
     const lightning = this.resolveLightningState(time);
-    if (profile.frontCloudAlpha > 0.02) {
-      const topShadow = ctx.createLinearGradient(0, 0, 0, this.height * 0.5);
-      topShadow.addColorStop(0, rgba(profile.cloudShadow, 0.26 + profile.frontCloudAlpha * 0.34));
-      topShadow.addColorStop(0.34, rgba(profile.cloudMid, profile.frontCloudAlpha * 0.18));
-      topShadow.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = topShadow;
-      ctx.fillRect(0, 0, this.width, this.height * 0.54);
+    if (profile.frontMistAlpha > 0.02 || profile.nearPrecipAlpha > 0.08) {
+      const haze = ctx.createLinearGradient(0, 0, 0, this.height * 0.54);
+      haze.addColorStop(0, rgba(profile.cloudShadow, 0.08 + profile.frontMistAlpha * 0.16));
+      haze.addColorStop(0.32, rgba(profile.cloudMid, 0.04 + profile.frontMistAlpha * 0.08));
+      haze.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = haze;
+      ctx.fillRect(0, 0, this.width, this.height * 0.56);
     }
-    this.drawCloudLayers(time, frontClouds);
     this.drawFogWisps(time, frontMist);
     this.drawRain(time, rain, profile, "front");
     this.drawSnow(time, snow, profile, "front");
@@ -2857,18 +2865,14 @@ class CanvasWeatherRenderer {
     return { flash, bolts };
   }
   drawLightningState(profile, lightning) {
-    if (lightning.flash <= 0.001 && lightning.bolts.length === 0)
+    if (lightning.flash <= 0.001)
       return;
-    const palette = buildLightningPalette(profile);
     const ctx = this.context;
     ctx.save();
     ctx.globalAlpha = lightning.flash * (this.kind === "back" ? 0.46 : 0.26);
     ctx.fillStyle = rgba(profile.lightningGlow, 0.72);
     ctx.fillRect(0, 0, this.width, this.height);
     ctx.restore();
-    for (const bolt of lightning.bolts) {
-      drawSprite(ctx, "lightning-fork", palette, bolt.x * this.width, bolt.y * this.height, bolt.width, bolt.height, bolt.alpha, bolt.rotation, this.onAssetReady);
-    }
   }
   handleFatalError(error) {
     if (this.failed)

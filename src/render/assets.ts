@@ -41,7 +41,14 @@ function svgToDataUri(svg: string): string {
 }
 
 function buildSvgDocument(viewBox: string, defs: string, body: string): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" fill="none">${defs}${body}</svg>`;
+  const parts = viewBox.trim().split(/\s+/).map((value) => Number.parseFloat(value));
+  if (parts.length !== 4 || parts.some((value) => !Number.isFinite(value))) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" fill="none" overflow="visible">${defs}${body}</svg>`;
+  }
+  const [x, y, width, height] = parts;
+  const pad = Math.max(8, Math.max(width, height) * 0.08);
+  const paddedViewBox = `${x - pad} ${y - pad} ${width + pad * 2} ${height + pad * 2}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${paddedViewBox}" fill="none" overflow="visible">${defs}${body}</svg>`;
 }
 
 function buildCloudWispSvg(colors: WeatherSpritePalette): string {
