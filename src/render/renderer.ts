@@ -2357,50 +2357,100 @@ class CanvasWeatherRenderer {
     }
   }
 
+  private getParticleStride(kind: RendererKind, densityBias = 1): number {
+    const baselinePixels = 1280 * 720;
+    const areaScale = Math.sqrt(baselinePixels / Math.max(1, this.width * this.height));
+    const qualityScale =
+      this.prefs.qualityMode === "cinematic"
+        ? 1
+        : this.prefs.qualityMode === "standard"
+          ? 0.88
+          : this.prefs.qualityMode === "lite"
+            ? 0.76
+            : 0.64;
+    const frontPenalty = kind === "front" ? 0.86 : 1;
+    const drawScale = clamp(areaScale * qualityScale * frontPenalty * densityBias, 0.34, 1);
+    return Math.max(1, Math.ceil(1 / drawScale));
+  }
+
   private drawRain(time: number, particles: RainParticle[], profile: SceneProfile, kind: RendererKind): void {
     if (particles.length === 0) return;
-    const palette = buildRainPalette(profile);
-    for (const particle of particles) {
+    const ctx = this.context;
+    const stride = this.getParticleStride(kind, 0.94);
+    const mainAlpha = (kind === "front" ? 0.38 : 0.24) * clamp(profile.nearPrecipAlpha + profile.distantPrecipAlpha * 0.4, 0.4, 1.05);
+    const lengthScale = kind === "front" ? 0.72 : 0.56;
+    const slantScale = 0.08 + profile.wind * (kind === "front" ? 0.1 : 0.07);
+
+    ctx.save();
+    ctx.strokeStyle = rgba(profile.rainColor, mainAlpha);
+    ctx.lineWidth = kind === "front" ? 1.4 : 1;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let index = 0; index < particles.length; index += stride) {
+      const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x = (particle.x + progress * particle.drift + Math.sin(time * 2.2 + particle.phase) * particle.sway) * this.width;
       const y = -particle.height + progress * (this.height + particle.height * 1.4);
-      drawSprite(
-        this.context,
-        "rain-streak",
-        palette,
-        x,
-        y,
-        particle.width,
-        particle.height,
-        particle.alpha * (kind === "front" ? 1 : 0.86),
-        kind === "front" ? 10 : 8,
-        this.onAssetReady,
-      );
+      const length = particle.height * lengthScale;
+      const slant = length * slantScale + particle.width * 0.8;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - slant, y - length);
     }
+    ctx.stroke();
+
+    const highlightStride = stride * (kind === "front" ? 3 : 5);
+    ctx.strokeStyle = rgba("#ffffff", kind === "front" ? mainAlpha * 0.72 : mainAlpha * 0.44);
+    ctx.lineWidth = kind === "front" ? 0.8 : 0.55;
+    ctx.beginPath();
+    for (let index = 0; index < particles.length; index += highlightStride) {
+      const particle = particles[index];
+      const progress = (time / particle.cycle + particle.offset) % 1;
+      const x = (particle.x + progress * particle.drift + Math.sin(time * 2.2 + particle.phase) * particle.sway) * this.width;
+      const y = -particle.height + progress * (this.height + particle.height * 1.4);
+      const length = particle.height * (lengthScale * 0.42);
+      const slant = length * slantScale;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - slant, y - length);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 
   private drawSnow(time: number, particles: SnowParticle[], profile: SceneProfile, kind: RendererKind): void {
     if (particles.length === 0) return;
-    const palette = buildSnowPalette(profile);
-    for (const particle of particles) {
+    const ctx = this.context;
+    const stride = this.getParticleStride(kind, 1.08);
+    const baseRadiusScale = kind === "front" ? 0.22 : 0.18;
+    ctx.save();
+    ctx.fillStyle = rgba(profile.snowColor, kind === "front" ? 0.42 : 0.28);
+    ctx.beginPath();
+    for (let index = 0; index < particles.length; index += stride) {
+      const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x =
         (particle.x + Math.sin(time * particle.sway + particle.phase) * particle.drift + progress * particle.drift * 0.18) * this.width;
       const y = -particle.size + progress * (this.height + particle.size * 1.4);
-      const rotation = particle.rotation + time * (kind === "front" ? 46 : 28);
-      drawSprite(
-        this.context,
-        "snow-crystal",
-        palette,
-        x,
-        y,
-        particle.size,
-        particle.size,
-        particle.alpha,
-        rotation,
-        this.onAssetReady,
-      );
+      const radius = Math.max(1, particle.size * baseRadiusScale);
+      ctx.moveTo(x + radius, y);
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
     }
+    ctx.fill();
+
+    const highlightStride = stride * (kind === "front" ? 4 : 6);
+    ctx.fillStyle = rgba("#ffffff", kind === "front" ? 0.34 : 0.22);
+    ctx.beginPath();
+    for (let index = 0; index < particles.length; index += highlightStride) {
+      const particle = particles[index];
+      const progress = (time / particle.cycle + particle.offset) % 1;
+      const x =
+        (particle.x + Math.sin(time * particle.sway + particle.phase) * particle.drift + progress * particle.drift * 0.18) * this.width;
+      const y = -particle.size + progress * (this.height + particle.size * 1.4);
+      const radius = Math.max(0.9, particle.size * baseRadiusScale * 0.54);
+      ctx.moveTo(x + radius, y);
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    ctx.restore();
   }
 
   private drawHorizon(profile: SceneProfile, lightningFlash: number): void {

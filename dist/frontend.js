@@ -668,24 +668,24 @@ function requestWeatherSprite(kind, colors, onReady) {
 // src/render/quality.ts
 var WEATHER_QUALITY_BUDGETS = {
   performance: {
-    resolutionScale: 0.85,
-    maxDevicePixelRatio: 1.2,
-    maxPixelCount: 900000,
-    stars: 18,
-    motes: 8,
-    cloudLayers: 2,
-    cloudSprites: 5,
+    resolutionScale: 0.8,
+    maxDevicePixelRatio: 1,
+    maxPixelCount: 700000,
+    stars: 12,
+    motes: 4,
+    cloudLayers: 1,
+    cloudSprites: 4,
     frontCloudSprites: 0,
-    fogWisps: 4,
+    fogWisps: 3,
     frontMistWisps: 1,
     anchorBands: 1,
     scudLayers: 0,
     shadowPasses: 1,
     horizonGlowPasses: 1,
-    rainBack: 90,
-    rainFront: 160,
-    rainCurtains: 2,
-    curtainTextures: 1,
+    rainBack: 48,
+    rainFront: 80,
+    rainCurtains: 1,
+    curtainTextures: 0,
     contactBands: 0,
     impactBursts: 0,
     runoffSheets: 0,
@@ -694,8 +694,8 @@ var WEATHER_QUALITY_BUDGETS = {
     fogCreepBands: 0,
     shadowSweepPasses: 0,
     distortionPasses: 0,
-    snowBack: 56,
-    snowFront: 96,
+    snowBack: 40,
+    snowFront: 64,
     snowGusts: 1,
     glassBeads: 0,
     glassRivulets: 0,
@@ -720,22 +720,74 @@ var WEATHER_QUALITY_BUDGETS = {
     }
   },
   lite: {
-    resolutionScale: 1,
-    maxDevicePixelRatio: 1.45,
-    maxPixelCount: 1500000,
-    stars: 34,
-    motes: 16,
+    resolutionScale: 0.9,
+    maxDevicePixelRatio: 1.15,
+    maxPixelCount: 1e6,
+    stars: 22,
+    motes: 10,
+    cloudLayers: 2,
+    cloudSprites: 6,
+    frontCloudSprites: 1,
+    fogWisps: 4,
+    frontMistWisps: 2,
+    anchorBands: 2,
+    scudLayers: 1,
+    shadowPasses: 1,
+    horizonGlowPasses: 2,
+    rainBack: 72,
+    rainFront: 120,
+    rainCurtains: 2,
+    curtainTextures: 1,
+    contactBands: 0,
+    impactBursts: 0,
+    runoffSheets: 0,
+    accumulationBands: 0,
+    condensationBlooms: 0,
+    fogCreepBands: 0,
+    shadowSweepPasses: 0,
+    distortionPasses: 1,
+    snowBack: 72,
+    snowFront: 112,
+    snowGusts: 2,
+    glassBeads: 6,
+    glassRivulets: 3,
+    lightningBranches: 1,
+    lightningForks: 0,
+    lightningGlow: 0.86,
+    flags: {
+      stars: true,
+      motes: true,
+      layeredClouds: true,
+      frontCloudBank: false,
+      deepOvercast: false,
+      distantCurtains: true,
+      texturedCurtains: false,
+      glassOverlay: true,
+      glassDroplets: false,
+      frostOverlay: true,
+      lightningForks: false,
+      relightAnchors: true,
+      horizonPoles: false,
+      multiFlash: false
+    }
+  },
+  standard: {
+    resolutionScale: 0.98,
+    maxDevicePixelRatio: 1.35,
+    maxPixelCount: 1400000,
+    stars: 42,
+    motes: 18,
     cloudLayers: 3,
     cloudSprites: 8,
     frontCloudSprites: 2,
     fogWisps: 6,
-    frontMistWisps: 2,
-    anchorBands: 2,
-    scudLayers: 1,
+    frontMistWisps: 3,
+    anchorBands: 3,
+    scudLayers: 2,
     shadowPasses: 2,
-    horizonGlowPasses: 2,
-    rainBack: 140,
-    rainFront: 260,
+    horizonGlowPasses: 3,
+    rainBack: 96,
+    rainFront: 160,
     rainCurtains: 3,
     curtainTextures: 2,
     contactBands: 0,
@@ -745,21 +797,21 @@ var WEATHER_QUALITY_BUDGETS = {
     condensationBlooms: 0,
     fogCreepBands: 0,
     shadowSweepPasses: 0,
-    distortionPasses: 1,
-    snowBack: 110,
-    snowFront: 190,
-    snowGusts: 2,
-    glassBeads: 8,
-    glassRivulets: 4,
+    distortionPasses: 2,
+    snowBack: 108,
+    snowFront: 168,
+    snowGusts: 3,
+    glassBeads: 12,
+    glassRivulets: 5,
     lightningBranches: 2,
     lightningForks: 1,
-    lightningGlow: 0.86,
+    lightningGlow: 1,
     flags: {
       stars: true,
       motes: true,
       layeredClouds: true,
       frontCloudBank: false,
-      deepOvercast: false,
+      deepOvercast: true,
       distantCurtains: true,
       texturedCurtains: true,
       glassOverlay: true,
@@ -767,28 +819,28 @@ var WEATHER_QUALITY_BUDGETS = {
       frostOverlay: true,
       lightningForks: true,
       relightAnchors: true,
-      horizonPoles: false,
+      horizonPoles: true,
       multiFlash: false
     }
   },
-  standard: {
-    resolutionScale: 1.1,
-    maxDevicePixelRatio: 1.8,
-    maxPixelCount: 2400000,
-    stars: 64,
+  cinematic: {
+    resolutionScale: 1.06,
+    maxDevicePixelRatio: 1.55,
+    maxPixelCount: 1900000,
+    stars: 72,
     motes: 28,
     cloudLayers: 4,
     cloudSprites: 12,
-    frontCloudSprites: 4,
-    fogWisps: 10,
+    frontCloudSprites: 3,
+    fogWisps: 9,
     frontMistWisps: 4,
-    anchorBands: 3,
+    anchorBands: 4,
     scudLayers: 2,
     shadowPasses: 3,
-    horizonGlowPasses: 3,
-    rainBack: 240,
-    rainFront: 420,
-    rainCurtains: 5,
+    horizonGlowPasses: 4,
+    rainBack: 140,
+    rainFront: 220,
+    rainCurtains: 4,
     curtainTextures: 3,
     contactBands: 0,
     impactBursts: 0,
@@ -798,66 +850,14 @@ var WEATHER_QUALITY_BUDGETS = {
     fogCreepBands: 0,
     shadowSweepPasses: 0,
     distortionPasses: 2,
-    snowBack: 180,
-    snowFront: 320,
-    snowGusts: 3,
+    snowBack: 160,
+    snowFront: 260,
+    snowGusts: 4,
     glassBeads: 20,
     glassRivulets: 8,
     lightningBranches: 3,
     lightningForks: 2,
-    lightningGlow: 1,
-    flags: {
-      stars: true,
-      motes: true,
-      layeredClouds: true,
-      frontCloudBank: true,
-      deepOvercast: true,
-      distantCurtains: true,
-      texturedCurtains: true,
-      glassOverlay: true,
-      glassDroplets: true,
-      frostOverlay: true,
-      lightningForks: true,
-      relightAnchors: true,
-      horizonPoles: true,
-      multiFlash: true
-    }
-  },
-  cinematic: {
-    resolutionScale: 1.3,
-    maxDevicePixelRatio: 2.25,
-    maxPixelCount: 3200000,
-    stars: 112,
-    motes: 44,
-    cloudLayers: 6,
-    cloudSprites: 18,
-    frontCloudSprites: 7,
-    fogWisps: 16,
-    frontMistWisps: 7,
-    anchorBands: 5,
-    scudLayers: 3,
-    shadowPasses: 5,
-    horizonGlowPasses: 4,
-    rainBack: 360,
-    rainFront: 720,
-    rainCurtains: 8,
-    curtainTextures: 5,
-    contactBands: 0,
-    impactBursts: 0,
-    runoffSheets: 0,
-    accumulationBands: 0,
-    condensationBlooms: 0,
-    fogCreepBands: 0,
-    shadowSweepPasses: 0,
-    distortionPasses: 3,
-    snowBack: 300,
-    snowFront: 620,
-    snowGusts: 5,
-    glassBeads: 40,
-    glassRivulets: 14,
-    lightningBranches: 5,
-    lightningForks: 4,
-    lightningGlow: 1.22,
+    lightningGlow: 1.08,
     flags: {
       stars: true,
       motes: true,
@@ -1480,26 +1480,6 @@ function buildCloudPalette(profile, kind) {
     };
   }
   return createSpritePalette(profile);
-}
-function buildRainPalette(profile) {
-  return {
-    primary: profile.rainColor,
-    secondary: profile.rainColor,
-    shadow: rgba(profile.rainColor, 0.08),
-    highlight: withLight(profile.rainColor, 0.18),
-    accent: withLight(profile.rainColor, 0.3),
-    glow: rgba(profile.rainColor, 0.34)
-  };
-}
-function buildSnowPalette(profile) {
-  return {
-    primary: profile.snowColor,
-    secondary: withLight(profile.snowColor, 0.08),
-    shadow: rgba(profile.snowColor, 0.12),
-    highlight: withLight(profile.snowColor, 0.06),
-    accent: withLight(profile.snowColor, 0.18),
-    glow: rgba(profile.snowColor, 0.16)
-  };
 }
 function buildGlassPalette(profile) {
   return {
@@ -2690,28 +2670,88 @@ class CanvasWeatherRenderer {
       ctx.restore();
     }
   }
+  getParticleStride(kind, densityBias = 1) {
+    const baselinePixels = 1280 * 720;
+    const areaScale = Math.sqrt(baselinePixels / Math.max(1, this.width * this.height));
+    const qualityScale = this.prefs.qualityMode === "cinematic" ? 1 : this.prefs.qualityMode === "standard" ? 0.88 : this.prefs.qualityMode === "lite" ? 0.76 : 0.64;
+    const frontPenalty = kind === "front" ? 0.86 : 1;
+    const drawScale = clamp(areaScale * qualityScale * frontPenalty * densityBias, 0.34, 1);
+    return Math.max(1, Math.ceil(1 / drawScale));
+  }
   drawRain(time, particles, profile, kind) {
     if (particles.length === 0)
       return;
-    const palette = buildRainPalette(profile);
-    for (const particle of particles) {
+    const ctx = this.context;
+    const stride = this.getParticleStride(kind, 0.94);
+    const mainAlpha = (kind === "front" ? 0.38 : 0.24) * clamp(profile.nearPrecipAlpha + profile.distantPrecipAlpha * 0.4, 0.4, 1.05);
+    const lengthScale = kind === "front" ? 0.72 : 0.56;
+    const slantScale = 0.08 + profile.wind * (kind === "front" ? 0.1 : 0.07);
+    ctx.save();
+    ctx.strokeStyle = rgba(profile.rainColor, mainAlpha);
+    ctx.lineWidth = kind === "front" ? 1.4 : 1;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let index = 0;index < particles.length; index += stride) {
+      const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x = (particle.x + progress * particle.drift + Math.sin(time * 2.2 + particle.phase) * particle.sway) * this.width;
       const y = -particle.height + progress * (this.height + particle.height * 1.4);
-      drawSprite(this.context, "rain-streak", palette, x, y, particle.width, particle.height, particle.alpha * (kind === "front" ? 1 : 0.86), kind === "front" ? 10 : 8, this.onAssetReady);
+      const length = particle.height * lengthScale;
+      const slant = length * slantScale + particle.width * 0.8;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - slant, y - length);
     }
+    ctx.stroke();
+    const highlightStride = stride * (kind === "front" ? 3 : 5);
+    ctx.strokeStyle = rgba("#ffffff", kind === "front" ? mainAlpha * 0.72 : mainAlpha * 0.44);
+    ctx.lineWidth = kind === "front" ? 0.8 : 0.55;
+    ctx.beginPath();
+    for (let index = 0;index < particles.length; index += highlightStride) {
+      const particle = particles[index];
+      const progress = (time / particle.cycle + particle.offset) % 1;
+      const x = (particle.x + progress * particle.drift + Math.sin(time * 2.2 + particle.phase) * particle.sway) * this.width;
+      const y = -particle.height + progress * (this.height + particle.height * 1.4);
+      const length = particle.height * (lengthScale * 0.42);
+      const slant = length * slantScale;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - slant, y - length);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
   drawSnow(time, particles, profile, kind) {
     if (particles.length === 0)
       return;
-    const palette = buildSnowPalette(profile);
-    for (const particle of particles) {
+    const ctx = this.context;
+    const stride = this.getParticleStride(kind, 1.08);
+    const baseRadiusScale = kind === "front" ? 0.22 : 0.18;
+    ctx.save();
+    ctx.fillStyle = rgba(profile.snowColor, kind === "front" ? 0.42 : 0.28);
+    ctx.beginPath();
+    for (let index = 0;index < particles.length; index += stride) {
+      const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x = (particle.x + Math.sin(time * particle.sway + particle.phase) * particle.drift + progress * particle.drift * 0.18) * this.width;
       const y = -particle.size + progress * (this.height + particle.size * 1.4);
-      const rotation = particle.rotation + time * (kind === "front" ? 46 : 28);
-      drawSprite(this.context, "snow-crystal", palette, x, y, particle.size, particle.size, particle.alpha, rotation, this.onAssetReady);
+      const radius = Math.max(1, particle.size * baseRadiusScale);
+      ctx.moveTo(x + radius, y);
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
     }
+    ctx.fill();
+    const highlightStride = stride * (kind === "front" ? 4 : 6);
+    ctx.fillStyle = rgba("#ffffff", kind === "front" ? 0.34 : 0.22);
+    ctx.beginPath();
+    for (let index = 0;index < particles.length; index += highlightStride) {
+      const particle = particles[index];
+      const progress = (time / particle.cycle + particle.offset) % 1;
+      const x = (particle.x + Math.sin(time * particle.sway + particle.phase) * particle.drift + progress * particle.drift * 0.18) * this.width;
+      const y = -particle.size + progress * (this.height + particle.size * 1.4);
+      const radius = Math.max(0.9, particle.size * baseRadiusScale * 0.54);
+      ctx.moveTo(x + radius, y);
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    ctx.restore();
   }
   drawHorizon(profile, lightningFlash) {
     const ctx = this.context;
