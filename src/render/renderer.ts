@@ -382,6 +382,16 @@ function resolvePhase(state: WeatherState): Phase {
   return "night";
 }
 
+function resolveEffectiveLayerMode(state: WeatherState, prefs: WeatherPrefs): WeatherState["layer"] {
+  return prefs.layerMode === "auto" ? state.layer : prefs.layerMode;
+}
+
+function trimArray<T>(items: T[], count: number): T[] {
+  if (count <= 0) return [];
+  if (count >= items.length) return items;
+  return items.slice(0, count);
+}
+
 function buildSceneProfile(state: WeatherState, effectiveIntensity: number): SceneProfile {
   const phase = resolvePhase(state);
   const intensity = clamp(effectiveIntensity, 0.2, 1.5);
@@ -1305,9 +1315,23 @@ function createCurtainTextures(
   });
 }
 
-function createRainParticles(rng: () => number, profile: SceneProfile, budget: WeatherQualityBudget, kind: RendererKind): RainParticle[] {
+function createRainParticles(
+  rng: () => number,
+  state: WeatherState,
+  prefs: WeatherPrefs,
+  profile: SceneProfile,
+  budget: WeatherQualityBudget,
+  kind: RendererKind,
+): RainParticle[] {
   if (profile.precipitation <= 0.04) return [];
-  const target = kind === "front" ? budget.rainFront : budget.rainBack;
+  const effectiveLayer = resolveEffectiveLayerMode(state, prefs);
+  let target = kind === "front" ? budget.rainFront : budget.rainBack;
+  if (kind === "front") {
+    if (effectiveLayer === "both") target *= 0.5;
+    if (state.condition === "storm") {
+      target = Math.min(target, getQualityBudget("lite").rainFront);
+    }
+  }
   if (target <= 0) return [];
   const count = Math.round(target * clamp(profile.precipitation, 0.18, 1.15));
   return Array.from({ length: count }, () => ({
@@ -1323,9 +1347,20 @@ function createRainParticles(rng: () => number, profile: SceneProfile, budget: W
   }));
 }
 
-function createSnowParticles(rng: () => number, profile: SceneProfile, budget: WeatherQualityBudget, kind: RendererKind): SnowParticle[] {
+function createSnowParticles(
+  rng: () => number,
+  state: WeatherState,
+  prefs: WeatherPrefs,
+  profile: SceneProfile,
+  budget: WeatherQualityBudget,
+  kind: RendererKind,
+): SnowParticle[] {
   if (profile.precipitation <= 0.04) return [];
-  const target = kind === "front" ? budget.snowFront : budget.snowBack;
+  const effectiveLayer = resolveEffectiveLayerMode(state, prefs);
+  let target = kind === "front" ? budget.snowFront : budget.snowBack;
+  if (kind === "front" && effectiveLayer === "both") {
+    target *= 0.5;
+  }
   if (target <= 0) return [];
   const count = Math.round(target * clamp(profile.precipitation, 0.22, 1.1));
   return Array.from({ length: count }, () => ({
@@ -1343,10 +1378,9 @@ function createSnowParticles(rng: () => number, profile: SceneProfile, budget: W
 
 function createCurtains(rng: () => number, profile: SceneProfile, budget: WeatherQualityBudget, condition: WeatherCondition): CurtainBand[] {
   if (!budget.flags.distantCurtains || profile.curtainAlpha <= 0.02) return [];
-  const count =
-    condition === "snow"
-      ? Math.max(1, Math.round(budget.snowGusts * clamp(profile.precipitation, 0.25, 1)))
-      : Math.max(1, Math.round(budget.rainCurtains * clamp(profile.precipitation, 0.25, 1)));
+  const base = condition === "snow" ? budget.snowGusts : budget.rainCurtains;
+  if (base <= 0) return [];
+  const count = Math.max(1, Math.round(base * clamp(profile.precipitation, 0.25, 1)));
   return Array.from({ length: count }, () => ({
     x: rng(),
     width: 0.12 + rng() * 0.2,
@@ -1512,7 +1546,7 @@ function createCondensationBlooms(
 ): SpriteLayer[] {
   if (
     !budget.flags.glassOverlay ||
-    (condition !== "rain" && condition !== "storm" && condition !== "snow" && condition !== "fog") ||
+    (condition !== "rain" && condition !== "storm") ||
     profile.condensationAlpha <= 0.01 ||
     budget.condensationBlooms <= 0
   ) {
@@ -1544,16 +1578,15 @@ function createGlassParticles(
   budget: WeatherQualityBudget,
   condition: WeatherCondition,
 ): { beads: GlassParticle[]; rivulets: GlassParticle[] } {
-  if (!budget.flags.glassOverlay || profile.windowOpacity <= 0.02) {
+  if (!budget.flags.glassOverlay || profile.windowOpacity <= 0.02 || (condition !== "rain" && condition !== "storm")) {
     return { beads: [], rivulets: [] };
   }
 
-  const conditionScale =
-    condition === "storm" ? 1.16 : condition === "rain" ? 1 : condition === "snow" ? 0.7 : condition === "fog" ? 0.56 : 0;
+  const conditionScale = condition === "storm" ? 1.16 : 1;
   const moistureScale = clamp(profile.windowOpacity + profile.condensationAlpha * 0.5, 0.2, 1.2);
   const beadCount = budget.flags.glassDroplets ? Math.round(budget.glassBeads * moistureScale * conditionScale) : 0;
   const rivuletCount = budget.flags.glassDroplets ? Math.round(budget.glassRivulets * moistureScale * conditionScale) : 0;
-  const condensationScale = condition === "snow" || condition === "fog" ? 0.55 : 1;
+  const condensationScale = 1;
 
   return {
     beads: Array.from({ length: beadCount }, () => ({
@@ -1562,7 +1595,7 @@ function createGlassParticles(
       width: 10 + rng() * 24,
       height: 12 + rng() * 28,
       alpha: profile.windowOpacity * condensationScale * (0.36 + rng() * 0.54),
-      speed: condition === "fog" ? 0.02 + rng() * 0.04 : 0.06 + rng() * 0.12,
+      speed: 0.06 + rng() * 0.12,
       drift: (rng() - 0.5) * 0.015,
       phase: rng() * Math.PI * 2,
     })),
@@ -1572,7 +1605,7 @@ function createGlassParticles(
       width: 8 + rng() * 10,
       height: 120 + rng() * 260,
       alpha: profile.windowOpacity * (0.3 + rng() * 0.5),
-      speed: condition === "snow" || condition === "fog" ? 0.03 + rng() * 0.04 : 0.08 + rng() * 0.1,
+      speed: 0.08 + rng() * 0.1,
       drift: (rng() - 0.5) * 0.02,
       phase: rng() * Math.PI * 2,
     })),
@@ -1583,17 +1616,24 @@ function buildComposition(kind: RendererKind, state: WeatherState, prefs: Weathe
   const effectiveIntensity = clamp(state.intensity * prefs.intensity, 0.2, 1.5);
   const profile = buildSceneProfile(state, effectiveIntensity);
   const budget = getQualityBudget(prefs.qualityMode);
+  const effectiveLayer = resolveEffectiveLayerMode(state, prefs);
   const signature = buildSceneSignature(kind, state, prefs, profile.phase, effectiveIntensity);
   const rng = createRng(hashString(signature));
   const anchors = kind === "back" ? createAnchorLayers(rng, state.condition, profile, budget) : [];
   const clouds = kind === "back" ? createCloudLayers(rng, state.condition, profile, budget, "back") : [];
   const scud = kind === "back" ? createScudLayers(rng, state.condition, profile, budget) : [];
-  const frontClouds =
-    kind === "front" && budget.flags.frontCloudBank ? createCloudLayers(rng, state.condition, profile, budget, "front") : [];
+  const frontClouds: SpriteLayer[] = [];
   const fogWisps = kind === "back" ? createFogWisps(rng, profile, budget, "back") : [];
-  const frontMist = kind === "front" ? createFogWisps(rng, profile, budget, "front") : [];
-  const rain = state.condition === "rain" || state.condition === "storm" ? createRainParticles(rng, profile, budget, kind) : [];
-  const snow = state.condition === "snow" ? createSnowParticles(rng, profile, budget, kind) : [];
+  const rawFrontMist = kind === "front" ? createFogWisps(rng, profile, budget, "front") : [];
+  const frontMist =
+    kind === "front"
+      ? trimArray(rawFrontMist, effectiveLayer === "both" ? Math.ceil(rawFrontMist.length * 0.5) : rawFrontMist.length)
+      : [];
+  const rain =
+    state.condition === "rain" || state.condition === "storm"
+      ? createRainParticles(rng, state, prefs, profile, budget, kind)
+      : [];
+  const snow = state.condition === "snow" ? createSnowParticles(rng, state, prefs, profile, budget, kind) : [];
   const curtains = kind === "back" ? createCurtains(rng, profile, budget, state.condition) : [];
   const curtainTextures = kind === "back" ? createCurtainTextures(rng, state.condition, profile, budget) : [];
   const contactBands = kind === "back" ? createContactBands(rng, state.condition, profile, budget) : [];
@@ -1659,13 +1699,23 @@ class CanvasWeatherRenderer {
   private readonly kind: RendererKind;
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
+  private readonly staticCanvas: HTMLCanvasElement | null;
+  private readonly staticContext: CanvasRenderingContext2D | null;
+  private readonly slowCanvas: HTMLCanvasElement | null;
+  private readonly slowContext: CanvasRenderingContext2D | null;
   private readonly glassOverlay: HTMLDivElement | null;
   private readonly resizeObserver: ResizeObserverHandle | null;
-  private readonly onAssetReady = () => this.drawOnce();
+  private readonly onAssetReady = () => this.handleAssetReady();
   private readonly onWindowResize = () => {
     if (this.resizeCanvas()) {
       this.drawOnce();
     }
+  };
+  private readonly onVisibilityChange = () => {
+    if (document.visibilityState === "visible" && this.visible) {
+      this.drawOnce();
+    }
+    this.refreshLoop();
   };
   private composition: SceneComposition | null = null;
   private prefs: WeatherPrefs = DEFAULT_PREFS;
@@ -1673,13 +1723,18 @@ class CanvasWeatherRenderer {
   private reducedMotion = false;
   private visible = false;
   private rafId: number | null = null;
+  private assetRefreshId: number | null = null;
   private animationTime = 0;
   private lastFrameAt: number | null = null;
+  private lastRenderAt: number | null = null;
+  private lastSlowPassAt = Number.NEGATIVE_INFINITY;
   private width = 1;
   private height = 1;
   private dpr = 1;
   private lightningEvents: LightningEvent[] = [];
   private failed = false;
+  private staticCacheDirty = true;
+  private slowCacheDirty = true;
 
   constructor(kind: RendererKind) {
     this.kind = kind;
@@ -1698,6 +1753,23 @@ class CanvasWeatherRenderer {
       throw new Error("Weather renderer could not acquire a 2D canvas context.");
     }
     this.context = context;
+
+    if (kind === "back") {
+      this.staticCanvas = document.createElement("canvas");
+      this.slowCanvas = document.createElement("canvas");
+      const staticContext = this.staticCanvas.getContext("2d", { alpha: true }) ?? this.staticCanvas.getContext("2d");
+      const slowContext = this.slowCanvas.getContext("2d", { alpha: true }) ?? this.slowCanvas.getContext("2d");
+      if (!staticContext || !slowContext) {
+        throw new Error("Weather renderer could not acquire cache canvas contexts.");
+      }
+      this.staticContext = staticContext;
+      this.slowContext = slowContext;
+    } else {
+      this.staticCanvas = null;
+      this.slowCanvas = null;
+      this.staticContext = null;
+      this.slowContext = null;
+    }
 
     if (kind === "back") {
       this.glassOverlay = document.createElement("div");
@@ -1719,6 +1791,7 @@ class CanvasWeatherRenderer {
       this.resizeObserver = null;
       window.addEventListener("resize", this.onWindowResize);
     }
+    document.addEventListener("visibilitychange", this.onVisibilityChange);
   }
 
   setScene(state: WeatherState, prefs: WeatherPrefs, reducedMotion: boolean): void {
@@ -1736,7 +1809,12 @@ class CanvasWeatherRenderer {
     this.root.classList.toggle("weather-paused", prefs.pauseEffects);
     this.root.classList.toggle("weather-reduced-motion", reducedMotion);
     this.syncGlassOverlay();
-    this.drawOnce();
+    this.staticCacheDirty = true;
+    this.slowCacheDirty = true;
+    this.lastSlowPassAt = Number.NEGATIVE_INFINITY;
+    if (this.visible && this.root.isConnected && document.visibilityState === "visible") {
+      this.drawOnce();
+    }
     this.refreshLoop();
   }
 
@@ -1749,14 +1827,18 @@ class CanvasWeatherRenderer {
     this.visible = visible;
     this.root.classList.toggle("weather-hidden", !visible);
     this.root.classList.toggle("weather-visible", visible);
-    this.drawOnce();
+    if (visible && this.root.isConnected && document.visibilityState === "visible") {
+      this.drawOnce();
+    }
     this.refreshLoop();
   }
 
   refreshLayout(): void {
     if (this.failed) return;
     if (this.resizeCanvas()) {
-      this.drawOnce();
+      if (this.visible && document.visibilityState === "visible") {
+        this.drawOnce();
+      }
     }
   }
 
@@ -1793,10 +1875,15 @@ class CanvasWeatherRenderer {
 
   destroy(): void {
     this.stopLoop();
+    if (this.assetRefreshId !== null) {
+      window.cancelAnimationFrame(this.assetRefreshId);
+      this.assetRefreshId = null;
+    }
     this.resizeObserver?.disconnect();
     if (!this.resizeObserver) {
       window.removeEventListener("resize", this.onWindowResize);
     }
+    document.removeEventListener("visibilitychange", this.onVisibilityChange);
     this.root.remove();
   }
 
@@ -1806,12 +1893,10 @@ class CanvasWeatherRenderer {
       !this.composition.budget.flags.glassOverlay
         ? "none"
         : this.state.condition === "rain" || this.state.condition === "storm"
-          ? "rain"
-          : this.state.condition === "snow"
-            ? "snow"
-            : this.state.condition === "fog"
-              ? "fog"
-              : "none";
+          ? this.composition.glassBeads.length || this.composition.glassRivulets.length || this.composition.condensationBlooms.length
+            ? this.state.condition
+            : "none"
+          : "none";
     this.root.dataset.glass = variant;
     this.root.style.setProperty("--weather-glass-opacity", this.composition.profile.windowOpacity.toFixed(3));
     this.root.style.setProperty("--weather-glass-blur", this.composition.profile.glassBlur.toFixed(2));
@@ -1846,6 +1931,15 @@ class CanvasWeatherRenderer {
     this.canvas.height = pixelHeight;
     this.canvas.style.width = `${nextWidth}px`;
     this.canvas.style.height = `${nextHeight}px`;
+    if (this.staticCanvas && this.slowCanvas) {
+      this.staticCanvas.width = pixelWidth;
+      this.staticCanvas.height = pixelHeight;
+      this.slowCanvas.width = pixelWidth;
+      this.slowCanvas.height = pixelHeight;
+      this.staticCacheDirty = true;
+      this.slowCacheDirty = true;
+      this.lastSlowPassAt = Number.NEGATIVE_INFINITY;
+    }
     return true;
   }
 
@@ -1857,6 +1951,7 @@ class CanvasWeatherRenderer {
     const shouldRun =
       this.visible &&
       this.root.isConnected &&
+      document.visibilityState === "visible" &&
       !this.reducedMotion &&
       !this.prefs.pauseEffects &&
       !!this.composition;
@@ -1876,11 +1971,19 @@ class CanvasWeatherRenderer {
       this.rafId = null;
     }
     this.lastFrameAt = null;
+    this.lastRenderAt = null;
   }
 
   private readonly step = (now: number) => {
     this.rafId = null;
-    if (!this.composition || !this.visible || !this.root.isConnected || this.reducedMotion || this.prefs.pauseEffects) {
+    if (
+      !this.composition ||
+      !this.visible ||
+      !this.root.isConnected ||
+      document.visibilityState !== "visible" ||
+      this.reducedMotion ||
+      this.prefs.pauseEffects
+    ) {
       this.stopLoop();
       return;
     }
@@ -1890,8 +1993,19 @@ class CanvasWeatherRenderer {
     const delta = Math.min(0.06, Math.max(0, (now - this.lastFrameAt) / 1000));
     this.lastFrameAt = now;
     this.animationTime += delta;
+    const shouldRender =
+      this.lastRenderAt === null ||
+      this.staticCacheDirty ||
+      this.slowCacheDirty ||
+      this.lightningEvents.length > 0 ||
+      now - this.lastRenderAt >= this.composition.budget.frameIntervalMs;
+    if (!shouldRender) {
+      this.refreshLoop();
+      return;
+    }
     try {
       this.render(this.animationTime);
+      this.lastRenderAt = now;
     } catch (error) {
       this.handleFatalError(error);
       return;
@@ -1900,7 +2014,7 @@ class CanvasWeatherRenderer {
   };
 
   private drawOnce(): void {
-    if (this.failed || !this.composition) return;
+    if (this.failed || !this.composition || !this.root.isConnected) return;
     try {
       this.resizeCanvas();
       this.render(this.animationTime);
@@ -1910,8 +2024,26 @@ class CanvasWeatherRenderer {
   }
 
   private clearCanvas(): void {
-    this.context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    this.context.clearRect(0, 0, this.width, this.height);
+    this.clearTarget(this.context);
+  }
+
+  private clearTarget(ctx: CanvasRenderingContext2D): void {
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.clearRect(0, 0, this.width, this.height);
+  }
+
+  private handleAssetReady(): void {
+    if (this.kind === "back") {
+      this.staticCacheDirty = true;
+      this.slowCacheDirty = true;
+      this.lastSlowPassAt = Number.NEGATIVE_INFINITY;
+    }
+    if (this.failed || !this.visible || this.rafId !== null || document.visibilityState !== "visible") return;
+    if (this.assetRefreshId !== null) return;
+    this.assetRefreshId = window.requestAnimationFrame(() => {
+      this.assetRefreshId = null;
+      this.drawOnce();
+    });
   }
 
   private render(time: number): void {
@@ -1926,25 +2058,71 @@ class CanvasWeatherRenderer {
 
   private drawBack(time: number): void {
     if (!this.composition) return;
-    const ctx = this.context;
-    const {
-      profile,
-      stars,
-      motes,
-      anchors,
-      clouds,
-      scud,
-      fogWisps,
-      curtains,
-      curtainTextures,
-      condensationBlooms,
-      rain,
-      snow,
-      glassBeads,
-      glassRivulets,
-    } = this.composition;
+    const { profile, anchors, condensationBlooms, rain, snow, glassBeads, glassRivulets } = this.composition;
+    const lightning = this.resolveLightningState(time);
+    this.renderBackStaticCache();
+    this.renderBackSlowCache(time);
+    if (this.staticCanvas) {
+      this.context.drawImage(this.staticCanvas, 0, 0, this.width, this.height);
+    }
+    if (this.slowCanvas) {
+      this.context.drawImage(this.slowCanvas, 0, 0, this.width, this.height);
+    }
+    if (lightning.flash > 0.01) {
+      this.drawAnchorLayers(time, anchors, profile, lightning.flash, this.context, true);
+    }
+    this.drawRain(time, rain, profile, "back");
+    this.drawSnow(time, snow, profile, "back");
+    this.drawGlass(profile, time, glassRivulets, glassBeads, condensationBlooms, lightning.flash);
+    this.drawVignette(profile);
+    this.drawLightningState(profile, lightning);
+  }
+
+  private drawFront(time: number): void {
+    if (!this.composition) return;
+    const { profile, frontMist, rain, snow } = this.composition;
     const lightning = this.resolveLightningState(time);
 
+    this.drawFrontAtmosphere(profile);
+    this.drawFogWisps(time, frontMist);
+    this.drawRain(time, rain, profile, "front");
+    this.drawSnow(time, snow, profile, "front");
+    this.drawLightningState(profile, lightning);
+  }
+
+  private renderBackStaticCache(): void {
+    if (!this.composition || !this.staticCanvas || !this.staticContext || !this.staticCacheDirty) return;
+    const { profile, anchors } = this.composition;
+    this.clearTarget(this.staticContext);
+    this.drawSkyBackdrop(profile, this.staticContext);
+    this.drawCelestialOrb(profile, this.staticContext);
+    this.drawAtmosphericDepth(profile, 0, this.staticContext);
+    this.drawAnchorLayers(0, anchors, profile, 0, this.staticContext);
+    this.drawHorizon(profile, 0, this.staticContext);
+    this.staticCacheDirty = false;
+  }
+
+  private renderBackSlowCache(time: number): void {
+    if (!this.composition || !this.slowCanvas || !this.slowContext) return;
+    const needsRefresh =
+      this.slowCacheDirty ||
+      this.lastSlowPassAt === Number.NEGATIVE_INFINITY ||
+      time - this.lastSlowPassAt >= this.composition.budget.slowPassIntervalMs / 1000;
+    if (!needsRefresh) return;
+    const { profile, stars, clouds, scud, curtainTextures, curtains, fogWisps, motes } = this.composition;
+    this.clearTarget(this.slowContext);
+    this.drawStars(time, stars, profile, this.slowContext);
+    this.drawCloudLayers(time, clouds, this.slowContext);
+    this.drawCloudLayers(time, scud, this.slowContext);
+    this.drawCurtainTextures(time, curtainTextures, this.slowContext);
+    this.drawCurtains(time, curtains, profile, this.slowContext);
+    this.drawFogWisps(time, fogWisps, this.slowContext);
+    this.drawMotes(time, motes, profile, this.slowContext);
+    this.lastSlowPassAt = time;
+    this.slowCacheDirty = false;
+  }
+
+  private drawSkyBackdrop(profile: SceneProfile, ctx: CanvasRenderingContext2D = this.context): void {
     const sky = ctx.createLinearGradient(0, 0, 0, this.height);
     sky.addColorStop(0, profile.skyTop);
     sky.addColorStop(0.52, profile.skyMid);
@@ -1957,50 +2135,20 @@ class CanvasWeatherRenderer {
     skyGlow.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = skyGlow;
     ctx.fillRect(0, 0, this.width, this.height);
-
-    this.drawCelestialOrb(profile);
-    this.drawStars(time, stars, profile);
-    this.drawAtmosphericDepth(profile, lightning.flash);
-    this.drawAnchorLayers(time, anchors, profile, lightning.flash);
-    this.drawCloudLayers(time, clouds);
-    this.drawCloudLayers(time, scud);
-    this.drawCurtainTextures(time, curtainTextures);
-    this.drawCurtains(time, curtains, profile);
-    this.drawFogWisps(time, fogWisps);
-    this.drawRain(time, rain, profile, "back");
-    this.drawSnow(time, snow, profile, "back");
-    this.drawMotes(time, motes, profile);
-    this.drawHorizon(profile, lightning.flash);
-    this.drawGlass(profile, time, glassRivulets, glassBeads, condensationBlooms, lightning.flash);
-    this.drawVignette(profile);
-    this.drawLightningState(profile, lightning);
   }
 
-  private drawFront(time: number): void {
-    if (!this.composition) return;
+  private drawFrontAtmosphere(profile: SceneProfile): void {
     const ctx = this.context;
-    const { profile, frontClouds, frontMist, rain, snow } = this.composition;
-    const lightning = this.resolveLightningState(time);
-
-    if (profile.frontCloudAlpha > 0.02) {
-      const topShadow = ctx.createLinearGradient(0, 0, 0, this.height * 0.5);
-      topShadow.addColorStop(0, rgba(profile.cloudShadow, 0.26 + profile.frontCloudAlpha * 0.34));
-      topShadow.addColorStop(0.34, rgba(profile.cloudMid, profile.frontCloudAlpha * 0.18));
-      topShadow.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = topShadow;
-      ctx.fillRect(0, 0, this.width, this.height * 0.54);
-    }
-
-    this.drawCloudLayers(time, frontClouds);
-    this.drawFogWisps(time, frontMist);
-    this.drawRain(time, rain, profile, "front");
-    this.drawSnow(time, snow, profile, "front");
-    this.drawLightningState(profile, lightning);
+    const canopy = ctx.createLinearGradient(0, 0, 0, this.height * 0.54);
+    canopy.addColorStop(0, rgba(profile.cloudShadow, 0.08 + profile.haze * 0.14));
+    canopy.addColorStop(0.32, rgba(profile.cloudMid, 0.05 + profile.frontMistAlpha * 0.12));
+    canopy.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = canopy;
+    ctx.fillRect(0, 0, this.width, this.height * 0.56);
   }
 
-  private drawCelestialOrb(profile: SceneProfile): void {
+  private drawCelestialOrb(profile: SceneProfile, ctx: CanvasRenderingContext2D = this.context): void {
     if (profile.celestialAlpha <= 0.02) return;
-    const ctx = this.context;
     const celestial = buildCelestialPosition(profile.phase, this.width, this.height);
     const coreColor = profile.isNight ? profile.moonColor : profile.sunColor;
     const glow = ctx.createRadialGradient(celestial.x, celestial.y, celestial.radius * 0.24, celestial.x, celestial.y, celestial.radius * 4.4);
@@ -2034,9 +2182,8 @@ class CanvasWeatherRenderer {
     }
   }
 
-  private drawStars(time: number, stars: StarParticle[], profile: SceneProfile): void {
+  private drawStars(time: number, stars: StarParticle[], profile: SceneProfile, ctx: CanvasRenderingContext2D = this.context): void {
     if (stars.length === 0 || profile.starAlpha <= 0.01) return;
-    const ctx = this.context;
     for (const star of stars) {
       const twinkle = 0.58 + 0.42 * Math.sin(time * star.twinkleSpeed * 2.3 + star.phase);
       const alpha = profile.starAlpha * star.alpha * twinkle;
@@ -2055,9 +2202,12 @@ class CanvasWeatherRenderer {
     }
   }
 
-  private drawAtmosphericDepth(profile: SceneProfile, lightningFlash: number): void {
+  private drawAtmosphericDepth(
+    profile: SceneProfile,
+    lightningFlash: number,
+    ctx: CanvasRenderingContext2D = this.context,
+  ): void {
     if (!this.composition) return;
-    const ctx = this.context;
     const glowPasses = Math.max(1, this.composition.budget.horizonGlowPasses);
     const shadowPasses = Math.max(1, this.composition.budget.shadowPasses);
 
@@ -2095,29 +2245,37 @@ class CanvasWeatherRenderer {
     ctx.fillRect(0, this.height * 0.48, this.width, this.height * 0.52);
   }
 
-  private drawAnchorLayers(time: number, anchors: HorizonAnchor[], profile: SceneProfile, lightningFlash: number): void {
+  private drawAnchorLayers(
+    time: number,
+    anchors: HorizonAnchor[],
+    profile: SceneProfile,
+    lightningFlash: number,
+    ctx: CanvasRenderingContext2D = this.context,
+    relightOnly = false,
+  ): void {
     if (!anchors.length) return;
-    const ctx = this.context;
 
     for (const anchor of anchors) {
       const travel = this.width * anchor.parallax;
       const x = anchor.x * this.width + Math.sin(time * 0.02 + anchor.depth) * travel;
       const y = anchor.y * this.height;
-      ctx.save();
-      ctx.filter = `blur(${anchor.blur}px)`;
-      drawSprite(
-        ctx,
-        anchor.sprite,
-        anchor.palette,
-        x,
-        y,
-        anchor.width,
-        anchor.height,
-        anchor.alpha,
-        0,
-        this.onAssetReady,
-      );
-      ctx.restore();
+      if (!relightOnly) {
+        ctx.save();
+        ctx.filter = `blur(${anchor.blur}px)`;
+        drawSprite(
+          ctx,
+          anchor.sprite,
+          anchor.palette,
+          x,
+          y,
+          anchor.width,
+          anchor.height,
+          anchor.alpha,
+          0,
+          this.onAssetReady,
+        );
+        ctx.restore();
+      }
 
       if (this.composition?.budget.flags.relightAnchors && lightningFlash > 0.01) {
         ctx.save();
@@ -2132,9 +2290,8 @@ class CanvasWeatherRenderer {
     }
   }
 
-  private drawMotes(time: number, motes: MoteParticle[], profile: SceneProfile): void {
+  private drawMotes(time: number, motes: MoteParticle[], profile: SceneProfile, ctx: CanvasRenderingContext2D = this.context): void {
     if (motes.length === 0) return;
-    const ctx = this.context;
     for (const mote of motes) {
       const x = (mote.x + Math.sin(time * mote.speed + mote.phase) * mote.driftX) * this.width;
       const y = (mote.y + Math.cos(time * mote.speed * 0.7 + mote.phase) * mote.driftY) * this.height;
@@ -2260,7 +2417,7 @@ class CanvasWeatherRenderer {
     }
   }
 
-  private drawCloudLayers(time: number, layers: SpriteLayer[]): void {
+  private drawCloudLayers(time: number, layers: SpriteLayer[], ctx: CanvasRenderingContext2D = this.context): void {
     if (layers.length === 0 || !this.composition) return;
     for (const layer of layers) {
       const travel = this.width + layer.width * 1.6;
@@ -2268,7 +2425,7 @@ class CanvasWeatherRenderer {
       const x = offset - layer.width * 0.8;
       const y = layer.y * this.height + Math.sin(time * 0.14 + layer.phase) * layer.driftY;
       drawSprite(
-        this.context,
+        ctx,
         layer.sprite,
         layer.palette,
         x,
@@ -2282,7 +2439,7 @@ class CanvasWeatherRenderer {
     }
   }
 
-  private drawFogWisps(time: number, wisps: SpriteLayer[]): void {
+  private drawFogWisps(time: number, wisps: SpriteLayer[], ctx: CanvasRenderingContext2D = this.context): void {
     if (wisps.length === 0 || !this.composition) return;
     for (const wisp of wisps) {
       const travel = this.width + wisp.width * 1.3;
@@ -2290,7 +2447,7 @@ class CanvasWeatherRenderer {
       const x = offset - wisp.width * 0.6;
       const y = wisp.y * this.height + Math.sin(time * 0.12 + wisp.phase) * wisp.driftY;
       drawSprite(
-        this.context,
+        ctx,
         wisp.sprite,
         wisp.palette,
         x,
@@ -2304,7 +2461,7 @@ class CanvasWeatherRenderer {
     }
   }
 
-  private drawCurtainTextures(time: number, textures: SpriteLayer[]): void {
+  private drawCurtainTextures(time: number, textures: SpriteLayer[], ctx: CanvasRenderingContext2D = this.context): void {
     if (textures.length === 0 || !this.composition) return;
     for (const texture of textures) {
       const travel = this.width + texture.width * 0.6;
@@ -2312,7 +2469,7 @@ class CanvasWeatherRenderer {
       const x = offset - texture.width * 0.3;
       const y = texture.y * this.height + Math.sin(time * 0.08 + texture.phase) * texture.driftY;
       drawSprite(
-        this.context,
+        ctx,
         texture.sprite,
         texture.palette,
         x,
@@ -2326,9 +2483,13 @@ class CanvasWeatherRenderer {
     }
   }
 
-  private drawCurtains(time: number, curtains: CurtainBand[], profile: SceneProfile): void {
+  private drawCurtains(
+    time: number,
+    curtains: CurtainBand[],
+    profile: SceneProfile,
+    ctx: CanvasRenderingContext2D = this.context,
+  ): void {
     if (curtains.length === 0) return;
-    const ctx = this.context;
     for (const curtain of curtains) {
       const drift = ((curtain.x + time * curtain.speed * 0.005) % 1) * this.width;
       const width = curtain.width * this.width;
@@ -2362,23 +2523,40 @@ class CanvasWeatherRenderer {
     const areaScale = Math.sqrt(baselinePixels / Math.max(1, this.width * this.height));
     const qualityScale =
       this.prefs.qualityMode === "cinematic"
-        ? 1
+        ? 0.9
         : this.prefs.qualityMode === "standard"
-          ? 0.88
+          ? 0.78
           : this.prefs.qualityMode === "lite"
-            ? 0.76
-            : 0.64;
-    const frontPenalty = kind === "front" ? 0.86 : 1;
-    const drawScale = clamp(areaScale * qualityScale * frontPenalty * densityBias, 0.34, 1);
+            ? 0.68
+            : 0.58;
+    const frontPenalty = kind === "front" ? 0.68 : 1;
+    const drawScale = clamp(areaScale * qualityScale * frontPenalty * densityBias, 0.26, 1);
     return Math.max(1, Math.ceil(1 / drawScale));
+  }
+
+  private getParticleDrawLimit(total: number, kind: RendererKind, densityBias = 1): number {
+    const baselinePixels = 1280 * 720;
+    const areaScale = Math.sqrt(baselinePixels / Math.max(1, this.width * this.height));
+    const qualityScale =
+      this.prefs.qualityMode === "cinematic"
+        ? 0.92
+        : this.prefs.qualityMode === "standard"
+          ? 0.82
+          : this.prefs.qualityMode === "lite"
+            ? 0.7
+            : 0.58;
+    const frontPenalty = kind === "front" ? 0.64 : 1;
+    const scale = clamp(areaScale * qualityScale * frontPenalty * densityBias, 0.2, 1);
+    return Math.max(1, Math.min(total, Math.round(total * scale)));
   }
 
   private drawRain(time: number, particles: RainParticle[], profile: SceneProfile, kind: RendererKind): void {
     if (particles.length === 0) return;
     const ctx = this.context;
     const stride = this.getParticleStride(kind, 0.94);
-    const mainAlpha = (kind === "front" ? 0.38 : 0.24) * clamp(profile.nearPrecipAlpha + profile.distantPrecipAlpha * 0.4, 0.4, 1.05);
-    const lengthScale = kind === "front" ? 0.72 : 0.56;
+    const activeCount = this.getParticleDrawLimit(particles.length, kind, 0.9);
+    const mainAlpha = (kind === "front" ? 0.34 : 0.22) * clamp(profile.nearPrecipAlpha + profile.distantPrecipAlpha * 0.4, 0.4, 1.05);
+    const lengthScale = kind === "front" ? 0.86 : 0.6;
     const slantScale = 0.08 + profile.wind * (kind === "front" ? 0.1 : 0.07);
 
     ctx.save();
@@ -2386,7 +2564,8 @@ class CanvasWeatherRenderer {
     ctx.lineWidth = kind === "front" ? 1.4 : 1;
     ctx.lineCap = "round";
     ctx.beginPath();
-    for (let index = 0; index < particles.length; index += stride) {
+    let drawn = 0;
+    for (let index = 0; index < particles.length && drawn < activeCount; index += stride, drawn += 1) {
       const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x = (particle.x + progress * particle.drift + Math.sin(time * 2.2 + particle.phase) * particle.sway) * this.width;
@@ -2402,7 +2581,9 @@ class CanvasWeatherRenderer {
     ctx.strokeStyle = rgba("#ffffff", kind === "front" ? mainAlpha * 0.72 : mainAlpha * 0.44);
     ctx.lineWidth = kind === "front" ? 0.8 : 0.55;
     ctx.beginPath();
-    for (let index = 0; index < particles.length; index += highlightStride) {
+    const highlightCount = Math.max(1, Math.round(activeCount / (kind === "front" ? 3 : 5)));
+    drawn = 0;
+    for (let index = 0; index < particles.length && drawn < highlightCount; index += highlightStride, drawn += 1) {
       const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x = (particle.x + progress * particle.drift + Math.sin(time * 2.2 + particle.phase) * particle.sway) * this.width;
@@ -2420,11 +2601,13 @@ class CanvasWeatherRenderer {
     if (particles.length === 0) return;
     const ctx = this.context;
     const stride = this.getParticleStride(kind, 1.08);
-    const baseRadiusScale = kind === "front" ? 0.22 : 0.18;
+    const activeCount = this.getParticleDrawLimit(particles.length, kind, 1.02);
+    const baseRadiusScale = kind === "front" ? 0.26 : 0.2;
     ctx.save();
-    ctx.fillStyle = rgba(profile.snowColor, kind === "front" ? 0.42 : 0.28);
+    ctx.fillStyle = rgba(profile.snowColor, kind === "front" ? 0.38 : 0.26);
     ctx.beginPath();
-    for (let index = 0; index < particles.length; index += stride) {
+    let drawn = 0;
+    for (let index = 0; index < particles.length && drawn < activeCount; index += stride, drawn += 1) {
       const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x =
@@ -2437,9 +2620,11 @@ class CanvasWeatherRenderer {
     ctx.fill();
 
     const highlightStride = stride * (kind === "front" ? 4 : 6);
-    ctx.fillStyle = rgba("#ffffff", kind === "front" ? 0.34 : 0.22);
+    ctx.fillStyle = rgba("#ffffff", kind === "front" ? 0.3 : 0.18);
     ctx.beginPath();
-    for (let index = 0; index < particles.length; index += highlightStride) {
+    const highlightCount = Math.max(1, Math.round(activeCount / (kind === "front" ? 4 : 6)));
+    drawn = 0;
+    for (let index = 0; index < particles.length && drawn < highlightCount; index += highlightStride, drawn += 1) {
       const particle = particles[index];
       const progress = (time / particle.cycle + particle.offset) % 1;
       const x =
@@ -2453,8 +2638,7 @@ class CanvasWeatherRenderer {
     ctx.restore();
   }
 
-  private drawHorizon(profile: SceneProfile, lightningFlash: number): void {
-    const ctx = this.context;
+  private drawHorizon(profile: SceneProfile, lightningFlash: number, ctx: CanvasRenderingContext2D = this.context): void {
     const gradient = ctx.createLinearGradient(0, this.height * 0.44, 0, this.height);
     gradient.addColorStop(0, "rgba(0,0,0,0)");
     gradient.addColorStop(0.68, rgba(profile.surfaceLight, profile.horizonGlintAlpha * 0.08 + lightningFlash * 0.03));
@@ -2493,6 +2677,7 @@ class CanvasWeatherRenderer {
     if (
       !this.composition?.budget.flags.glassOverlay ||
       this.kind !== "back" ||
+      (this.state.condition !== "rain" && this.state.condition !== "storm") ||
       profile.windowOpacity <= 0.02 ||
       (!rivulets.length && !beads.length && condensationBlooms.length === 0 && profile.condensationAlpha <= 0.01)
     ) {
@@ -2571,7 +2756,7 @@ class CanvasWeatherRenderer {
       );
     }
     for (const bead of beads) {
-      const offset = this.state.condition === "fog" ? Math.sin(time * bead.speed + bead.phase) * 0.01 : time * bead.speed;
+      const offset = time * bead.speed;
       const x = (bead.x + Math.cos(time * 0.2 + bead.phase) * bead.drift) * this.width;
       const y = (bead.y + offset) * this.height;
       drawSprite(

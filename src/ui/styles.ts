@@ -1878,14 +1878,11 @@ export const WEATHER_HUD_CSS = `
   opacity: var(--weather-glass-opacity, 0);
   transition: opacity 280ms ease;
   background:
-    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-edge-opacity, 0) * 0.08)), transparent 36%),
-    linear-gradient(180deg, rgba(255, 255, 255, calc(0.01 + var(--weather-glass-condensation, 0) * 0.04)), transparent 10%, transparent 70%, rgba(255, 255, 255, calc(0.02 + var(--weather-glass-edge-opacity, 0) * 0.05)) 100%),
-    linear-gradient(90deg, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.05)), transparent 10%, transparent 90%, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.05))),
-    radial-gradient(circle at 84% 16%, var(--weather-glass-glow, rgba(216, 232, 255, 0.2)), transparent 30%);
+    linear-gradient(180deg, rgba(255, 255, 255, calc(0.004 + var(--weather-glass-condensation, 0) * 0.02)), transparent 12%, transparent 84%, rgba(255, 255, 255, calc(0.01 + var(--weather-glass-edge-opacity, 0) * 0.03)) 100%),
+    linear-gradient(90deg, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.035)), transparent 8%, transparent 92%, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.035)));
   backdrop-filter:
-    blur(calc(var(--weather-glass-blur, 0) * 0.9px + var(--weather-glass-distortion, 0) * 0.6px))
-    saturate(calc(104% + var(--weather-glass-distortion, 0) * 8%))
-    contrast(calc(100% + var(--weather-glass-condensation, 0) * 3%));
+    blur(calc(var(--weather-glass-blur, 0) * 0.32px + var(--weather-glass-distortion, 0) * 0.28px))
+    saturate(calc(101% + var(--weather-glass-distortion, 0) * 3%));
   mix-blend-mode: normal;
 }
 
@@ -1898,19 +1895,18 @@ export const WEATHER_HUD_CSS = `
 }
 
 .weather-fx-glass::before {
-  opacity: calc(var(--weather-frost-opacity, 0) * 0.72 + var(--weather-glass-condensation, 0) * 0.08);
+  opacity: calc(var(--weather-frost-opacity, 0) * 0.4 + var(--weather-glass-condensation, 0) * 0.04);
   background:
-    radial-gradient(circle at 12% 10%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-condensation, 0) * 0.08)), transparent 18%),
-    radial-gradient(circle at 78% 18%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-condensation, 0) * 0.06)), transparent 16%),
-    linear-gradient(180deg, rgba(255, 255, 255, calc(0.02 + var(--weather-frost-opacity, 0) * 0.04)), transparent 16%, transparent 62%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-edge-opacity, 0) * 0.06)) 100%);
+    radial-gradient(circle at 12% 10%, rgba(255, 255, 255, calc(0.016 + var(--weather-glass-condensation, 0) * 0.04)), transparent 18%),
+    radial-gradient(circle at 82% 16%, rgba(255, 255, 255, calc(0.014 + var(--weather-glass-condensation, 0) * 0.03)), transparent 16%),
+    linear-gradient(180deg, rgba(255, 255, 255, calc(0.01 + var(--weather-frost-opacity, 0) * 0.02)), transparent 14%, transparent 78%, rgba(255, 255, 255, calc(0.015 + var(--weather-glass-edge-opacity, 0) * 0.03)) 100%);
 }
 
 .weather-fx-glass::after {
   background:
-    radial-gradient(circle at 50% 108%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-edge-opacity, 0) * 0.08)), transparent 38%),
-    linear-gradient(90deg, transparent, rgba(255, 255, 255, calc(0.01 + var(--weather-glass-distortion, 0) * 0.03)) 50%, transparent),
-    linear-gradient(180deg, transparent 72%, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.06)) 100%);
-  opacity: calc(0.16 + var(--weather-glass-edge-opacity, 0) * 0.12);
+    radial-gradient(circle at 50% 108%, rgba(255, 255, 255, calc(0.014 + var(--weather-glass-edge-opacity, 0) * 0.04)), transparent 36%),
+    linear-gradient(180deg, transparent 76%, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.035)) 100%);
+  opacity: calc(0.08 + var(--weather-glass-edge-opacity, 0) * 0.08);
 }
 
 .weather-fx-renderer-root[data-glass="none"] .weather-fx-glass {
@@ -1920,11 +1916,6 @@ export const WEATHER_HUD_CSS = `
 
 .weather-fx-renderer-root[data-glass="rain"] .weather-fx-glass,
 .weather-fx-renderer-root[data-glass="storm"] .weather-fx-glass {
-  opacity: calc(var(--weather-glass-opacity, 0) * 0.72);
-}
-
-.weather-fx-renderer-root[data-glass="snow"] .weather-fx-glass,
-.weather-fx-renderer-root[data-glass="fog"] .weather-fx-glass {
-  opacity: calc(var(--weather-glass-opacity, 0) * 0.64);
+  opacity: calc(var(--weather-glass-opacity, 0) * 0.44);
 }
 `;
