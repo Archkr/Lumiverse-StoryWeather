@@ -7,7 +7,7 @@ const QUALITY_MODES: Array<{ value: WeatherEffectsQuality; label: string }> = [
   { value: "performance", label: "Performance" },
   { value: "lite", label: "Lite" },
   { value: "standard", label: "Standard" },
-  { value: "cinematic", label: "Cinematic (Heavy)" },
+  { value: "cinematic", label: "Cinematic" },
 ];
 
 export interface SettingsUI {
@@ -118,10 +118,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   );
   const effectsSection = createSection("Effects", "Overall ambience, density, and motion.");
   const placementSection = createSection("Placement", "Control whether the weather stays behind the chat, in front, or both.");
-  const motionSection = createSection(
-    "Motion",
-  "Fine-tune motion budgets and pacing. Cinematic intentionally pushes the heaviest cloud, contact, precipitation, and glass interaction layers.",
-  );
+  const motionSection = createSection("Motion", "Fine-tune animation pacing without breaking story sync.");
 
   const promptRecommended = document.createElement("div");
   promptRecommended.className = "weather-settings-copy-group";
@@ -223,11 +220,6 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   });
   qualityLabel.appendChild(qualitySelect);
 
-  const qualityHint = document.createElement("p");
-  qualityHint.className = "weather-settings-section-copy";
-  qualityHint.textContent =
-    "Performance and Lite cut scene depth, world-contact passes, and particle counts. Cinematic unlocks the richest framing, environmental interaction, pane moisture, and full weather budget for stronger devices.";
-
   const motionLabel = document.createElement("label");
   motionLabel.className = "weather-settings-label";
   motionLabel.textContent = "Reduced motion";
@@ -260,7 +252,6 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   placementSection.body.appendChild(layerLabel);
   motionSection.body.appendChild(intensityLabel);
   motionSection.body.appendChild(qualityLabel);
-  motionSection.body.appendChild(qualityHint);
   motionSection.body.appendChild(motionLabel);
   motionSection.body.appendChild(pauseLabel);
 
