@@ -1723,6 +1723,7 @@ class CanvasWeatherRenderer {
   private reducedMotion = false;
   private visible = false;
   private rafId: number | null = null;
+  private timeoutId: number | null = null;
   private assetRefreshId: number | null = null;
   private animationTime = 0;
   private lastFrameAt: number | null = null;
@@ -1812,7 +1813,7 @@ class CanvasWeatherRenderer {
     this.staticCacheDirty = true;
     this.slowCacheDirty = true;
     this.lastSlowPassAt = Number.NEGATIVE_INFINITY;
-    if (this.visible && this.root.isConnected && document.visibilityState === "visible") {
+    if (this.visible && this.root.isConnected) {
       this.drawOnce();
     }
     this.refreshLoop();
@@ -1827,7 +1828,7 @@ class CanvasWeatherRenderer {
     this.visible = visible;
     this.root.classList.toggle("weather-hidden", !visible);
     this.root.classList.toggle("weather-visible", visible);
-    if (visible && this.root.isConnected && document.visibilityState === "visible") {
+    if (visible && this.root.isConnected) {
       this.drawOnce();
     }
     this.refreshLoop();
@@ -1836,7 +1837,7 @@ class CanvasWeatherRenderer {
   refreshLayout(): void {
     if (this.failed) return;
     if (this.resizeCanvas()) {
-      if (this.visible && document.visibilityState === "visible") {
+      if (this.visible) {
         this.drawOnce();
       }
     }
@@ -1951,14 +1952,13 @@ class CanvasWeatherRenderer {
     const shouldRun =
       this.visible &&
       this.root.isConnected &&
-      document.visibilityState === "visible" &&
       !this.reducedMotion &&
       !this.prefs.pauseEffects &&
       !!this.composition;
     if (shouldRun) {
-      if (this.rafId === null) {
+      if (this.rafId === null && this.timeoutId === null) {
         this.lastFrameAt = null;
-        this.rafId = window.requestAnimationFrame(this.step);
+        this.scheduleNextFrame();
       }
       return;
     }
@@ -1970,17 +1970,33 @@ class CanvasWeatherRenderer {
       window.cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
+    if (this.timeoutId !== null) {
+      window.clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
     this.lastFrameAt = null;
     this.lastRenderAt = null;
   }
 
+  private scheduleNextFrame(): void {
+    if (!this.composition) return;
+    if (typeof document.visibilityState === "string" && document.visibilityState === "hidden") {
+      this.timeoutId = window.setTimeout(() => {
+        this.timeoutId = null;
+        this.step(performance.now());
+      }, Math.max(16, Math.round(this.composition?.budget.frameIntervalMs ?? 33)));
+      return;
+    }
+    this.rafId = window.requestAnimationFrame(this.step);
+  }
+
   private readonly step = (now: number) => {
     this.rafId = null;
+    this.timeoutId = null;
     if (
       !this.composition ||
       !this.visible ||
       !this.root.isConnected ||
-      document.visibilityState !== "visible" ||
       this.reducedMotion ||
       this.prefs.pauseEffects
     ) {
@@ -2038,7 +2054,7 @@ class CanvasWeatherRenderer {
       this.slowCacheDirty = true;
       this.lastSlowPassAt = Number.NEGATIVE_INFINITY;
     }
-    if (this.failed || !this.visible || this.rafId !== null || document.visibilityState !== "visible") return;
+    if (this.failed || !this.visible || this.rafId !== null || this.timeoutId !== null) return;
     if (this.assetRefreshId !== null) return;
     this.assetRefreshId = window.requestAnimationFrame(() => {
       this.assetRefreshId = null;
