@@ -2273,7 +2273,6 @@ class CanvasWeatherRenderer {
     const shouldRun = this.visible && this.root.isConnected && !this.reducedMotion && !this.prefs.pauseEffects && !!this.composition;
     if (shouldRun) {
       if (this.rafId === null) {
-        this.lastFrameAt = null;
         this.rafId = window.requestAnimationFrame(this.step);
       }
       return;

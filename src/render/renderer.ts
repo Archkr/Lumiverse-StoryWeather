@@ -1862,7 +1862,6 @@ class CanvasWeatherRenderer {
       !!this.composition;
     if (shouldRun) {
       if (this.rafId === null) {
-        this.lastFrameAt = null;
         this.rafId = window.requestAnimationFrame(this.step);
       }
       return;
