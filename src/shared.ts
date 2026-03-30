@@ -1,6 +1,7 @@
 import type {
   ReducedMotionMode,
   WeatherCondition,
+  WeatherEffectsQuality,
   WeatherLayerMode,
   WeatherPalette,
   WeatherPrefs,
@@ -16,11 +17,13 @@ export const WEATHER_CONDITIONS: WeatherCondition[] = ["clear", "cloudy", "rain"
 export const WEATHER_LAYERS: WeatherLayerMode[] = ["back", "front", "both"];
 export const WEATHER_PALETTES: WeatherPalette[] = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
 export const REDUCED_MOTION_VALUES: ReducedMotionMode[] = ["system", "always", "never"];
+export const WEATHER_EFFECT_QUALITY_VALUES: WeatherEffectsQuality[] = ["performance", "lite", "standard", "cinematic"];
 
 export const DEFAULT_PREFS: WeatherPrefs = {
   effectsEnabled: true,
   layerMode: "auto",
   intensity: 1,
+  qualityMode: "standard",
   reducedMotion: "never",
   pauseEffects: false,
   widgetPosition: null,
@@ -61,6 +64,12 @@ function normalizePalette(value: unknown, fallback: WeatherPalette): WeatherPale
 function normalizeReducedMotion(value: unknown, fallback: ReducedMotionMode): ReducedMotionMode {
   return typeof value === "string" && REDUCED_MOTION_VALUES.includes(value as ReducedMotionMode)
     ? (value as ReducedMotionMode)
+    : fallback;
+}
+
+function normalizeQualityMode(value: unknown, fallback: WeatherEffectsQuality): WeatherEffectsQuality {
+  return typeof value === "string" && WEATHER_EFFECT_QUALITY_VALUES.includes(value as WeatherEffectsQuality)
+    ? (value as WeatherEffectsQuality)
     : fallback;
 }
 
@@ -240,6 +249,7 @@ export function normalizePrefs(input: unknown): WeatherPrefs {
     effectsEnabled: typeof source.effectsEnabled === "boolean" ? source.effectsEnabled : DEFAULT_PREFS.effectsEnabled,
     layerMode,
     intensity: clamp(parseNumeric(source.intensity) ?? DEFAULT_PREFS.intensity, 0.25, 1.5),
+    qualityMode: normalizeQualityMode(source.qualityMode, DEFAULT_PREFS.qualityMode),
     reducedMotion: normalizeReducedMotion(source.reducedMotion, DEFAULT_PREFS.reducedMotion),
     pauseEffects: typeof source.pauseEffects === "boolean" ? source.pauseEffects : DEFAULT_PREFS.pauseEffects,
     widgetPosition: position,

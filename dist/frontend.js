@@ -4,6 +4,7 @@ var DEFAULT_PREFS = {
   effectsEnabled: true,
   layerMode: "auto",
   intensity: 1,
+  qualityMode: "standard",
   reducedMotion: "never",
   pauseEffects: false,
   widgetPosition: null
@@ -183,6 +184,12 @@ function matchWeatherScenePreset(state) {
 // src/ui/settings.ts
 var CONDITIONS = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
 var PALETTES = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
+var QUALITY_MODES = [
+  { value: "performance", label: "Performance" },
+  { value: "lite", label: "Lite" },
+  { value: "standard", label: "Standard" },
+  { value: "cinematic", label: "Cinematic" }
+];
 function createCodeBlock(text) {
   const code = document.createElement("pre");
   code.className = "weather-settings-code";
@@ -330,6 +337,16 @@ function createSettingsUI(sendToBackend) {
   intensityRow.appendChild(intensitySlider);
   intensityRow.appendChild(intensityValue);
   intensityLabel.appendChild(intensityRow);
+  const qualityLabel = document.createElement("label");
+  qualityLabel.className = "weather-settings-label";
+  qualityLabel.textContent = "Effects quality";
+  const qualitySelect = document.createElement("select");
+  qualitySelect.className = "weather-settings-select";
+  qualitySelect.innerHTML = QUALITY_MODES.map((mode) => `<option value="${mode.value}">${mode.label}</option>`).join("");
+  qualitySelect.addEventListener("change", () => {
+    sendToBackend({ type: "save_prefs", prefs: { qualityMode: qualitySelect.value } });
+  });
+  qualityLabel.appendChild(qualitySelect);
   const motionLabel = document.createElement("label");
   motionLabel.className = "weather-settings-label";
   motionLabel.textContent = "Reduced motion";
@@ -357,6 +374,7 @@ function createSettingsUI(sendToBackend) {
   effectsSection.body.appendChild(effectsLabel);
   placementSection.body.appendChild(layerLabel);
   motionSection.body.appendChild(intensityLabel);
+  motionSection.body.appendChild(qualityLabel);
   motionSection.body.appendChild(motionLabel);
   motionSection.body.appendChild(pauseLabel);
   const manualCard = document.createElement("section");
@@ -574,6 +592,7 @@ function createSettingsUI(sendToBackend) {
       layerSelect.value = prefs.layerMode;
       intensitySlider.value = String(prefs.intensity.toFixed(2));
       intensityValue.textContent = `${Math.round(prefs.intensity * 100)}%`;
+      qualitySelect.value = prefs.qualityMode;
       motionSelect.value = prefs.reducedMotion;
       pauseToggle.checked = prefs.pauseEffects;
       status.textContent = state ? `${state.source === "manual" ? "manual" : "story"} / ${state.condition} ${state.temperature}` : "Waiting for story weather";
@@ -753,6 +772,24 @@ var WEATHER_HUD_CSS = `
 }
 
 @property --weather-rain-sheet-opacity {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --weather-canopy-opacity {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --weather-window-overlay-opacity {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --weather-window-streak-opacity {
   syntax: "<number>";
   inherits: true;
   initial-value: 0;
@@ -1579,6 +1616,9 @@ var WEATHER_HUD_CSS = `
     --weather-front-cloud-opacity 800ms ease,
     --weather-front-mist-opacity 800ms ease,
     --weather-rain-sheet-opacity 600ms ease,
+    --weather-canopy-opacity 800ms ease,
+    --weather-window-overlay-opacity 500ms ease,
+    --weather-window-streak-opacity 500ms ease,
     --weather-flash-opacity 300ms ease;
 }
 
@@ -1600,10 +1640,13 @@ var WEATHER_HUD_CSS = `
 }
 
 .weather-fx-root:not([data-palette="night"]):not([data-palette="dawn"]):not([data-palette="dusk"]) .weather-fx-stars,
+.weather-fx-root[data-condition="clear"] .weather-fx-canopy,
 .weather-fx-root[data-condition="clear"] .weather-fx-rain,
 .weather-fx-root[data-condition="clear"] .weather-fx-rain-sheet,
 .weather-fx-root[data-condition="clear"] .weather-fx-snow,
 .weather-fx-root[data-condition="clear"] .weather-fx-fog,
+.weather-fx-root[data-condition="clear"] .weather-fx-window,
+.weather-fx-root[data-condition="cloudy"] .weather-fx-window-streak,
 .weather-fx-root[data-condition="cloudy"] .weather-fx-rain,
 .weather-fx-root[data-condition="cloudy"] .weather-fx-rain-sheet,
 .weather-fx-root[data-condition="cloudy"] .weather-fx-snow,
@@ -1625,7 +1668,17 @@ var WEATHER_HUD_CSS = `
 .weather-fx-root[data-kind="front"][data-condition="clear"] .weather-fx-front-clouds,
 .weather-fx-root[data-kind="front"][data-condition="clear"] .weather-fx-front-mist,
 .weather-fx-root[data-kind="front"][data-condition="cloudy"] .weather-fx-front-haze,
-.weather-fx-root[data-kind="front"][data-condition="cloudy"] .weather-fx-front-mist {
+.weather-fx-root[data-kind="front"][data-condition="cloudy"] .weather-fx-front-mist,
+.weather-fx-root[data-quality="lite"] .weather-fx-window-streak,
+.weather-fx-root[data-quality="performance"] .weather-fx-window,
+.weather-fx-root[data-quality="performance"] .weather-fx-stars,
+.weather-fx-root[data-quality="performance"] .weather-fx-cloud-shadows,
+.weather-fx-root[data-quality="performance"] .weather-fx-front-clouds,
+.weather-fx-root[data-quality="performance"] .weather-fx-front-mist,
+.weather-fx-root[data-quality="performance"] .weather-fx-rain-sheet,
+.weather-fx-root[data-quality="performance"] .weather-fx-motes,
+.weather-fx-root[data-quality="lite"] .weather-fx-cloud-shadows,
+.weather-fx-root[data-kind="front"][data-quality="lite"] .weather-fx-front-clouds {
   display: none;
 }
 
@@ -1639,6 +1692,7 @@ var WEATHER_HUD_CSS = `
 .weather-fx-stars,
 .weather-fx-glow,
 .weather-fx-beams,
+.weather-fx-canopy,
 .weather-fx-cloud-shadows,
 .weather-fx-clouds,
 .weather-fx-horizon,
@@ -1649,6 +1703,7 @@ var WEATHER_HUD_CSS = `
 .weather-fx-front-clouds,
 .weather-fx-front-mist,
 .weather-fx-rain-sheet,
+.weather-fx-window,
 .weather-fx-rain,
 .weather-fx-snow,
 .weather-fx-flash {
@@ -1728,6 +1783,47 @@ var WEATHER_HUD_CSS = `
   animation: weather-beam-sway 14s ease-in-out infinite alternate;
 }
 
+.weather-fx-canopy {
+  top: -8%;
+  left: -10%;
+  right: -10%;
+  height: 52%;
+  opacity: var(--weather-canopy-opacity);
+  background:
+    radial-gradient(ellipse at 14% 26%, color-mix(in srgb, var(--weather-cloud-edge) 58%, transparent), transparent 24%),
+    radial-gradient(ellipse at 52% 18%, color-mix(in srgb, var(--weather-cloud-core) 74%, rgba(6, 12, 22, 0.84)), transparent 48%),
+    radial-gradient(ellipse at 84% 24%, color-mix(in srgb, var(--weather-cloud-core) 68%, rgba(7, 12, 22, 0.8)), transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--weather-cloud-core) 82%, rgba(6, 12, 22, 0.9)) 0%, color-mix(in srgb, var(--weather-cloud-core) 56%, rgba(8, 14, 24, 0.78)) 54%, transparent 100%);
+  filter: blur(28px) saturate(0.94);
+  transform: translateY(-4%);
+  mix-blend-mode: multiply;
+  animation: weather-canopy-drift 34s ease-in-out infinite alternate;
+}
+
+.weather-fx-canopy::before {
+  content: "";
+  position: absolute;
+  inset: 18% 4% auto;
+  height: 56%;
+  background:
+    radial-gradient(ellipse at 18% 42%, rgba(255, 255, 255, 0.09), transparent 26%),
+    radial-gradient(ellipse at 64% 36%, rgba(255, 255, 255, 0.07), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 76%);
+  opacity: 0.42;
+  filter: blur(16px);
+  mix-blend-mode: screen;
+}
+
+.weather-fx-canopy::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -24%;
+  height: 58%;
+  background: linear-gradient(180deg, transparent 0%, rgba(8, 13, 22, 0.5) 72%, transparent 100%);
+  filter: blur(22px);
+  opacity: 0.72;
+}
+
 .weather-fx-cloud-shadows {
   opacity: calc(var(--weather-cloud-opacity) * 0.9);
   mix-blend-mode: multiply;
@@ -1760,6 +1856,7 @@ var WEATHER_HUD_CSS = `
 .weather-fx-fog-band,
 .weather-fx-mist-plume,
 .weather-fx-mote,
+.weather-fx-window-streak,
 .weather-fx-rain-sheet-line,
 .weather-fx-rain-drop,
 .weather-fx-snow-flake {
@@ -1867,6 +1964,15 @@ var WEATHER_HUD_CSS = `
   filter: blur(34px);
 }
 
+.weather-fx-front-clouds::after {
+  content: "";
+  position: absolute;
+  inset: -4% -10% 42%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--weather-cloud-core) 34%, rgba(8, 14, 24, 0.3)) 0%, transparent 100%);
+  opacity: calc(var(--weather-front-cloud-opacity) * 0.54);
+  filter: blur(28px);
+}
+
 .weather-fx-fog-band {
   width: var(--fog-width);
   height: var(--fog-height);
@@ -1911,6 +2017,57 @@ var WEATHER_HUD_CSS = `
   opacity: calc(var(--weather-front-mist-opacity) * var(--mist-opacity-scale));
   mix-blend-mode: screen;
   filter: blur(24px);
+}
+
+.weather-fx-window {
+  opacity: var(--weather-window-overlay-opacity);
+  mix-blend-mode: screen;
+}
+
+.weather-fx-window::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 12%, rgba(255, 255, 255, 0.05) 58%, rgba(255, 255, 255, 0.12) 100%),
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.12), transparent 18%),
+    radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.1), transparent 18%);
+  opacity: 0.58;
+}
+
+.weather-fx-window::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 112%, color-mix(in srgb, var(--weather-mist-color) 28%, transparent), transparent 42%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 16%, transparent 84%, rgba(255, 255, 255, 0.08));
+  opacity: 0.48;
+  filter: blur(8px);
+}
+
+.weather-fx-window-streak {
+  left: var(--window-left);
+  top: var(--window-top);
+  width: var(--window-width);
+  height: var(--window-length);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.72) 18%, rgba(196, 222, 255, 0.4) 42%, rgba(255, 255, 255, 0) 100%);
+  opacity: calc(var(--weather-window-streak-opacity) * var(--window-opacity-scale));
+  filter: blur(1px);
+  animation: weather-window-drip var(--window-duration) linear infinite;
+  animation-delay: var(--window-delay);
+}
+
+.weather-fx-window-streak::before {
+  content: "";
+  position: absolute;
+  inset: -10px -2px auto;
+  height: 10px;
+  border-radius: 999px;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.75) 0%, rgba(204, 226, 255, 0.24) 64%, transparent 100%);
+  opacity: 0.86;
 }
 
 .weather-fx-mote {
@@ -2011,6 +2168,23 @@ var WEATHER_HUD_CSS = `
   animation: weather-flash 220ms ease-out;
 }
 
+.weather-fx-root[data-condition="clear"] .weather-fx-glow {
+  opacity: calc(var(--weather-glow-opacity) * 1.08);
+}
+
+.weather-fx-root[data-condition="clear"] .weather-fx-beams {
+  opacity: calc(var(--weather-beam-opacity) * 1.08);
+}
+
+.weather-fx-root[data-condition="cloudy"] .weather-fx-canopy {
+  mix-blend-mode: normal;
+  filter: blur(24px);
+}
+
+.weather-fx-root[data-condition="cloudy"] .weather-fx-cloud-front {
+  mix-blend-mode: normal;
+}
+
 .weather-fx-root[data-condition="rain"] .weather-fx-clouds::before,
 .weather-fx-root[data-condition="storm"] .weather-fx-clouds::before {
   inset: -14% -8% 44%;
@@ -2018,14 +2192,60 @@ var WEATHER_HUD_CSS = `
   filter: blur(42px);
 }
 
-.weather-fx-root[data-condition="storm"] .weather-fx-front-clouds,
-.weather-fx-root[data-condition="rain"] .weather-fx-front-clouds {
-  mix-blend-mode: screen;
+.weather-fx-root[data-condition="rain"] .weather-fx-canopy,
+.weather-fx-root[data-condition="storm"] .weather-fx-canopy {
+  top: -10%;
+  height: 60%;
+  mix-blend-mode: multiply;
+}
+
+.weather-fx-root[data-condition="rain"] .weather-fx-cloud-front,
+.weather-fx-root[data-condition="storm"] .weather-fx-cloud-front {
+  mix-blend-mode: normal;
+}
+
+.weather-fx-root[data-condition="rain"] .weather-fx-window::after,
+.weather-fx-root[data-condition="storm"] .weather-fx-window::after {
+  background:
+    radial-gradient(circle at 50% 112%, color-mix(in srgb, var(--weather-mist-color) 48%, transparent), transparent 38%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 18%, transparent 82%, rgba(255, 255, 255, 0.08)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 16%, rgba(255, 255, 255, 0.04) 78%, rgba(255, 255, 255, 0.1) 100%);
+}
+
+.weather-fx-root[data-condition="storm"] .weather-fx-canopy::after {
+  opacity: 0.94;
+  filter: blur(26px);
+}
+
+.weather-fx-root[data-condition="storm"] .weather-fx-horizon {
+  opacity: calc(var(--weather-horizon-opacity) * 1.1);
+}
+
+.weather-fx-root[data-condition="snow"] .weather-fx-window::before,
+.weather-fx-root[data-condition="fog"] .weather-fx-window::before {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 16%, rgba(255, 255, 255, 0.08) 62%, rgba(255, 255, 255, 0.16) 100%),
+    radial-gradient(circle at 20% 14%, rgba(255, 255, 255, 0.14), transparent 20%),
+    radial-gradient(circle at 80% 18%, rgba(255, 255, 255, 0.12), transparent 20%);
+  opacity: 0.74;
+}
+
+.weather-fx-root[data-condition="snow"] .weather-fx-window::after,
+.weather-fx-root[data-condition="fog"] .weather-fx-window::after {
+  background:
+    radial-gradient(circle at 50% 112%, color-mix(in srgb, var(--weather-mist-color) 64%, transparent), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 18%, rgba(255, 255, 255, 0.1) 100%);
+  opacity: 0.62;
 }
 
 .weather-fx-root[data-condition="fog"] .weather-fx-front-haze,
 .weather-fx-root[data-condition="snow"] .weather-fx-front-haze {
   opacity: calc(var(--weather-front-mist-opacity) * 0.9);
+}
+
+.weather-fx-root[data-condition="fog"] .weather-fx-window,
+.weather-fx-root[data-condition="snow"] .weather-fx-window {
+  mix-blend-mode: screen;
 }
 
 .weather-fx-root[data-kind="front"] .weather-fx-rain,
@@ -2034,12 +2254,34 @@ var WEATHER_HUD_CSS = `
   mix-blend-mode: screen;
 }
 
+.weather-fx-root[data-quality="lite"] .weather-fx-canopy {
+  filter: blur(20px);
+}
+
+.weather-fx-root[data-quality="lite"] .weather-fx-window {
+  opacity: calc(var(--weather-window-overlay-opacity) * 0.72);
+}
+
+.weather-fx-root[data-quality="performance"] .weather-fx-canopy {
+  filter: blur(18px);
+}
+
+.weather-fx-root[data-quality="cinematic"] .weather-fx-window {
+  opacity: calc(var(--weather-window-overlay-opacity) * 1.08);
+}
+
+.weather-fx-root[data-quality="cinematic"] .weather-fx-canopy::before {
+  opacity: 0.58;
+}
+
 .weather-fx-root.weather-reduced-motion .weather-fx-cloud,
+.weather-fx-root.weather-reduced-motion .weather-fx-canopy,
 .weather-fx-root.weather-reduced-motion .weather-fx-cloud-shadow-band,
 .weather-fx-root.weather-reduced-motion .weather-fx-fog-band,
 .weather-fx-root.weather-reduced-motion .weather-fx-mist-plume,
 .weather-fx-root.weather-reduced-motion .weather-fx-mote,
 .weather-fx-root.weather-reduced-motion .weather-fx-star,
+.weather-fx-root.weather-reduced-motion .weather-fx-window-streak,
 .weather-fx-root.weather-reduced-motion .weather-fx-rain-sheet-line,
 .weather-fx-root.weather-reduced-motion .weather-fx-rain-drop,
 .weather-fx-root.weather-reduced-motion .weather-fx-snow-flake {
@@ -2080,6 +2322,11 @@ var WEATHER_HUD_CSS = `
   100% { transform: translate3d(1vw, -0.6vh, 0) rotate(1deg); }
 }
 
+@keyframes weather-canopy-drift {
+  0% { transform: translate3d(-2vw, -3%, 0) scale(1); }
+  100% { transform: translate3d(2vw, -1%, 0) scale(1.04); }
+}
+
 @keyframes weather-shadow-drift {
   0% { transform: translate3d(-12vw, 0, 0); }
   100% { transform: translate3d(14vw, -1.4vh, 0); }
@@ -2103,6 +2350,12 @@ var WEATHER_HUD_CSS = `
 @keyframes weather-front-haze-drift {
   0% { transform: translate3d(-2vw, 0.6vh, 0) scale(1); }
   100% { transform: translate3d(2vw, -0.8vh, 0) scale(1.04); }
+}
+
+@keyframes weather-window-drip {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  8% { opacity: calc(var(--weather-window-streak-opacity) * var(--window-opacity-scale)); }
+  100% { transform: translate3d(var(--window-drift), 110vh, 0); opacity: 0; }
 }
 
 @keyframes weather-mote-drift {
@@ -2160,8 +2413,14 @@ var GEAR_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 12.
 var CHEVRON_DOWN_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>`;
 var CHEVRON_UP_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="m7.41 15.41 4.59-4.58 4.59 4.58L18 14l-6-6-6 6z"/></svg>`;
 var HUD_COLLAPSED_SIZE = { width: 272, height: 176 };
-var HUD_EXPANDED_SIZE = { width: 312, height: 430 };
+var HUD_EXPANDED_SIZE = { width: 320, height: 474 };
 var DEFAULT_WIDGET_POSITION = { x: 24, y: 96 };
+var WEATHER_QUALITY_OPTIONS = [
+  { value: "performance", label: "Performance" },
+  { value: "lite", label: "Lite" },
+  { value: "standard", label: "Standard" },
+  { value: "cinematic", label: "Cinematic" }
+];
 function conditionIcon(condition) {
   switch (condition) {
     case "cloudy":
@@ -2277,6 +2536,8 @@ function createFxMarkup(kind) {
     root.appendChild(glow);
     const beams = createDiv("weather-fx-beams");
     root.appendChild(beams);
+    const canopy = createDiv("weather-fx-canopy");
+    root.appendChild(canopy);
     const cloudShadows = createDiv("weather-fx-cloud-shadows");
     root.appendChild(cloudShadows);
     const clouds = createDiv("weather-fx-clouds");
@@ -2397,10 +2658,12 @@ function createFxMarkup(kind) {
     root.appendChild(frontMist);
     const rainSheet = createDiv("weather-fx-rain-sheet");
     root.appendChild(rainSheet);
+    const windowLayer = createDiv("weather-fx-window");
     const rain = createDiv("weather-fx-rain weather-fx-rain-front");
     root.appendChild(rain);
     const snow = createDiv("weather-fx-snow weather-fx-snow-front");
     root.appendChild(snow);
+    root.appendChild(windowLayer);
     for (let index = 0;index < 3; index += 1) {
       frontClouds.appendChild(createCloudCluster("weather-fx-cloud weather-fx-cloud-front", {
         "--cloud-width": `${randomBetween(320, 680).toFixed(2)}px`,
@@ -2436,6 +2699,18 @@ function createFxMarkup(kind) {
         "--sheet-delay": `${randomBetween(-1.8, 0).toFixed(2)}s`,
         "--sheet-drift": `${randomBetween(-10, -5.6).toFixed(2)}vw`,
         "--sheet-opacity-scale": `${randomBetween(0.3, 0.84).toFixed(2)}`
+      }));
+    }
+    for (let index = 0;index < 10; index += 1) {
+      windowLayer.appendChild(createSpan("weather-fx-window-streak", {
+        "--window-left": `${randomBetween(-4, 102).toFixed(2)}%`,
+        "--window-top": `${randomBetween(-14, 28).toFixed(2)}%`,
+        "--window-width": `${randomBetween(2, 5).toFixed(2)}px`,
+        "--window-length": `${randomBetween(80, 180).toFixed(2)}px`,
+        "--window-duration": `${randomBetween(5.5, 10.5).toFixed(2)}s`,
+        "--window-delay": `${randomBetween(-8, 0).toFixed(2)}s`,
+        "--window-drift": `${randomBetween(-1.2, 1.2).toFixed(2)}vw`,
+        "--window-opacity-scale": `${randomBetween(0.38, 0.9).toFixed(2)}`
       }));
     }
     for (let index = 0;index < 56; index += 1) {
@@ -2714,104 +2989,120 @@ function resolveSceneTokens(state, intensity) {
     starOpacity: state.palette === "night" ? 0.46 : state.palette === "dusk" ? 0.1 : state.palette === "dawn" ? 0.06 : 0.02,
     frontCloudOpacity: 0.04,
     frontMistOpacity: 0.03,
-    rainSheetOpacity: 0
+    rainSheetOpacity: 0,
+    canopyOpacity: 0.04,
+    windowOverlayOpacity: 0,
+    windowStreakOpacity: 0
   };
   switch (state.condition) {
     case "cloudy":
-      values.skyOpacity = 0.14;
-      values.glowOpacity = 0.09;
-      values.beamOpacity = 0.04;
-      values.cloudOpacity = 0.5;
-      values.horizonOpacity = 0.1;
-      values.mistOpacity = 0.06;
+      values.skyOpacity = 0.17;
+      values.glowOpacity = 0.04;
+      values.beamOpacity = 0;
+      values.cloudOpacity = 0.6;
+      values.horizonOpacity = 0.12;
+      values.mistOpacity = 0.08;
       values.moteOpacity = 0.02;
       values.starOpacity = state.palette === "night" ? 0.08 : 0;
-      values.frontCloudOpacity = 0.18;
-      values.frontMistOpacity = 0.06;
-      cloudCore = "rgba(205, 216, 231, 0.34)";
-      cloudEdge = "rgba(238, 244, 255, 0.12)";
-      fogColor = "rgba(210, 223, 239, 0.18)";
-      mistColor = "rgba(217, 227, 239, 0.2)";
+      values.frontCloudOpacity = 0.12;
+      values.frontMistOpacity = 0.05;
+      values.canopyOpacity = 0.44;
+      cloudCore = "rgba(174, 189, 208, 0.44)";
+      cloudEdge = "rgba(224, 232, 242, 0.11)";
+      fogColor = "rgba(196, 210, 228, 0.2)";
+      mistColor = "rgba(204, 216, 229, 0.18)";
       break;
     case "rain":
-      values.skyOpacity = 0.2;
-      values.glowOpacity = 0.06;
+      values.skyOpacity = 0.24;
+      values.glowOpacity = 0.02;
       values.beamOpacity = 0;
-      values.cloudOpacity = 0.7;
-      values.horizonOpacity = 0.16;
-      values.mistOpacity = 0.22;
-      values.fogOpacity = 0.12;
-      values.rainOpacity = 0.82;
+      values.cloudOpacity = 0.82;
+      values.horizonOpacity = 0.22;
+      values.mistOpacity = 0.26;
+      values.fogOpacity = 0.16;
+      values.rainOpacity = 0.88;
       values.moteOpacity = 0;
       values.starOpacity = 0;
-      values.frontCloudOpacity = 0.22;
-      values.frontMistOpacity = 0.18;
-      values.rainSheetOpacity = 0.36;
-      cloudCore = "rgba(87, 106, 128, 0.48)";
-      cloudEdge = "rgba(158, 178, 201, 0.12)";
-      fogColor = "rgba(162, 180, 198, 0.2)";
-      mistColor = "rgba(174, 188, 204, 0.22)";
+      values.frontCloudOpacity = 0.16;
+      values.frontMistOpacity = 0.2;
+      values.rainSheetOpacity = 0.4;
+      values.canopyOpacity = 0.72;
+      values.windowOverlayOpacity = 0.22;
+      values.windowStreakOpacity = 0.54;
+      cloudCore = "rgba(70, 86, 105, 0.58)";
+      cloudEdge = "rgba(136, 154, 177, 0.1)";
+      fogColor = "rgba(145, 162, 182, 0.22)";
+      mistColor = "rgba(154, 169, 186, 0.24)";
       break;
     case "storm":
-      values.skyOpacity = 0.24;
-      values.glowOpacity = 0.05;
+      values.skyOpacity = 0.28;
+      values.glowOpacity = 0.015;
       values.beamOpacity = 0;
-      values.cloudOpacity = 0.86;
-      values.horizonOpacity = 0.24;
-      values.mistOpacity = 0.28;
-      values.fogOpacity = 0.18;
-      values.rainOpacity = 1.04;
+      values.cloudOpacity = 0.96;
+      values.horizonOpacity = 0.28;
+      values.mistOpacity = 0.32;
+      values.fogOpacity = 0.22;
+      values.rainOpacity = 1.08;
       values.flashOpacity = 0.64;
       values.moteOpacity = 0;
       values.starOpacity = 0;
-      values.frontCloudOpacity = 0.3;
+      values.frontCloudOpacity = 0.22;
       values.frontMistOpacity = 0.24;
-      values.rainSheetOpacity = 0.58;
-      cloudCore = "rgba(56, 73, 93, 0.62)";
-      cloudEdge = "rgba(118, 138, 163, 0.12)";
-      fogColor = "rgba(130, 149, 171, 0.22)";
-      mistColor = "rgba(151, 167, 186, 0.24)";
+      values.rainSheetOpacity = 0.66;
+      values.canopyOpacity = 0.92;
+      values.windowOverlayOpacity = 0.3;
+      values.windowStreakOpacity = 0.72;
+      cloudCore = "rgba(42, 55, 74, 0.72)";
+      cloudEdge = "rgba(102, 121, 148, 0.1)";
+      fogColor = "rgba(116, 134, 154, 0.24)";
+      mistColor = "rgba(135, 150, 170, 0.26)";
       break;
     case "snow":
-      values.skyOpacity = 0.15;
-      values.glowOpacity = 0.2;
-      values.beamOpacity = 0.08;
-      values.cloudOpacity = 0.34;
-      values.horizonOpacity = 0.2;
-      values.mistOpacity = 0.12;
-      values.fogOpacity = 0.08;
+      values.skyOpacity = 0.17;
+      values.glowOpacity = 0.18;
+      values.beamOpacity = 0.03;
+      values.cloudOpacity = 0.42;
+      values.horizonOpacity = 0.24;
+      values.mistOpacity = 0.16;
+      values.fogOpacity = 0.12;
       values.snowOpacity = 0.84;
       values.moteOpacity = 0.02;
       values.starOpacity = state.palette === "night" ? 0.12 : 0.02;
-      values.frontCloudOpacity = 0.12;
-      values.frontMistOpacity = 0.14;
-      cloudCore = "rgba(232, 238, 247, 0.34)";
-      cloudEdge = "rgba(255, 255, 255, 0.14)";
-      fogColor = "rgba(230, 236, 245, 0.22)";
-      mistColor = "rgba(225, 233, 242, 0.22)";
+      values.frontCloudOpacity = 0.1;
+      values.frontMistOpacity = 0.16;
+      values.canopyOpacity = 0.32;
+      values.windowOverlayOpacity = 0.18;
+      values.windowStreakOpacity = 0.12;
+      cloudCore = "rgba(222, 230, 242, 0.38)";
+      cloudEdge = "rgba(255, 255, 255, 0.18)";
+      fogColor = "rgba(222, 231, 241, 0.24)";
+      mistColor = "rgba(228, 236, 245, 0.24)";
       break;
     case "fog":
-      values.skyOpacity = 0.12;
-      values.glowOpacity = 0.08;
+      values.skyOpacity = 0.1;
+      values.glowOpacity = 0.03;
       values.beamOpacity = 0.02;
-      values.cloudOpacity = 0.18;
-      values.horizonOpacity = 0.22;
-      values.mistOpacity = 0.38;
-      values.fogOpacity = 0.68;
+      values.cloudOpacity = 0.12;
+      values.horizonOpacity = 0.26;
+      values.mistOpacity = 0.44;
+      values.fogOpacity = 0.78;
       values.moteOpacity = 0.01;
       values.starOpacity = 0;
-      values.frontCloudOpacity = 0.14;
-      values.frontMistOpacity = 0.5;
-      cloudCore = "rgba(186, 198, 207, 0.28)";
-      cloudEdge = "rgba(232, 239, 244, 0.1)";
-      fogColor = "rgba(223, 230, 236, 0.26)";
-      mistColor = "rgba(217, 224, 231, 0.28)";
+      values.frontCloudOpacity = 0.06;
+      values.frontMistOpacity = 0.62;
+      values.canopyOpacity = 0.12;
+      values.windowOverlayOpacity = 0.38;
+      values.windowStreakOpacity = 0.08;
+      cloudCore = "rgba(180, 192, 204, 0.24)";
+      cloudEdge = "rgba(226, 233, 239, 0.08)";
+      fogColor = "rgba(219, 227, 234, 0.28)";
+      mistColor = "rgba(213, 221, 229, 0.32)";
       break;
     case "clear":
     default:
       if (state.palette === "night") {
-        values.skyOpacity = 0.06;
-        values.glowOpacity = 0.08;
+        values.skyOpacity = 0.05;
+        values.glowOpacity = 0.06;
         values.beamOpacity = 0.03;
         values.cloudOpacity = 0.02;
         values.moteOpacity = 0.02;
@@ -2822,6 +3113,12 @@ function resolveSceneTokens(state, intensity) {
         values.starOpacity = 0.08;
         values.frontCloudOpacity = 0.04;
         values.frontMistOpacity = 0.03;
+        values.glowOpacity = 0.16;
+        values.beamOpacity = 0.1;
+      } else {
+        values.glowOpacity = 0.18;
+        values.beamOpacity = 0.16;
+        values.cloudOpacity = 0.03;
       }
       break;
   }
@@ -2852,7 +3149,10 @@ function resolveSceneTokens(state, intensity) {
     starOpacity: values.starOpacity * atmosphereScale,
     frontCloudOpacity: values.frontCloudOpacity * detailScale,
     frontMistOpacity: values.frontMistOpacity * detailScale,
-    rainSheetOpacity: values.rainSheetOpacity * detailScale
+    rainSheetOpacity: values.rainSheetOpacity * detailScale,
+    canopyOpacity: values.canopyOpacity * detailScale,
+    windowOverlayOpacity: values.windowOverlayOpacity * detailScale,
+    windowStreakOpacity: values.windowStreakOpacity * detailScale
   };
 }
 function getEffectiveLayerMode(prefs, state) {
@@ -2962,6 +3262,7 @@ function createHudWidget(ctx, initialPosition, expanded, callbacks) {
   let layerSelect;
   let intensitySlider;
   let intensityValue;
+  let qualitySelect;
   let pauseButton;
   let resumeButton;
   if (expanded) {
@@ -3068,8 +3369,23 @@ function createHudWidget(ctx, initialPosition, expanded, callbacks) {
     });
     intensityWrap.appendChild(intensityHeader);
     intensityWrap.appendChild(intensitySlider);
+    const qualityWrap = document.createElement("label");
+    qualityWrap.className = "weather-hud-field";
+    const qualityText = document.createElement("span");
+    qualityText.textContent = "Quality";
+    qualitySelect = document.createElement("select");
+    qualitySelect.className = "weather-hud-select";
+    qualitySelect.innerHTML = WEATHER_QUALITY_OPTIONS.map((option) => `<option value="${option.value}">${option.label}</option>`).join("");
+    protectInteractive(qualitySelect);
+    qualitySelect.addEventListener("change", (event) => {
+      event.stopPropagation();
+      callbacks.onChangeQuality(qualitySelect.value);
+    });
+    qualityWrap.appendChild(qualityText);
+    qualityWrap.appendChild(qualitySelect);
     controlGrid.appendChild(layerWrap);
     controlGrid.appendChild(intensityWrap);
+    controlGrid.appendChild(qualityWrap);
     controlsSection.appendChild(controlsLabel);
     controlsSection.appendChild(controlGrid);
     const actionsSection = document.createElement("div");
@@ -3138,6 +3454,7 @@ function createHudWidget(ctx, initialPosition, expanded, callbacks) {
     layerSelect,
     intensitySlider,
     intensityValue,
+    qualitySelect,
     pauseButton,
     resumeButton
   };
@@ -3158,6 +3475,7 @@ function syncHudState(hud, prefs, state, expanded) {
   hud.root.dataset.palette = state.palette;
   hud.root.dataset.timePhase = phase;
   hud.root.dataset.layer = effectiveLayer;
+  hud.root.dataset.quality = prefs.qualityMode;
   hud.root.dataset.paused = prefs.pauseEffects ? "true" : "false";
   hud.root.style.setProperty("--weather-hud-scene-intensity", sceneIntensity.toFixed(2));
   hud.icon.innerHTML = conditionIcon(state.condition);
@@ -3201,6 +3519,9 @@ function syncHudState(hud, prefs, state, expanded) {
     hud.intensitySlider.value = prefs.intensity.toFixed(2);
     hud.intensityValue.textContent = `${Math.round(prefs.intensity * 100)}%`;
   }
+  if (hud.qualitySelect) {
+    hud.qualitySelect.value = prefs.qualityMode;
+  }
   if (hud.pauseButton) {
     hud.pauseButton.textContent = prefs.pauseEffects ? "Resume motion" : "Pause motion";
     hud.pauseButton.classList.toggle("weather-hud-control-active", prefs.pauseEffects);
@@ -3219,6 +3540,7 @@ function applySceneState(root, state, prefs, reducedMotion) {
   const isFront = root.kind === "front";
   root.root.dataset.condition = state.condition;
   root.root.dataset.palette = state.palette;
+  root.root.dataset.quality = prefs.qualityMode;
   root.root.classList.toggle("weather-reduced-motion", reducedMotion);
   root.root.classList.toggle("weather-paused", prefs.pauseEffects);
   root.root.style.setProperty("--weather-bg-start", tokens.bgStart);
@@ -3246,6 +3568,9 @@ function applySceneState(root, state, prefs, reducedMotion) {
   root.root.style.setProperty("--weather-front-cloud-opacity", String(tokens.frontCloudOpacity));
   root.root.style.setProperty("--weather-front-mist-opacity", String(tokens.frontMistOpacity));
   root.root.style.setProperty("--weather-rain-sheet-opacity", String(tokens.rainSheetOpacity));
+  root.root.style.setProperty("--weather-canopy-opacity", String(isFront ? 0 : tokens.canopyOpacity));
+  root.root.style.setProperty("--weather-window-overlay-opacity", String(isFront ? tokens.windowOverlayOpacity : 0));
+  root.root.style.setProperty("--weather-window-streak-opacity", String(isFront ? tokens.windowStreakOpacity : 0));
   root.root.style.setProperty("--weather-rain-color", state.condition === "storm" ? "rgba(212, 231, 255, 0.96)" : "rgba(190, 220, 255, 0.84)");
   root.root.style.setProperty("--weather-snow-color", state.palette === "night" ? "rgba(219, 232, 255, 0.92)" : "rgba(247, 250, 255, 0.95)");
   root.root.style.setProperty("--weather-particle-opacity-static", state.condition === "snow" ? String(clamp(tokens.snowOpacity * 0.2, 0.04, 0.22)) : String(clamp(tokens.rainOpacity * 0.12, 0.03, 0.18)));
@@ -3466,6 +3791,9 @@ function setup(ctx) {
       },
       onChangeIntensity: (intensity) => {
         sendToBackend(ctx, { type: "save_prefs", prefs: { intensity } });
+      },
+      onChangeQuality: (qualityMode) => {
+        sendToBackend(ctx, { type: "save_prefs", prefs: { qualityMode } });
       },
       onTogglePause: () => {
         sendToBackend(ctx, { type: "save_prefs", prefs: { pauseEffects: !currentPrefs.pauseEffects } });

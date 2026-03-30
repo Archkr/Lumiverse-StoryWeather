@@ -1,8 +1,14 @@
 import { buildPresetWeatherState, matchWeatherScenePreset, WEATHER_SCENE_PRESETS } from "../presets";
-import type { WeatherCondition, WeatherPalette, WeatherPrefs, WeatherState } from "../types";
+import type { WeatherCondition, WeatherEffectsQuality, WeatherPalette, WeatherPrefs, WeatherState } from "../types";
 
 const CONDITIONS: WeatherCondition[] = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
 const PALETTES: WeatherPalette[] = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
+const QUALITY_MODES: Array<{ value: WeatherEffectsQuality; label: string }> = [
+  { value: "performance", label: "Performance" },
+  { value: "lite", label: "Lite" },
+  { value: "standard", label: "Standard" },
+  { value: "cinematic", label: "Cinematic" },
+];
 
 export interface SettingsUI {
   root: HTMLElement;
@@ -202,6 +208,18 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   intensityRow.appendChild(intensityValue);
   intensityLabel.appendChild(intensityRow);
 
+  const qualityLabel = document.createElement("label");
+  qualityLabel.className = "weather-settings-label";
+  qualityLabel.textContent = "Effects quality";
+
+  const qualitySelect = document.createElement("select");
+  qualitySelect.className = "weather-settings-select";
+  qualitySelect.innerHTML = QUALITY_MODES.map((mode) => `<option value="${mode.value}">${mode.label}</option>`).join("");
+  qualitySelect.addEventListener("change", () => {
+    sendToBackend({ type: "save_prefs", prefs: { qualityMode: qualitySelect.value } });
+  });
+  qualityLabel.appendChild(qualitySelect);
+
   const motionLabel = document.createElement("label");
   motionLabel.className = "weather-settings-label";
   motionLabel.textContent = "Reduced motion";
@@ -233,6 +251,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   effectsSection.body.appendChild(effectsLabel);
   placementSection.body.appendChild(layerLabel);
   motionSection.body.appendChild(intensityLabel);
+  motionSection.body.appendChild(qualityLabel);
   motionSection.body.appendChild(motionLabel);
   motionSection.body.appendChild(pauseLabel);
 
@@ -491,6 +510,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
       layerSelect.value = prefs.layerMode;
       intensitySlider.value = String(prefs.intensity.toFixed(2));
       intensityValue.textContent = `${Math.round(prefs.intensity * 100)}%`;
+      qualitySelect.value = prefs.qualityMode;
       motionSelect.value = prefs.reducedMotion;
       pauseToggle.checked = prefs.pauseEffects;
 

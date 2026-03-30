@@ -5,6 +5,7 @@ import type {
   BackendToFrontend,
   FrontendToBackend,
   WeatherCondition,
+  WeatherEffectsQuality,
   WeatherLayerMode,
   WeatherPrefs,
   WeatherState,
@@ -17,8 +18,15 @@ const CHEVRON_DOWN_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="
 const CHEVRON_UP_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="m7.41 15.41 4.59-4.58 4.59 4.58L18 14l-6-6-6 6z"/></svg>`;
 
 const HUD_COLLAPSED_SIZE = { width: 272, height: 176 };
-const HUD_EXPANDED_SIZE = { width: 312, height: 430 };
+const HUD_EXPANDED_SIZE = { width: 320, height: 474 };
 const DEFAULT_WIDGET_POSITION = { x: 24, y: 96 };
+
+const WEATHER_QUALITY_OPTIONS: Array<{ value: WeatherEffectsQuality; label: string }> = [
+  { value: "performance", label: "Performance" },
+  { value: "lite", label: "Lite" },
+  { value: "standard", label: "Standard" },
+  { value: "cinematic", label: "Cinematic" },
+];
 
 type FloatWidgetHandle = ReturnType<SpindleFrontendContext["ui"]["createFloatWidget"]>;
 
@@ -45,6 +53,7 @@ type HudCallbacks = {
   onApplyPreset(presetId: string): void;
   onChangeLayerMode(mode: WeatherPrefs["layerMode"]): void;
   onChangeIntensity(intensity: number): void;
+  onChangeQuality(quality: WeatherEffectsQuality): void;
   onTogglePause(): void;
 };
 
@@ -70,6 +79,7 @@ type HudElements = {
   layerSelect?: HTMLSelectElement;
   intensitySlider?: HTMLInputElement;
   intensityValue?: HTMLSpanElement;
+  qualitySelect?: HTMLSelectElement;
   pauseButton?: HTMLButtonElement;
   resumeButton?: HTMLButtonElement;
 };
@@ -102,6 +112,9 @@ type SceneTokens = {
   frontCloudOpacity: number;
   frontMistOpacity: number;
   rainSheetOpacity: number;
+  canopyOpacity: number;
+  windowOverlayOpacity: number;
+  windowStreakOpacity: number;
 };
 
 function conditionIcon(condition: WeatherCondition): string {
@@ -237,6 +250,9 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
 
     const beams = createDiv("weather-fx-beams");
     root.appendChild(beams);
+
+    const canopy = createDiv("weather-fx-canopy");
+    root.appendChild(canopy);
 
     const cloudShadows = createDiv("weather-fx-cloud-shadows");
     root.appendChild(cloudShadows);
@@ -397,11 +413,15 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
     const rainSheet = createDiv("weather-fx-rain-sheet");
     root.appendChild(rainSheet);
 
+    const windowLayer = createDiv("weather-fx-window");
+
     const rain = createDiv("weather-fx-rain weather-fx-rain-front");
     root.appendChild(rain);
 
     const snow = createDiv("weather-fx-snow weather-fx-snow-front");
     root.appendChild(snow);
+
+    root.appendChild(windowLayer);
 
     for (let index = 0; index < 3; index += 1) {
       frontClouds.appendChild(
@@ -449,6 +469,21 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
           "--sheet-delay": `${randomBetween(-1.8, 0).toFixed(2)}s`,
           "--sheet-drift": `${randomBetween(-10, -5.6).toFixed(2)}vw`,
           "--sheet-opacity-scale": `${randomBetween(0.3, 0.84).toFixed(2)}`,
+        }),
+      );
+    }
+
+    for (let index = 0; index < 10; index += 1) {
+      windowLayer.appendChild(
+        createSpan("weather-fx-window-streak", {
+          "--window-left": `${randomBetween(-4, 102).toFixed(2)}%`,
+          "--window-top": `${randomBetween(-14, 28).toFixed(2)}%`,
+          "--window-width": `${randomBetween(2, 5).toFixed(2)}px`,
+          "--window-length": `${randomBetween(80, 180).toFixed(2)}px`,
+          "--window-duration": `${randomBetween(5.5, 10.5).toFixed(2)}s`,
+          "--window-delay": `${randomBetween(-8, 0).toFixed(2)}s`,
+          "--window-drift": `${randomBetween(-1.2, 1.2).toFixed(2)}vw`,
+          "--window-opacity-scale": `${randomBetween(0.38, 0.9).toFixed(2)}`,
         }),
       );
     }
@@ -796,104 +831,120 @@ function resolveSceneTokens(state: WeatherState, intensity: number): SceneTokens
     frontCloudOpacity: 0.04,
     frontMistOpacity: 0.03,
     rainSheetOpacity: 0,
+    canopyOpacity: 0.04,
+    windowOverlayOpacity: 0,
+    windowStreakOpacity: 0,
   };
 
   switch (state.condition) {
     case "cloudy":
-      values.skyOpacity = 0.14;
-      values.glowOpacity = 0.09;
-      values.beamOpacity = 0.04;
-      values.cloudOpacity = 0.5;
-      values.horizonOpacity = 0.1;
-      values.mistOpacity = 0.06;
+      values.skyOpacity = 0.17;
+      values.glowOpacity = 0.04;
+      values.beamOpacity = 0;
+      values.cloudOpacity = 0.6;
+      values.horizonOpacity = 0.12;
+      values.mistOpacity = 0.08;
       values.moteOpacity = 0.02;
       values.starOpacity = state.palette === "night" ? 0.08 : 0;
-      values.frontCloudOpacity = 0.18;
-      values.frontMistOpacity = 0.06;
-      cloudCore = "rgba(205, 216, 231, 0.34)";
-      cloudEdge = "rgba(238, 244, 255, 0.12)";
-      fogColor = "rgba(210, 223, 239, 0.18)";
-      mistColor = "rgba(217, 227, 239, 0.2)";
+      values.frontCloudOpacity = 0.12;
+      values.frontMistOpacity = 0.05;
+      values.canopyOpacity = 0.44;
+      cloudCore = "rgba(174, 189, 208, 0.44)";
+      cloudEdge = "rgba(224, 232, 242, 0.11)";
+      fogColor = "rgba(196, 210, 228, 0.2)";
+      mistColor = "rgba(204, 216, 229, 0.18)";
       break;
     case "rain":
-      values.skyOpacity = 0.2;
-      values.glowOpacity = 0.06;
+      values.skyOpacity = 0.24;
+      values.glowOpacity = 0.02;
       values.beamOpacity = 0;
-      values.cloudOpacity = 0.7;
-      values.horizonOpacity = 0.16;
-      values.mistOpacity = 0.22;
-      values.fogOpacity = 0.12;
-      values.rainOpacity = 0.82;
+      values.cloudOpacity = 0.82;
+      values.horizonOpacity = 0.22;
+      values.mistOpacity = 0.26;
+      values.fogOpacity = 0.16;
+      values.rainOpacity = 0.88;
       values.moteOpacity = 0;
       values.starOpacity = 0;
-      values.frontCloudOpacity = 0.22;
-      values.frontMistOpacity = 0.18;
-      values.rainSheetOpacity = 0.36;
-      cloudCore = "rgba(87, 106, 128, 0.48)";
-      cloudEdge = "rgba(158, 178, 201, 0.12)";
-      fogColor = "rgba(162, 180, 198, 0.2)";
-      mistColor = "rgba(174, 188, 204, 0.22)";
+      values.frontCloudOpacity = 0.16;
+      values.frontMistOpacity = 0.2;
+      values.rainSheetOpacity = 0.4;
+      values.canopyOpacity = 0.72;
+      values.windowOverlayOpacity = 0.22;
+      values.windowStreakOpacity = 0.54;
+      cloudCore = "rgba(70, 86, 105, 0.58)";
+      cloudEdge = "rgba(136, 154, 177, 0.1)";
+      fogColor = "rgba(145, 162, 182, 0.22)";
+      mistColor = "rgba(154, 169, 186, 0.24)";
       break;
     case "storm":
-      values.skyOpacity = 0.24;
-      values.glowOpacity = 0.05;
+      values.skyOpacity = 0.28;
+      values.glowOpacity = 0.015;
       values.beamOpacity = 0;
-      values.cloudOpacity = 0.86;
-      values.horizonOpacity = 0.24;
-      values.mistOpacity = 0.28;
-      values.fogOpacity = 0.18;
-      values.rainOpacity = 1.04;
+      values.cloudOpacity = 0.96;
+      values.horizonOpacity = 0.28;
+      values.mistOpacity = 0.32;
+      values.fogOpacity = 0.22;
+      values.rainOpacity = 1.08;
       values.flashOpacity = 0.64;
       values.moteOpacity = 0;
       values.starOpacity = 0;
-      values.frontCloudOpacity = 0.3;
+      values.frontCloudOpacity = 0.22;
       values.frontMistOpacity = 0.24;
-      values.rainSheetOpacity = 0.58;
-      cloudCore = "rgba(56, 73, 93, 0.62)";
-      cloudEdge = "rgba(118, 138, 163, 0.12)";
-      fogColor = "rgba(130, 149, 171, 0.22)";
-      mistColor = "rgba(151, 167, 186, 0.24)";
+      values.rainSheetOpacity = 0.66;
+      values.canopyOpacity = 0.92;
+      values.windowOverlayOpacity = 0.3;
+      values.windowStreakOpacity = 0.72;
+      cloudCore = "rgba(42, 55, 74, 0.72)";
+      cloudEdge = "rgba(102, 121, 148, 0.1)";
+      fogColor = "rgba(116, 134, 154, 0.24)";
+      mistColor = "rgba(135, 150, 170, 0.26)";
       break;
     case "snow":
-      values.skyOpacity = 0.15;
-      values.glowOpacity = 0.2;
-      values.beamOpacity = 0.08;
-      values.cloudOpacity = 0.34;
-      values.horizonOpacity = 0.2;
-      values.mistOpacity = 0.12;
-      values.fogOpacity = 0.08;
+      values.skyOpacity = 0.17;
+      values.glowOpacity = 0.18;
+      values.beamOpacity = 0.03;
+      values.cloudOpacity = 0.42;
+      values.horizonOpacity = 0.24;
+      values.mistOpacity = 0.16;
+      values.fogOpacity = 0.12;
       values.snowOpacity = 0.84;
       values.moteOpacity = 0.02;
       values.starOpacity = state.palette === "night" ? 0.12 : 0.02;
-      values.frontCloudOpacity = 0.12;
-      values.frontMistOpacity = 0.14;
-      cloudCore = "rgba(232, 238, 247, 0.34)";
-      cloudEdge = "rgba(255, 255, 255, 0.14)";
-      fogColor = "rgba(230, 236, 245, 0.22)";
-      mistColor = "rgba(225, 233, 242, 0.22)";
+      values.frontCloudOpacity = 0.1;
+      values.frontMistOpacity = 0.16;
+      values.canopyOpacity = 0.32;
+      values.windowOverlayOpacity = 0.18;
+      values.windowStreakOpacity = 0.12;
+      cloudCore = "rgba(222, 230, 242, 0.38)";
+      cloudEdge = "rgba(255, 255, 255, 0.18)";
+      fogColor = "rgba(222, 231, 241, 0.24)";
+      mistColor = "rgba(228, 236, 245, 0.24)";
       break;
     case "fog":
-      values.skyOpacity = 0.12;
-      values.glowOpacity = 0.08;
+      values.skyOpacity = 0.1;
+      values.glowOpacity = 0.03;
       values.beamOpacity = 0.02;
-      values.cloudOpacity = 0.18;
-      values.horizonOpacity = 0.22;
-      values.mistOpacity = 0.38;
-      values.fogOpacity = 0.68;
+      values.cloudOpacity = 0.12;
+      values.horizonOpacity = 0.26;
+      values.mistOpacity = 0.44;
+      values.fogOpacity = 0.78;
       values.moteOpacity = 0.01;
       values.starOpacity = 0;
-      values.frontCloudOpacity = 0.14;
-      values.frontMistOpacity = 0.5;
-      cloudCore = "rgba(186, 198, 207, 0.28)";
-      cloudEdge = "rgba(232, 239, 244, 0.1)";
-      fogColor = "rgba(223, 230, 236, 0.26)";
-      mistColor = "rgba(217, 224, 231, 0.28)";
+      values.frontCloudOpacity = 0.06;
+      values.frontMistOpacity = 0.62;
+      values.canopyOpacity = 0.12;
+      values.windowOverlayOpacity = 0.38;
+      values.windowStreakOpacity = 0.08;
+      cloudCore = "rgba(180, 192, 204, 0.24)";
+      cloudEdge = "rgba(226, 233, 239, 0.08)";
+      fogColor = "rgba(219, 227, 234, 0.28)";
+      mistColor = "rgba(213, 221, 229, 0.32)";
       break;
     case "clear":
     default:
       if (state.palette === "night") {
-        values.skyOpacity = 0.06;
-        values.glowOpacity = 0.08;
+        values.skyOpacity = 0.05;
+        values.glowOpacity = 0.06;
         values.beamOpacity = 0.03;
         values.cloudOpacity = 0.02;
         values.moteOpacity = 0.02;
@@ -904,6 +955,12 @@ function resolveSceneTokens(state: WeatherState, intensity: number): SceneTokens
         values.starOpacity = 0.08;
         values.frontCloudOpacity = 0.04;
         values.frontMistOpacity = 0.03;
+        values.glowOpacity = 0.16;
+        values.beamOpacity = 0.1;
+      } else {
+        values.glowOpacity = 0.18;
+        values.beamOpacity = 0.16;
+        values.cloudOpacity = 0.03;
       }
       break;
   }
@@ -937,6 +994,9 @@ function resolveSceneTokens(state: WeatherState, intensity: number): SceneTokens
     frontCloudOpacity: values.frontCloudOpacity * detailScale,
     frontMistOpacity: values.frontMistOpacity * detailScale,
     rainSheetOpacity: values.rainSheetOpacity * detailScale,
+    canopyOpacity: values.canopyOpacity * detailScale,
+    windowOverlayOpacity: values.windowOverlayOpacity * detailScale,
+    windowStreakOpacity: values.windowStreakOpacity * detailScale,
   };
 }
 
@@ -1067,6 +1127,7 @@ function createHudWidget(
   let layerSelect: HTMLSelectElement | undefined;
   let intensitySlider: HTMLInputElement | undefined;
   let intensityValue: HTMLSpanElement | undefined;
+  let qualitySelect: HTMLSelectElement | undefined;
   let pauseButton: HTMLButtonElement | undefined;
   let resumeButton: HTMLButtonElement | undefined;
 
@@ -1187,8 +1248,24 @@ function createHudWidget(
     intensityWrap.appendChild(intensityHeader);
     intensityWrap.appendChild(intensitySlider);
 
+    const qualityWrap = document.createElement("label");
+    qualityWrap.className = "weather-hud-field";
+    const qualityText = document.createElement("span");
+    qualityText.textContent = "Quality";
+    qualitySelect = document.createElement("select");
+    qualitySelect.className = "weather-hud-select";
+    qualitySelect.innerHTML = WEATHER_QUALITY_OPTIONS.map((option) => `<option value="${option.value}">${option.label}</option>`).join("");
+    protectInteractive(qualitySelect);
+    qualitySelect.addEventListener("change", (event) => {
+      event.stopPropagation();
+      callbacks.onChangeQuality(qualitySelect!.value as WeatherEffectsQuality);
+    });
+    qualityWrap.appendChild(qualityText);
+    qualityWrap.appendChild(qualitySelect);
+
     controlGrid.appendChild(layerWrap);
     controlGrid.appendChild(intensityWrap);
+    controlGrid.appendChild(qualityWrap);
 
     controlsSection.appendChild(controlsLabel);
     controlsSection.appendChild(controlGrid);
@@ -1267,6 +1344,7 @@ function createHudWidget(
     layerSelect,
     intensitySlider,
     intensityValue,
+    qualitySelect,
     pauseButton,
     resumeButton,
   };
@@ -1288,6 +1366,7 @@ function syncHudState(hud: HudElements, prefs: WeatherPrefs, state: WeatherState
   hud.root.dataset.palette = state.palette;
   hud.root.dataset.timePhase = phase;
   hud.root.dataset.layer = effectiveLayer;
+  hud.root.dataset.quality = prefs.qualityMode;
   hud.root.dataset.paused = prefs.pauseEffects ? "true" : "false";
   hud.root.style.setProperty("--weather-hud-scene-intensity", sceneIntensity.toFixed(2));
 
@@ -1338,6 +1417,10 @@ function syncHudState(hud: HudElements, prefs: WeatherPrefs, state: WeatherState
     hud.intensityValue.textContent = `${Math.round(prefs.intensity * 100)}%`;
   }
 
+  if (hud.qualitySelect) {
+    hud.qualitySelect.value = prefs.qualityMode;
+  }
+
   if (hud.pauseButton) {
     hud.pauseButton.textContent = prefs.pauseEffects ? "Resume motion" : "Pause motion";
     hud.pauseButton.classList.toggle("weather-hud-control-active", prefs.pauseEffects);
@@ -1360,6 +1443,7 @@ function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs,
 
   root.root.dataset.condition = state.condition;
   root.root.dataset.palette = state.palette;
+  root.root.dataset.quality = prefs.qualityMode;
   root.root.classList.toggle("weather-reduced-motion", reducedMotion);
   root.root.classList.toggle("weather-paused", prefs.pauseEffects);
 
@@ -1388,6 +1472,9 @@ function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs,
   root.root.style.setProperty("--weather-front-cloud-opacity", String(tokens.frontCloudOpacity));
   root.root.style.setProperty("--weather-front-mist-opacity", String(tokens.frontMistOpacity));
   root.root.style.setProperty("--weather-rain-sheet-opacity", String(tokens.rainSheetOpacity));
+  root.root.style.setProperty("--weather-canopy-opacity", String(isFront ? 0 : tokens.canopyOpacity));
+  root.root.style.setProperty("--weather-window-overlay-opacity", String(isFront ? tokens.windowOverlayOpacity : 0));
+  root.root.style.setProperty("--weather-window-streak-opacity", String(isFront ? tokens.windowStreakOpacity : 0));
   root.root.style.setProperty(
     "--weather-rain-color",
     state.condition === "storm" ? "rgba(212, 231, 255, 0.96)" : "rgba(190, 220, 255, 0.84)",
@@ -1662,6 +1749,9 @@ export function setup(ctx: SpindleFrontendContext) {
       },
       onChangeIntensity: (intensity) => {
         sendToBackend(ctx, { type: "save_prefs", prefs: { intensity } });
+      },
+      onChangeQuality: (qualityMode) => {
+        sendToBackend(ctx, { type: "save_prefs", prefs: { qualityMode } });
       },
       onTogglePause: () => {
         sendToBackend(ctx, { type: "save_prefs", prefs: { pauseEffects: !currentPrefs.pauseEffects } });

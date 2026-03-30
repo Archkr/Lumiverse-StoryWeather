@@ -6,10 +6,12 @@ var WEATHER_CONDITIONS = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
 var WEATHER_LAYERS = ["back", "front", "both"];
 var WEATHER_PALETTES = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
 var REDUCED_MOTION_VALUES = ["system", "always", "never"];
+var WEATHER_EFFECT_QUALITY_VALUES = ["performance", "lite", "standard", "cinematic"];
 var DEFAULT_PREFS = {
   effectsEnabled: true,
   layerMode: "auto",
   intensity: 1,
+  qualityMode: "standard",
   reducedMotion: "never",
   pauseEffects: false,
   widgetPosition: null
@@ -37,6 +39,9 @@ function normalizePalette(value, fallback) {
 }
 function normalizeReducedMotion(value, fallback) {
   return typeof value === "string" && REDUCED_MOTION_VALUES.includes(value) ? value : fallback;
+}
+function normalizeQualityMode(value, fallback) {
+  return typeof value === "string" && WEATHER_EFFECT_QUALITY_VALUES.includes(value) ? value : fallback;
 }
 function normalizeSource(value, fallback) {
   return value === "manual" || value === "story" ? value : fallback;
@@ -214,6 +219,7 @@ function normalizePrefs(input) {
     effectsEnabled: typeof source.effectsEnabled === "boolean" ? source.effectsEnabled : DEFAULT_PREFS.effectsEnabled,
     layerMode,
     intensity: clamp(parseNumeric(source.intensity) ?? DEFAULT_PREFS.intensity, 0.25, 1.5),
+    qualityMode: normalizeQualityMode(source.qualityMode, DEFAULT_PREFS.qualityMode),
     reducedMotion: normalizeReducedMotion(source.reducedMotion, DEFAULT_PREFS.reducedMotion),
     pauseEffects: typeof source.pauseEffects === "boolean" ? source.pauseEffects : DEFAULT_PREFS.pauseEffects,
     widgetPosition: position
