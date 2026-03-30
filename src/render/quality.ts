@@ -20,7 +20,6 @@ export interface WeatherQualityFlags {
 export interface WeatherQualityBudget {
   resolutionScale: number;
   maxDevicePixelRatio: number;
-  maxPixelCount: number;
   stars: number;
   motes: number;
   cloudLayers: number;
@@ -59,7 +58,6 @@ export const WEATHER_QUALITY_BUDGETS: Record<WeatherEffectsQuality, WeatherQuali
   performance: {
     resolutionScale: 0.85,
     maxDevicePixelRatio: 1.2,
-    maxPixelCount: 900_000,
     stars: 18,
     motes: 8,
     cloudLayers: 2,
@@ -111,7 +109,6 @@ export const WEATHER_QUALITY_BUDGETS: Record<WeatherEffectsQuality, WeatherQuali
   lite: {
     resolutionScale: 1,
     maxDevicePixelRatio: 1.45,
-    maxPixelCount: 1_500_000,
     stars: 34,
     motes: 16,
     cloudLayers: 3,
@@ -163,7 +160,6 @@ export const WEATHER_QUALITY_BUDGETS: Record<WeatherEffectsQuality, WeatherQuali
   standard: {
     resolutionScale: 1.1,
     maxDevicePixelRatio: 1.8,
-    maxPixelCount: 2_400_000,
     stars: 64,
     motes: 28,
     cloudLayers: 4,
@@ -215,7 +211,6 @@ export const WEATHER_QUALITY_BUDGETS: Record<WeatherEffectsQuality, WeatherQuali
   cinematic: {
     resolutionScale: 1.3,
     maxDevicePixelRatio: 2.25,
-    maxPixelCount: 3_200_000,
     stars: 112,
     motes: 44,
     cloudLayers: 6,

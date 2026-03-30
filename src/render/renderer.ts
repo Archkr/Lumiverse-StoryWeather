@@ -5,7 +5,6 @@ import { getQualityBudget, type WeatherQualityBudget } from "./quality";
 
 type RendererKind = "back" | "front";
 type Phase = "dawn" | "day" | "dusk" | "night";
-type ResizeObserverHandle = { disconnect(): void };
 
 interface PaletteBase {
   skyTop: string;
@@ -1660,13 +1659,8 @@ class CanvasWeatherRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
   private readonly glassOverlay: HTMLDivElement | null;
-  private readonly resizeObserver: ResizeObserverHandle | null;
+  private readonly resizeObserver: ResizeObserver;
   private readonly onAssetReady = () => this.drawOnce();
-  private readonly onWindowResize = () => {
-    if (this.resizeCanvas()) {
-      this.drawOnce();
-    }
-  };
   private composition: SceneComposition | null = null;
   private prefs: WeatherPrefs = DEFAULT_PREFS;
   private state: WeatherState = makeDefaultWeatherState();
@@ -1679,7 +1673,6 @@ class CanvasWeatherRenderer {
   private height = 1;
   private dpr = 1;
   private lightningEvents: LightningEvent[] = [];
-  private failed = false;
 
   constructor(kind: RendererKind) {
     this.kind = kind;
@@ -1693,11 +1686,7 @@ class CanvasWeatherRenderer {
     this.canvas.className = "weather-fx-canvas";
     this.root.appendChild(this.canvas);
 
-    const context = this.canvas.getContext("2d", { alpha: true }) ?? this.canvas.getContext("2d");
-    if (!context) {
-      throw new Error("Weather renderer could not acquire a 2D canvas context.");
-    }
-    this.context = context;
+    this.context = this.canvas.getContext("2d", { alpha: true }) as CanvasRenderingContext2D;
 
     if (kind === "back") {
       this.glassOverlay = document.createElement("div");
@@ -1707,22 +1696,15 @@ class CanvasWeatherRenderer {
       this.glassOverlay = null;
     }
 
-    if (typeof ResizeObserver !== "undefined") {
-      const observer = new ResizeObserver(() => {
-        if (this.resizeCanvas()) {
-          this.drawOnce();
-        }
-      });
-      observer.observe(this.root);
-      this.resizeObserver = observer;
-    } else {
-      this.resizeObserver = null;
-      window.addEventListener("resize", this.onWindowResize);
-    }
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.resizeCanvas()) {
+        this.drawOnce();
+      }
+    });
+    this.resizeObserver.observe(this.root);
   }
 
   setScene(state: WeatherState, prefs: WeatherPrefs, reducedMotion: boolean): void {
-    if (this.failed) return;
     this.state = state;
     this.prefs = prefs;
     this.reducedMotion = reducedMotion;
@@ -1741,11 +1723,6 @@ class CanvasWeatherRenderer {
   }
 
   setVisible(visible: boolean): void {
-    if (this.failed) {
-      this.root.classList.toggle("weather-hidden", true);
-      this.root.classList.toggle("weather-visible", false);
-      return;
-    }
     this.visible = visible;
     this.root.classList.toggle("weather-hidden", !visible);
     this.root.classList.toggle("weather-visible", visible);
@@ -1754,14 +1731,12 @@ class CanvasWeatherRenderer {
   }
 
   refreshLayout(): void {
-    if (this.failed) return;
     if (this.resizeCanvas()) {
       this.drawOnce();
     }
   }
 
   triggerLightning(): void {
-    if (this.failed) return;
     if (!this.visible || this.state.condition !== "storm" || this.reducedMotion || this.prefs.pauseEffects || !this.composition) {
       return;
     }
@@ -1793,10 +1768,7 @@ class CanvasWeatherRenderer {
 
   destroy(): void {
     this.stopLoop();
-    this.resizeObserver?.disconnect();
-    if (!this.resizeObserver) {
-      window.removeEventListener("resize", this.onWindowResize);
-    }
+    this.resizeObserver.disconnect();
     this.root.remove();
   }
 
@@ -1832,10 +1804,7 @@ class CanvasWeatherRenderer {
     const nextWidth = Math.max(1, Math.round(rect.width));
     const nextHeight = Math.max(1, Math.round(rect.height));
     const budget = getQualityBudget(this.prefs.qualityMode);
-    const viewportPixels = Math.max(1, nextWidth * nextHeight);
-    const desiredDpr = Math.max(0.65, window.devicePixelRatio * budget.resolutionScale);
-    const maxPixelDpr = Math.max(0.65, Math.sqrt(budget.maxPixelCount / viewportPixels));
-    const nextDpr = Math.min(desiredDpr, budget.maxDevicePixelRatio, maxPixelDpr);
+    const nextDpr = clamp(window.devicePixelRatio * budget.resolutionScale, 1, budget.maxDevicePixelRatio);
     const pixelWidth = Math.max(1, Math.round(nextWidth * nextDpr));
     const pixelHeight = Math.max(1, Math.round(nextHeight * nextDpr));
     if (this.width === nextWidth && this.height === nextHeight && this.dpr === nextDpr) return false;
@@ -1850,10 +1819,6 @@ class CanvasWeatherRenderer {
   }
 
   private refreshLoop(): void {
-    if (this.failed) {
-      this.stopLoop();
-      return;
-    }
     const shouldRun =
       this.visible &&
       this.root.isConnected &&
@@ -1890,23 +1855,14 @@ class CanvasWeatherRenderer {
     const delta = Math.min(0.06, Math.max(0, (now - this.lastFrameAt) / 1000));
     this.lastFrameAt = now;
     this.animationTime += delta;
-    try {
-      this.render(this.animationTime);
-    } catch (error) {
-      this.handleFatalError(error);
-      return;
-    }
+    this.render(this.animationTime);
     this.refreshLoop();
   };
 
   private drawOnce(): void {
-    if (this.failed || !this.composition) return;
-    try {
-      this.resizeCanvas();
-      this.render(this.animationTime);
-    } catch (error) {
-      this.handleFatalError(error);
-    }
+    if (!this.composition) return;
+    this.resizeCanvas();
+    this.render(this.animationTime);
   }
 
   private clearCanvas(): void {
@@ -2565,17 +2521,6 @@ class CanvasWeatherRenderer {
     return { flash, bolts };
   }
 
-  private handleFatalError(error: unknown): void {
-    if (this.failed) return;
-    this.failed = true;
-    this.stopLoop();
-    this.visible = false;
-    this.root.classList.add("weather-hidden");
-    this.root.classList.remove("weather-visible");
-    this.root.dataset.failed = "true";
-    console.error("[weather_hud] renderer disabled after runtime error", error);
-  }
-
   private drawLightningState(profile: SceneProfile, lightning: { flash: number; bolts: Array<LightningBolt & { alpha: number }> }): void {
     if (lightning.flash <= 0.001 && lightning.bolts.length === 0) return;
     const palette = buildLightningPalette(profile);
@@ -2614,25 +2559,7 @@ export interface WeatherRendererHandle {
 }
 
 export function createWeatherRenderer(kind: RendererKind): WeatherRendererHandle {
-  let renderer: CanvasWeatherRenderer;
-  try {
-    renderer = new CanvasWeatherRenderer(kind);
-  } catch (error) {
-    console.error(`[weather_hud] failed to initialize ${kind} renderer`, error);
-    const root = document.createElement("div");
-    root.className = "weather-fx-root weather-fx-renderer-root weather-hidden";
-    root.dataset.kind = kind;
-    root.dataset.failed = "true";
-    root.setAttribute("aria-hidden", "true");
-    return {
-      root,
-      destroy: () => root.remove(),
-      refreshLayout: () => undefined,
-      setScene: () => undefined,
-      setVisible: () => undefined,
-      triggerLightning: () => undefined,
-    };
-  }
+  const renderer = new CanvasWeatherRenderer(kind);
   return {
     root: renderer.root,
     destroy: () => renderer.destroy(),
