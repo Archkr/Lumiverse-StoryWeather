@@ -262,7 +262,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
     const snow = createDiv("weather-fx-snow");
     root.appendChild(snow);
 
-    for (let index = 0; index < 46; index += 1) {
+    for (let index = 0; index < 18; index += 1) {
       stars.appendChild(
         createSpan("weather-fx-star", {
           "--star-left": `${randomBetween(0, 100).toFixed(2)}%`,
@@ -275,7 +275,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
       );
     }
 
-    for (let index = 0; index < 5; index += 1) {
+    for (let index = 0; index < 3; index += 1) {
       cloudShadows.appendChild(
         createSpan("weather-fx-cloud-shadow-band", {
           "--shadow-width": `${randomBetween(280, 620).toFixed(2)}px`,
@@ -289,7 +289,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
       );
     }
 
-    for (let index = 0; index < 9; index += 1) {
+    for (let index = 0; index < 5; index += 1) {
       clouds.appendChild(
         createCloudCluster(
           "weather-fx-cloud",
@@ -305,12 +305,12 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
             "--cloud-depth": `${randomBetween(0.88, 1.08).toFixed(2)}`,
             "--cloud-rise": `${randomBetween(-1.4, 2).toFixed(2)}vh`,
           },
-          5 + Math.floor(Math.random() * 4),
+          3 + Math.floor(Math.random() * 2),
         ),
       );
     }
 
-    for (let index = 0; index < 6; index += 1) {
+    for (let index = 0; index < 4; index += 1) {
       fog.appendChild(
         createSpan("weather-fx-fog-band", {
           "--fog-width": `${240 + Math.round(Math.random() * 320)}px`,
@@ -324,7 +324,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
       );
     }
 
-    for (let index = 0; index < 5; index += 1) {
+    for (let index = 0; index < 3; index += 1) {
       mist.appendChild(
         createSpan("weather-fx-mist-plume", {
           "--mist-width": `${randomBetween(260, 560).toFixed(2)}px`,
@@ -338,7 +338,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
       );
     }
 
-    for (let index = 0; index < 18; index += 1) {
+    for (let index = 0; index < 10; index += 1) {
       motes.appendChild(
         createSpan("weather-fx-mote", {
           "--mote-left": `${Math.round(Math.random() * 100)}%`,
@@ -353,7 +353,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
       );
     }
 
-    for (let index = 0; index < 64; index += 1) {
+    for (let index = 0; index < 40; index += 1) {
       rain.appendChild(
         createSpan("weather-fx-rain-drop", {
           "--drop-left": `${Math.round(Math.random() * 104)}%`,
@@ -368,7 +368,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
       );
     }
 
-    for (let index = 0; index < 42; index += 1) {
+    for (let index = 0; index < 26; index += 1) {
       snow.appendChild(
         createSpan("weather-fx-snow-flake", {
           "--flake-left": `${Math.round(Math.random() * 102)}%`,
@@ -403,7 +403,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
     const snow = createDiv("weather-fx-snow weather-fx-snow-front");
     root.appendChild(snow);
 
-    for (let index = 0; index < 5; index += 1) {
+    for (let index = 0; index < 3; index += 1) {
       frontClouds.appendChild(
         createCloudCluster(
           "weather-fx-cloud weather-fx-cloud-front",
@@ -419,12 +419,12 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
             "--cloud-depth": `${randomBetween(1.02, 1.2).toFixed(2)}`,
             "--cloud-rise": `${randomBetween(-1.2, 1.6).toFixed(2)}vh`,
           },
-          6 + Math.floor(Math.random() * 4),
+          3 + Math.floor(Math.random() * 2),
         ),
       );
     }
 
-    for (let index = 0; index < 4; index += 1) {
+    for (let index = 0; index < 2; index += 1) {
       frontMist.appendChild(
         createSpan("weather-fx-mist-plume weather-fx-mist-plume-front", {
           "--mist-width": `${randomBetween(320, 640).toFixed(2)}px`,
@@ -438,7 +438,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
       );
     }
 
-    for (let index = 0; index < 20; index += 1) {
+    for (let index = 0; index < 10; index += 1) {
       rainSheet.appendChild(
         createSpan("weather-fx-rain-sheet-line", {
           "--sheet-left": `${randomBetween(-8, 108).toFixed(2)}%`,
@@ -453,7 +453,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
       );
     }
 
-    for (let index = 0; index < 92; index += 1) {
+    for (let index = 0; index < 56; index += 1) {
       rain.appendChild(
         createSpan("weather-fx-rain-drop weather-fx-rain-drop-front", {
           "--drop-left": `${Math.round(Math.random() * 104)}%`,
@@ -468,7 +468,7 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
       );
     }
 
-    for (let index = 0; index < 58; index += 1) {
+    for (let index = 0; index < 34; index += 1) {
       snow.appendChild(
         createSpan("weather-fx-snow-flake weather-fx-snow-flake-front", {
           "--flake-left": `${Math.round(Math.random() * 102)}%`,

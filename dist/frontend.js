@@ -1556,6 +1556,7 @@ var WEATHER_HUD_CSS = `
   pointer-events: none;
   opacity: 0;
   isolation: isolate;
+  contain: layout paint style;
   transition:
     opacity 320ms ease,
     --weather-bg-start 1200ms ease,
@@ -1598,6 +1599,36 @@ var WEATHER_HUD_CSS = `
   display: none;
 }
 
+.weather-fx-root:not([data-palette="night"]):not([data-palette="dawn"]):not([data-palette="dusk"]) .weather-fx-stars,
+.weather-fx-root[data-condition="clear"] .weather-fx-rain,
+.weather-fx-root[data-condition="clear"] .weather-fx-rain-sheet,
+.weather-fx-root[data-condition="clear"] .weather-fx-snow,
+.weather-fx-root[data-condition="clear"] .weather-fx-fog,
+.weather-fx-root[data-condition="cloudy"] .weather-fx-rain,
+.weather-fx-root[data-condition="cloudy"] .weather-fx-rain-sheet,
+.weather-fx-root[data-condition="cloudy"] .weather-fx-snow,
+.weather-fx-root[data-condition="rain"] .weather-fx-snow,
+.weather-fx-root[data-condition="rain"] .weather-fx-stars,
+.weather-fx-root[data-condition="rain"] .weather-fx-beams,
+.weather-fx-root[data-condition="storm"] .weather-fx-snow,
+.weather-fx-root[data-condition="storm"] .weather-fx-stars,
+.weather-fx-root[data-condition="storm"] .weather-fx-beams,
+.weather-fx-root[data-condition="snow"] .weather-fx-rain,
+.weather-fx-root[data-condition="snow"] .weather-fx-rain-sheet,
+.weather-fx-root[data-condition="fog"] .weather-fx-rain,
+.weather-fx-root[data-condition="fog"] .weather-fx-rain-sheet,
+.weather-fx-root[data-condition="fog"] .weather-fx-snow,
+.weather-fx-root[data-condition="fog"] .weather-fx-stars,
+.weather-fx-root[data-condition="fog"] .weather-fx-beams,
+.weather-fx-root[data-condition="fog"] .weather-fx-motes,
+.weather-fx-root[data-kind="front"][data-condition="clear"] .weather-fx-front-haze,
+.weather-fx-root[data-kind="front"][data-condition="clear"] .weather-fx-front-clouds,
+.weather-fx-root[data-kind="front"][data-condition="clear"] .weather-fx-front-mist,
+.weather-fx-root[data-kind="front"][data-condition="cloudy"] .weather-fx-front-haze,
+.weather-fx-root[data-kind="front"][data-condition="cloudy"] .weather-fx-front-mist {
+  display: none;
+}
+
 .weather-fx-root.weather-paused *,
 .weather-fx-root.weather-paused *::before,
 .weather-fx-root.weather-paused *::after {
@@ -1623,6 +1654,7 @@ var WEATHER_HUD_CSS = `
 .weather-fx-flash {
   position: absolute;
   inset: 0;
+  contain: layout paint;
 }
 
 .weather-fx-sky {
@@ -1767,6 +1799,7 @@ var WEATHER_HUD_CSS = `
   opacity: calc(var(--weather-cloud-opacity) * var(--cloud-opacity-scale));
   animation: weather-cloud-drift var(--cloud-duration) linear infinite;
   animation-delay: var(--cloud-delay);
+  transform: translateZ(0);
 }
 
 .weather-fx-cloud-front {
@@ -1868,8 +1901,8 @@ var WEATHER_HUD_CSS = `
   background:
     linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--weather-mist-color) 12%, transparent) 54%, color-mix(in srgb, var(--weather-mist-color) 34%, transparent) 100%),
     radial-gradient(circle at 50% 118%, color-mix(in srgb, var(--weather-mist-color) 54%, transparent), transparent 48%);
-  opacity: calc(var(--weather-front-mist-opacity) * 0.78);
-  filter: blur(18px);
+  opacity: calc(var(--weather-front-mist-opacity) * 0.64);
+  filter: blur(12px);
   mix-blend-mode: screen;
   animation: weather-front-haze-drift 16s ease-in-out infinite alternate;
 }
@@ -1877,7 +1910,7 @@ var WEATHER_HUD_CSS = `
 .weather-fx-mist-plume-front {
   opacity: calc(var(--weather-front-mist-opacity) * var(--mist-opacity-scale));
   mix-blend-mode: screen;
-  filter: blur(32px);
+  filter: blur(24px);
 }
 
 .weather-fx-mote {
@@ -1901,7 +1934,7 @@ var WEATHER_HUD_CSS = `
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0), color-mix(in srgb, var(--weather-rain-color) 92%, white 8%) 26%, rgba(255, 255, 255, 0));
   opacity: calc(var(--weather-rain-sheet-opacity) * var(--sheet-opacity-scale));
-  filter: blur(1.6px) drop-shadow(0 0 10px rgba(206, 228, 255, 0.18));
+  filter: blur(1px) drop-shadow(0 0 6px rgba(206, 228, 255, 0.14));
   transform: rotate(13deg);
   animation: weather-rain-sheet-fall var(--sheet-duration) linear infinite;
   animation-delay: var(--sheet-delay);
@@ -1916,7 +1949,7 @@ var WEATHER_HUD_CSS = `
   border-radius: 999px;
   opacity: calc(var(--weather-rain-opacity) * var(--drop-opacity-scale));
   transform: rotate(11deg);
-  filter: drop-shadow(0 0 6px rgba(191, 221, 255, 0.26));
+  filter: drop-shadow(0 0 4px rgba(191, 221, 255, 0.22));
   animation: weather-rain-fall var(--drop-duration) linear infinite;
   animation-delay: var(--drop-delay);
 }
@@ -1932,7 +1965,7 @@ var WEATHER_HUD_CSS = `
 }
 
 .weather-fx-rain-drop-front {
-  filter: drop-shadow(0 0 8px rgba(209, 229, 255, 0.34));
+  filter: drop-shadow(0 0 5px rgba(209, 229, 255, 0.28));
 }
 
 .weather-fx-snow-flake {
@@ -1943,7 +1976,7 @@ var WEATHER_HUD_CSS = `
   border-radius: 50%;
   background: var(--weather-snow-color);
   opacity: calc(var(--weather-snow-opacity) * var(--flake-opacity-scale));
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.26);
   animation: weather-snow-fall var(--flake-duration) linear infinite;
   animation-delay: var(--flake-delay);
 }
@@ -1963,7 +1996,7 @@ var WEATHER_HUD_CSS = `
 }
 
 .weather-fx-snow-flake-front {
-  box-shadow: 0 0 14px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.32);
 }
 
 .weather-fx-flash {
@@ -2260,7 +2293,7 @@ function createFxMarkup(kind) {
     root.appendChild(rain);
     const snow = createDiv("weather-fx-snow");
     root.appendChild(snow);
-    for (let index = 0;index < 46; index += 1) {
+    for (let index = 0;index < 18; index += 1) {
       stars.appendChild(createSpan("weather-fx-star", {
         "--star-left": `${randomBetween(0, 100).toFixed(2)}%`,
         "--star-top": `${randomBetween(4, 72).toFixed(2)}%`,
@@ -2270,7 +2303,7 @@ function createFxMarkup(kind) {
         "--star-opacity-scale": `${randomBetween(0.42, 1).toFixed(2)}`
       }));
     }
-    for (let index = 0;index < 5; index += 1) {
+    for (let index = 0;index < 3; index += 1) {
       cloudShadows.appendChild(createSpan("weather-fx-cloud-shadow-band", {
         "--shadow-width": `${randomBetween(280, 620).toFixed(2)}px`,
         "--shadow-height": `${randomBetween(80, 170).toFixed(2)}px`,
@@ -2281,7 +2314,7 @@ function createFxMarkup(kind) {
         "--shadow-opacity-scale": `${randomBetween(0.5, 0.94).toFixed(2)}`
       }));
     }
-    for (let index = 0;index < 9; index += 1) {
+    for (let index = 0;index < 5; index += 1) {
       clouds.appendChild(createCloudCluster("weather-fx-cloud", {
         "--cloud-width": `${randomBetween(240, 520).toFixed(2)}px`,
         "--cloud-height": `${randomBetween(90, 188).toFixed(2)}px`,
@@ -2293,9 +2326,9 @@ function createFxMarkup(kind) {
         "--cloud-opacity-scale": `${randomBetween(0.56, 1.1).toFixed(2)}`,
         "--cloud-depth": `${randomBetween(0.88, 1.08).toFixed(2)}`,
         "--cloud-rise": `${randomBetween(-1.4, 2).toFixed(2)}vh`
-      }, 5 + Math.floor(Math.random() * 4)));
+      }, 3 + Math.floor(Math.random() * 2)));
     }
-    for (let index = 0;index < 6; index += 1) {
+    for (let index = 0;index < 4; index += 1) {
       fog.appendChild(createSpan("weather-fx-fog-band", {
         "--fog-width": `${240 + Math.round(Math.random() * 320)}px`,
         "--fog-height": `${52 + Math.round(Math.random() * 44)}px`,
@@ -2306,7 +2339,7 @@ function createFxMarkup(kind) {
         "--fog-opacity-scale": `${(0.55 + Math.random() * 0.6).toFixed(2)}`
       }));
     }
-    for (let index = 0;index < 5; index += 1) {
+    for (let index = 0;index < 3; index += 1) {
       mist.appendChild(createSpan("weather-fx-mist-plume", {
         "--mist-width": `${randomBetween(260, 560).toFixed(2)}px`,
         "--mist-height": `${randomBetween(78, 138).toFixed(2)}px`,
@@ -2317,7 +2350,7 @@ function createFxMarkup(kind) {
         "--mist-opacity-scale": `${randomBetween(0.64, 1.12).toFixed(2)}`
       }));
     }
-    for (let index = 0;index < 18; index += 1) {
+    for (let index = 0;index < 10; index += 1) {
       motes.appendChild(createSpan("weather-fx-mote", {
         "--mote-left": `${Math.round(Math.random() * 100)}%`,
         "--mote-top": `${18 + Math.round(Math.random() * 64)}%`,
@@ -2329,7 +2362,7 @@ function createFxMarkup(kind) {
         "--mote-opacity-scale": `${(0.45 + Math.random() * 0.7).toFixed(2)}`
       }));
     }
-    for (let index = 0;index < 64; index += 1) {
+    for (let index = 0;index < 40; index += 1) {
       rain.appendChild(createSpan("weather-fx-rain-drop", {
         "--drop-left": `${Math.round(Math.random() * 104)}%`,
         "--drop-top": `${(-20 - Math.random() * 28).toFixed(2)}%`,
@@ -2341,7 +2374,7 @@ function createFxMarkup(kind) {
         "--drop-opacity-scale": `${(0.4 + Math.random() * 0.7).toFixed(2)}`
       }));
     }
-    for (let index = 0;index < 42; index += 1) {
+    for (let index = 0;index < 26; index += 1) {
       snow.appendChild(createSpan("weather-fx-snow-flake", {
         "--flake-left": `${Math.round(Math.random() * 102)}%`,
         "--flake-top": `${(-18 - Math.random() * 18).toFixed(2)}%`,
@@ -2368,7 +2401,7 @@ function createFxMarkup(kind) {
     root.appendChild(rain);
     const snow = createDiv("weather-fx-snow weather-fx-snow-front");
     root.appendChild(snow);
-    for (let index = 0;index < 5; index += 1) {
+    for (let index = 0;index < 3; index += 1) {
       frontClouds.appendChild(createCloudCluster("weather-fx-cloud weather-fx-cloud-front", {
         "--cloud-width": `${randomBetween(320, 680).toFixed(2)}px`,
         "--cloud-height": `${randomBetween(120, 240).toFixed(2)}px`,
@@ -2380,9 +2413,9 @@ function createFxMarkup(kind) {
         "--cloud-opacity-scale": `${randomBetween(0.48, 0.86).toFixed(2)}`,
         "--cloud-depth": `${randomBetween(1.02, 1.2).toFixed(2)}`,
         "--cloud-rise": `${randomBetween(-1.2, 1.6).toFixed(2)}vh`
-      }, 6 + Math.floor(Math.random() * 4)));
+      }, 3 + Math.floor(Math.random() * 2)));
     }
-    for (let index = 0;index < 4; index += 1) {
+    for (let index = 0;index < 2; index += 1) {
       frontMist.appendChild(createSpan("weather-fx-mist-plume weather-fx-mist-plume-front", {
         "--mist-width": `${randomBetween(320, 640).toFixed(2)}px`,
         "--mist-height": `${randomBetween(110, 220).toFixed(2)}px`,
@@ -2393,7 +2426,7 @@ function createFxMarkup(kind) {
         "--mist-opacity-scale": `${randomBetween(0.68, 1.08).toFixed(2)}`
       }));
     }
-    for (let index = 0;index < 20; index += 1) {
+    for (let index = 0;index < 10; index += 1) {
       rainSheet.appendChild(createSpan("weather-fx-rain-sheet-line", {
         "--sheet-left": `${randomBetween(-8, 108).toFixed(2)}%`,
         "--sheet-top": `${randomBetween(-24, 18).toFixed(2)}%`,
@@ -2405,7 +2438,7 @@ function createFxMarkup(kind) {
         "--sheet-opacity-scale": `${randomBetween(0.3, 0.84).toFixed(2)}`
       }));
     }
-    for (let index = 0;index < 92; index += 1) {
+    for (let index = 0;index < 56; index += 1) {
       rain.appendChild(createSpan("weather-fx-rain-drop weather-fx-rain-drop-front", {
         "--drop-left": `${Math.round(Math.random() * 104)}%`,
         "--drop-top": `${(-24 - Math.random() * 30).toFixed(2)}%`,
@@ -2417,7 +2450,7 @@ function createFxMarkup(kind) {
         "--drop-opacity-scale": `${(0.48 + Math.random() * 0.75).toFixed(2)}`
       }));
     }
-    for (let index = 0;index < 58; index += 1) {
+    for (let index = 0;index < 34; index += 1) {
       snow.appendChild(createSpan("weather-fx-snow-flake weather-fx-snow-flake-front", {
         "--flake-left": `${Math.round(Math.random() * 102)}%`,
         "--flake-top": `${(-18 - Math.random() * 20).toFixed(2)}%`,
