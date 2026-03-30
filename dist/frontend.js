@@ -670,24 +670,24 @@ function requestWeatherSprite(kind, colors, onReady) {
 // src/render/quality.ts
 var WEATHER_QUALITY_BUDGETS = {
   performance: {
-    resolutionScale: 0.85,
-    maxDevicePixelRatio: 1.2,
-    maxPixelCount: 900000,
-    stars: 18,
-    motes: 8,
-    cloudLayers: 2,
-    cloudSprites: 5,
+    resolutionScale: 0.8,
+    maxDevicePixelRatio: 1.05,
+    maxPixelCount: 650000,
+    stars: 12,
+    motes: 4,
+    cloudLayers: 1,
+    cloudSprites: 4,
     frontCloudSprites: 0,
-    fogWisps: 4,
+    fogWisps: 2,
     frontMistWisps: 1,
     anchorBands: 1,
     scudLayers: 0,
     shadowPasses: 1,
     horizonGlowPasses: 1,
-    rainBack: 90,
-    rainFront: 160,
-    rainCurtains: 2,
-    curtainTextures: 1,
+    rainBack: 52,
+    rainFront: 104,
+    rainCurtains: 1,
+    curtainTextures: 0,
     contactBands: 1,
     impactBursts: 0,
     runoffSheets: 0,
@@ -696,8 +696,8 @@ var WEATHER_QUALITY_BUDGETS = {
     fogCreepBands: 1,
     shadowSweepPasses: 0,
     distortionPasses: 0,
-    snowBack: 56,
-    snowFront: 96,
+    snowBack: 34,
+    snowFront: 64,
     snowGusts: 1,
     glassBeads: 0,
     glassRivulets: 0,
@@ -722,13 +722,65 @@ var WEATHER_QUALITY_BUDGETS = {
     }
   },
   lite: {
-    resolutionScale: 1,
+    resolutionScale: 0.9,
+    maxDevicePixelRatio: 1.2,
+    maxPixelCount: 1e6,
+    stars: 24,
+    motes: 10,
+    cloudLayers: 2,
+    cloudSprites: 6,
+    frontCloudSprites: 1,
+    fogWisps: 4,
+    frontMistWisps: 1,
+    anchorBands: 1,
+    scudLayers: 1,
+    shadowPasses: 1,
+    horizonGlowPasses: 1,
+    rainBack: 88,
+    rainFront: 168,
+    rainCurtains: 2,
+    curtainTextures: 1,
+    contactBands: 1,
+    impactBursts: 2,
+    runoffSheets: 1,
+    accumulationBands: 1,
+    condensationBlooms: 1,
+    fogCreepBands: 1,
+    shadowSweepPasses: 0,
+    distortionPasses: 0,
+    snowBack: 68,
+    snowFront: 124,
+    snowGusts: 1,
+    glassBeads: 0,
+    glassRivulets: 0,
+    lightningBranches: 1,
+    lightningForks: 0,
+    lightningGlow: 0.86,
+    flags: {
+      stars: true,
+      motes: true,
+      layeredClouds: true,
+      frontCloudBank: false,
+      deepOvercast: false,
+      distantCurtains: true,
+      texturedCurtains: false,
+      glassOverlay: true,
+      glassDroplets: false,
+      frostOverlay: true,
+      lightningForks: false,
+      relightAnchors: true,
+      horizonPoles: false,
+      multiFlash: false
+    }
+  },
+  standard: {
+    resolutionScale: 0.98,
     maxDevicePixelRatio: 1.45,
-    maxPixelCount: 1500000,
-    stars: 34,
+    maxPixelCount: 1600000,
+    stars: 40,
     motes: 16,
     cloudLayers: 3,
-    cloudSprites: 8,
+    cloudSprites: 9,
     frontCloudSprites: 2,
     fogWisps: 6,
     frontMistWisps: 2,
@@ -736,8 +788,8 @@ var WEATHER_QUALITY_BUDGETS = {
     scudLayers: 1,
     shadowPasses: 2,
     horizonGlowPasses: 2,
-    rainBack: 140,
-    rainFront: 260,
+    rainBack: 136,
+    rainFront: 256,
     rainCurtains: 3,
     curtainTextures: 2,
     contactBands: 2,
@@ -748,20 +800,20 @@ var WEATHER_QUALITY_BUDGETS = {
     fogCreepBands: 2,
     shadowSweepPasses: 1,
     distortionPasses: 1,
-    snowBack: 110,
-    snowFront: 190,
+    snowBack: 108,
+    snowFront: 192,
     snowGusts: 2,
     glassBeads: 8,
     glassRivulets: 4,
     lightningBranches: 2,
     lightningForks: 1,
-    lightningGlow: 0.86,
+    lightningGlow: 0.96,
     flags: {
       stars: true,
       motes: true,
       layeredClouds: true,
       frontCloudBank: false,
-      deepOvercast: false,
+      deepOvercast: true,
       distantCurtains: true,
       texturedCurtains: true,
       glassOverlay: true,
@@ -773,93 +825,41 @@ var WEATHER_QUALITY_BUDGETS = {
       multiFlash: false
     }
   },
-  standard: {
-    resolutionScale: 1.1,
-    maxDevicePixelRatio: 1.8,
-    maxPixelCount: 2400000,
-    stars: 64,
-    motes: 28,
+  cinematic: {
+    resolutionScale: 1.06,
+    maxDevicePixelRatio: 1.7,
+    maxPixelCount: 2200000,
+    stars: 72,
+    motes: 24,
     cloudLayers: 4,
     cloudSprites: 12,
-    frontCloudSprites: 4,
-    fogWisps: 10,
-    frontMistWisps: 4,
+    frontCloudSprites: 3,
+    fogWisps: 9,
+    frontMistWisps: 3,
     anchorBands: 3,
     scudLayers: 2,
     shadowPasses: 3,
-    horizonGlowPasses: 3,
-    rainBack: 240,
-    rainFront: 420,
-    rainCurtains: 5,
+    horizonGlowPasses: 2,
+    rainBack: 208,
+    rainFront: 384,
+    rainCurtains: 4,
     curtainTextures: 3,
-    contactBands: 4,
-    impactBursts: 10,
+    contactBands: 3,
+    impactBursts: 8,
     runoffSheets: 3,
     accumulationBands: 2,
-    condensationBlooms: 5,
+    condensationBlooms: 4,
     fogCreepBands: 3,
-    shadowSweepPasses: 2,
-    distortionPasses: 2,
-    snowBack: 180,
-    snowFront: 320,
+    shadowSweepPasses: 1,
+    distortionPasses: 1,
+    snowBack: 164,
+    snowFront: 288,
     snowGusts: 3,
-    glassBeads: 20,
-    glassRivulets: 8,
+    glassBeads: 16,
+    glassRivulets: 7,
     lightningBranches: 3,
     lightningForks: 2,
-    lightningGlow: 1,
-    flags: {
-      stars: true,
-      motes: true,
-      layeredClouds: true,
-      frontCloudBank: true,
-      deepOvercast: true,
-      distantCurtains: true,
-      texturedCurtains: true,
-      glassOverlay: true,
-      glassDroplets: true,
-      frostOverlay: true,
-      lightningForks: true,
-      relightAnchors: true,
-      horizonPoles: true,
-      multiFlash: true
-    }
-  },
-  cinematic: {
-    resolutionScale: 1.3,
-    maxDevicePixelRatio: 2.25,
-    maxPixelCount: 3200000,
-    stars: 112,
-    motes: 44,
-    cloudLayers: 6,
-    cloudSprites: 18,
-    frontCloudSprites: 7,
-    fogWisps: 16,
-    frontMistWisps: 7,
-    anchorBands: 5,
-    scudLayers: 3,
-    shadowPasses: 5,
-    horizonGlowPasses: 4,
-    rainBack: 360,
-    rainFront: 720,
-    rainCurtains: 8,
-    curtainTextures: 5,
-    contactBands: 6,
-    impactBursts: 18,
-    runoffSheets: 6,
-    accumulationBands: 4,
-    condensationBlooms: 9,
-    fogCreepBands: 5,
-    shadowSweepPasses: 3,
-    distortionPasses: 3,
-    snowBack: 300,
-    snowFront: 620,
-    snowGusts: 5,
-    glassBeads: 40,
-    glassRivulets: 14,
-    lightningBranches: 5,
-    lightningForks: 4,
-    lightningGlow: 1.22,
+    lightningGlow: 1.08,
     flags: {
       stars: true,
       motes: true,
@@ -1695,9 +1695,12 @@ function createCloudLayers(rng, condition, profile, budget, kind) {
   const layerCount = Math.max(1, isFront ? Math.min(2, budget.cloudLayers) : budget.cloudLayers);
   const sprites = conditionCloudSprites(condition);
   const result = [];
+  let remaining = total;
   for (let layerIndex = 0;layerIndex < layerCount; layerIndex += 1) {
     const depth = layerCount === 1 ? 0.5 : layerIndex / (layerCount - 1);
-    const perLayer = Math.max(1, Math.round(total / layerCount + depth * (isFront ? 0.5 : 1.2)));
+    const layersLeft = layerCount - layerIndex;
+    const perLayer = layerIndex === layerCount - 1 ? remaining : Math.max(1, Math.round(remaining / layersLeft));
+    remaining = Math.max(0, remaining - perLayer);
     for (let itemIndex = 0;itemIndex < perLayer; itemIndex += 1) {
       const sprite = pick(rng, sprites);
       const widthScale = sprite === "cloud-anvil" ? 1.9 : sprite === "cloud-shelf" ? 2.1 : sprite === "cloud-stratus" ? 2 : sprite === "cloud-bank" ? 1.45 : 1.18;
@@ -2058,28 +2061,44 @@ function buildComposition(kind, state, prefs) {
   const budget = getQualityBudget(prefs.qualityMode);
   const signature = buildSceneSignature(kind, state, prefs, profile.phase, effectiveIntensity);
   const rng = createRng(hashString(signature));
-  const anchors = kind === "back" ? createAnchorLayers(rng, state.condition, profile, budget) : [];
-  const clouds = kind === "back" ? createCloudLayers(rng, state.condition, profile, budget, "back") : [];
-  const scud = kind === "back" ? createScudLayers(rng, state.condition, profile, budget) : [];
-  const frontClouds = kind === "front" && budget.flags.frontCloudBank ? createCloudLayers(rng, state.condition, profile, budget, "front") : [];
-  const fogWisps = kind === "back" ? createFogWisps(rng, profile, budget, "back") : [];
-  const frontMist = kind === "front" ? createFogWisps(rng, profile, budget, "front") : [];
-  const rain = state.condition === "rain" || state.condition === "storm" ? createRainParticles(rng, profile, budget, kind) : [];
-  const snow = state.condition === "snow" ? createSnowParticles(rng, profile, budget, kind) : [];
-  const curtains = kind === "back" ? createCurtains(rng, profile, budget, state.condition) : [];
-  const curtainTextures = kind === "back" ? createCurtainTextures(rng, state.condition, profile, budget) : [];
-  const contactBands = kind === "back" ? createContactBands(rng, state.condition, profile, budget) : [];
-  const impactBursts = kind === "back" ? createImpactBursts(rng, profile, budget, state.condition) : [];
-  const runoffSheets = kind === "back" ? createRunoffSheets(rng, profile, budget, state.condition) : [];
-  const accumulationBands = kind === "back" ? createAccumulationBands(rng, profile, budget, state.condition) : [];
-  const fogCreep = kind === "back" ? createFogCreepLayers(rng, state.condition, profile, budget) : [];
-  const condensationBlooms = kind === "back" ? createCondensationBlooms(rng, profile, budget, state.condition) : [];
-  const glass = kind === "back" ? createGlassParticles(rng, profile, budget, state.condition) : { beads: [], rivulets: [] };
+  const isBack = kind === "back";
+  const isFront = kind === "front";
+  const isWet = state.condition === "rain" || state.condition === "storm";
+  const isStorm = state.condition === "storm";
+  const isSnow = state.condition === "snow";
+  const isFog = state.condition === "fog";
+  const isClear = state.condition === "clear";
+  const isCloudy = state.condition === "cloudy";
+  const allowFrontClouds = isFront && budget.flags.frontCloudBank && !isClear && !isFog;
+  const allowContactBands = isBack && (isWet || isSnow || isCloudy || isClear && prefs.qualityMode === "cinematic");
+  const allowImpactBursts = isBack && (isStorm || state.condition === "rain" && prefs.qualityMode === "cinematic");
+  const allowRunoff = isBack && (isStorm || state.condition === "rain" && prefs.qualityMode !== "performance" && prefs.qualityMode !== "lite");
+  const allowAccumulation = isBack && isSnow;
+  const allowFogCreep = isBack && (isFog || isSnow || isCloudy || isWet);
+  const allowCondensation = isBack && (isStorm || state.condition === "rain" && budget.flags.glassDroplets || isSnow && budget.flags.frostOverlay && prefs.qualityMode !== "performance" || isFog && prefs.qualityMode === "cinematic");
+  const allowGlassDrops = isBack && (isStorm || state.condition === "rain" && budget.flags.glassDroplets);
+  const anchors = isBack ? createAnchorLayers(rng, state.condition, profile, budget) : [];
+  const clouds = isBack ? createCloudLayers(rng, state.condition, profile, budget, "back") : [];
+  const scud = isBack ? createScudLayers(rng, state.condition, profile, budget) : [];
+  const frontClouds = allowFrontClouds ? createCloudLayers(rng, state.condition, profile, budget, "front") : [];
+  const fogWisps = isBack ? createFogWisps(rng, profile, budget, "back") : [];
+  const frontMist = isFront && !isClear ? createFogWisps(rng, profile, budget, "front") : [];
+  const rain = isWet ? createRainParticles(rng, profile, budget, kind) : [];
+  const snow = isSnow ? createSnowParticles(rng, profile, budget, kind) : [];
+  const curtains = isBack && !isClear && !isCloudy ? createCurtains(rng, profile, budget, state.condition) : [];
+  const curtainTextures = isBack && (isWet || isSnow) ? createCurtainTextures(rng, state.condition, profile, budget) : [];
+  const contactBands = allowContactBands ? createContactBands(rng, state.condition, profile, budget) : [];
+  const impactBursts = allowImpactBursts ? createImpactBursts(rng, profile, budget, state.condition) : [];
+  const runoffSheets = allowRunoff ? createRunoffSheets(rng, profile, budget, state.condition) : [];
+  const accumulationBands = allowAccumulation ? createAccumulationBands(rng, profile, budget, state.condition) : [];
+  const fogCreep = allowFogCreep ? createFogCreepLayers(rng, state.condition, profile, budget) : [];
+  const condensationBlooms = allowCondensation ? createCondensationBlooms(rng, profile, budget, state.condition) : [];
+  const glass = allowGlassDrops ? createGlassParticles(rng, profile, budget, state.condition) : { beads: [], rivulets: [] };
   return {
     signature,
     budget,
     profile,
-    stars: kind === "back" ? createStars(rng, profile, budget) : [],
+    stars: isBack ? createStars(rng, profile, budget) : [],
     motes: createMotes(rng, profile, budget, kind),
     anchors,
     clouds,
@@ -2252,7 +2271,8 @@ class CanvasWeatherRenderer {
   syncGlassOverlay() {
     if (!this.glassOverlay || !this.composition)
       return;
-    const variant = !this.composition.budget.flags.glassOverlay ? "none" : this.state.condition === "rain" || this.state.condition === "storm" ? "rain" : this.state.condition === "snow" ? "snow" : this.state.condition === "fog" ? "fog" : "none";
+    const hasActiveGlass = this.composition.condensationBlooms.length > 0 || this.composition.glassBeads.length > 0 || this.composition.glassRivulets.length > 0;
+    const variant = !this.composition.budget.flags.glassOverlay || !hasActiveGlass ? "none" : this.state.condition === "rain" || this.state.condition === "storm" ? "rain" : this.state.condition === "snow" ? "snow" : this.state.condition === "fog" ? "fog" : "none";
     this.root.dataset.glass = variant;
     this.root.style.setProperty("--weather-glass-opacity", this.composition.profile.windowOpacity.toFixed(3));
     this.root.style.setProperty("--weather-glass-blur", this.composition.profile.glassBlur.toFixed(2));
@@ -2748,7 +2768,7 @@ class CanvasWeatherRenderer {
     this.context.fillRect(0, 0, this.width, this.height);
   }
   drawGlass(profile, time, rivulets, beads, condensationBlooms, lightningFlash) {
-    if (this.kind !== "back" || profile.windowOpacity <= 0.02 || !rivulets.length && !beads.length && condensationBlooms.length === 0 && profile.condensationAlpha <= 0.01) {
+    if (this.kind !== "back" || profile.windowOpacity <= 0.02 || !rivulets.length && !beads.length && condensationBlooms.length === 0) {
       return;
     }
     const palette = buildGlassPalette(profile);

@@ -1091,10 +1091,13 @@ function createCloudLayers(
   const layerCount = Math.max(1, isFront ? Math.min(2, budget.cloudLayers) : budget.cloudLayers);
   const sprites = conditionCloudSprites(condition);
   const result: SpriteLayer[] = [];
+  let remaining = total;
 
   for (let layerIndex = 0; layerIndex < layerCount; layerIndex += 1) {
     const depth = layerCount === 1 ? 0.5 : layerIndex / (layerCount - 1);
-    const perLayer = Math.max(1, Math.round(total / layerCount + depth * (isFront ? 0.5 : 1.2)));
+    const layersLeft = layerCount - layerIndex;
+    const perLayer = layerIndex === layerCount - 1 ? remaining : Math.max(1, Math.round(remaining / layersLeft));
+    remaining = Math.max(0, remaining - perLayer);
     for (let itemIndex = 0; itemIndex < perLayer; itemIndex += 1) {
       const sprite = pick(rng, sprites);
       const widthScale =
@@ -1585,30 +1588,51 @@ function buildComposition(kind: RendererKind, state: WeatherState, prefs: Weathe
   const budget = getQualityBudget(prefs.qualityMode);
   const signature = buildSceneSignature(kind, state, prefs, profile.phase, effectiveIntensity);
   const rng = createRng(hashString(signature));
-  const anchors = kind === "back" ? createAnchorLayers(rng, state.condition, profile, budget) : [];
-  const clouds = kind === "back" ? createCloudLayers(rng, state.condition, profile, budget, "back") : [];
-  const scud = kind === "back" ? createScudLayers(rng, state.condition, profile, budget) : [];
-  const frontClouds =
-    kind === "front" && budget.flags.frontCloudBank ? createCloudLayers(rng, state.condition, profile, budget, "front") : [];
-  const fogWisps = kind === "back" ? createFogWisps(rng, profile, budget, "back") : [];
-  const frontMist = kind === "front" ? createFogWisps(rng, profile, budget, "front") : [];
-  const rain = state.condition === "rain" || state.condition === "storm" ? createRainParticles(rng, profile, budget, kind) : [];
-  const snow = state.condition === "snow" ? createSnowParticles(rng, profile, budget, kind) : [];
-  const curtains = kind === "back" ? createCurtains(rng, profile, budget, state.condition) : [];
-  const curtainTextures = kind === "back" ? createCurtainTextures(rng, state.condition, profile, budget) : [];
-  const contactBands = kind === "back" ? createContactBands(rng, state.condition, profile, budget) : [];
-  const impactBursts = kind === "back" ? createImpactBursts(rng, profile, budget, state.condition) : [];
-  const runoffSheets = kind === "back" ? createRunoffSheets(rng, profile, budget, state.condition) : [];
-  const accumulationBands = kind === "back" ? createAccumulationBands(rng, profile, budget, state.condition) : [];
-  const fogCreep = kind === "back" ? createFogCreepLayers(rng, state.condition, profile, budget) : [];
-  const condensationBlooms = kind === "back" ? createCondensationBlooms(rng, profile, budget, state.condition) : [];
-  const glass = kind === "back" ? createGlassParticles(rng, profile, budget, state.condition) : { beads: [], rivulets: [] };
+  const isBack = kind === "back";
+  const isFront = kind === "front";
+  const isWet = state.condition === "rain" || state.condition === "storm";
+  const isStorm = state.condition === "storm";
+  const isSnow = state.condition === "snow";
+  const isFog = state.condition === "fog";
+  const isClear = state.condition === "clear";
+  const isCloudy = state.condition === "cloudy";
+  const allowFrontClouds = isFront && budget.flags.frontCloudBank && !isClear && !isFog;
+  const allowContactBands = isBack && (isWet || isSnow || isCloudy || (isClear && prefs.qualityMode === "cinematic"));
+  const allowImpactBursts = isBack && (isStorm || (state.condition === "rain" && prefs.qualityMode === "cinematic"));
+  const allowRunoff = isBack && (isStorm || (state.condition === "rain" && prefs.qualityMode !== "performance" && prefs.qualityMode !== "lite"));
+  const allowAccumulation = isBack && isSnow;
+  const allowFogCreep = isBack && (isFog || isSnow || isCloudy || isWet);
+  const allowCondensation =
+    isBack &&
+    (isStorm ||
+      (state.condition === "rain" && budget.flags.glassDroplets) ||
+      (isSnow && budget.flags.frostOverlay && prefs.qualityMode !== "performance") ||
+      (isFog && prefs.qualityMode === "cinematic"));
+  const allowGlassDrops = isBack && (isStorm || (state.condition === "rain" && budget.flags.glassDroplets));
+
+  const anchors = isBack ? createAnchorLayers(rng, state.condition, profile, budget) : [];
+  const clouds = isBack ? createCloudLayers(rng, state.condition, profile, budget, "back") : [];
+  const scud = isBack ? createScudLayers(rng, state.condition, profile, budget) : [];
+  const frontClouds = allowFrontClouds ? createCloudLayers(rng, state.condition, profile, budget, "front") : [];
+  const fogWisps = isBack ? createFogWisps(rng, profile, budget, "back") : [];
+  const frontMist = isFront && !isClear ? createFogWisps(rng, profile, budget, "front") : [];
+  const rain = isWet ? createRainParticles(rng, profile, budget, kind) : [];
+  const snow = isSnow ? createSnowParticles(rng, profile, budget, kind) : [];
+  const curtains = isBack && !isClear && !isCloudy ? createCurtains(rng, profile, budget, state.condition) : [];
+  const curtainTextures = isBack && (isWet || isSnow) ? createCurtainTextures(rng, state.condition, profile, budget) : [];
+  const contactBands = allowContactBands ? createContactBands(rng, state.condition, profile, budget) : [];
+  const impactBursts = allowImpactBursts ? createImpactBursts(rng, profile, budget, state.condition) : [];
+  const runoffSheets = allowRunoff ? createRunoffSheets(rng, profile, budget, state.condition) : [];
+  const accumulationBands = allowAccumulation ? createAccumulationBands(rng, profile, budget, state.condition) : [];
+  const fogCreep = allowFogCreep ? createFogCreepLayers(rng, state.condition, profile, budget) : [];
+  const condensationBlooms = allowCondensation ? createCondensationBlooms(rng, profile, budget, state.condition) : [];
+  const glass = allowGlassDrops ? createGlassParticles(rng, profile, budget, state.condition) : { beads: [], rivulets: [] };
 
   return {
     signature,
     budget,
     profile,
-    stars: kind === "back" ? createStars(rng, profile, budget) : [],
+    stars: isBack ? createStars(rng, profile, budget) : [],
     motes: createMotes(rng, profile, budget, kind),
     anchors,
     clouds,
@@ -1802,8 +1826,12 @@ class CanvasWeatherRenderer {
 
   private syncGlassOverlay(): void {
     if (!this.glassOverlay || !this.composition) return;
+    const hasActiveGlass =
+      this.composition.condensationBlooms.length > 0 ||
+      this.composition.glassBeads.length > 0 ||
+      this.composition.glassRivulets.length > 0;
     const variant =
-      !this.composition.budget.flags.glassOverlay
+      !this.composition.budget.flags.glassOverlay || !hasActiveGlass
         ? "none"
         : this.state.condition === "rain" || this.state.condition === "storm"
           ? "rain"
@@ -2450,7 +2478,7 @@ class CanvasWeatherRenderer {
     if (
       this.kind !== "back" ||
       profile.windowOpacity <= 0.02 ||
-      (!rivulets.length && !beads.length && condensationBlooms.length === 0 && profile.condensationAlpha <= 0.01)
+      (!rivulets.length && !beads.length && condensationBlooms.length === 0)
     ) {
       return;
     }
