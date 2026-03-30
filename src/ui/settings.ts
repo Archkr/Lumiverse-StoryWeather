@@ -118,7 +118,10 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   );
   const effectsSection = createSection("Effects", "Overall ambience, density, and motion.");
   const placementSection = createSection("Placement", "Control whether the weather stays behind the chat, in front, or both.");
-  const motionSection = createSection("Motion", "Fine-tune animation pacing without breaking story sync.");
+  const motionSection = createSection(
+    "Motion",
+    "Fine-tune motion budgets and pacing. Higher quality increases scene depth, atmospheric layering, and back-glass detail.",
+  );
 
   const promptRecommended = document.createElement("div");
   promptRecommended.className = "weather-settings-copy-group";
@@ -220,6 +223,11 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   });
   qualityLabel.appendChild(qualitySelect);
 
+  const qualityHint = document.createElement("p");
+  qualityHint.className = "weather-settings-section-copy";
+  qualityHint.textContent =
+    "Performance and Lite keep the renderer restrained. Standard adds fuller horizon layering and cloud depth, while Cinematic pushes the richest framing, silhouettes, curtains, mist, and back-glass detail.";
+
   const motionLabel = document.createElement("label");
   motionLabel.className = "weather-settings-label";
   motionLabel.textContent = "Reduced motion";
@@ -252,6 +260,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   placementSection.body.appendChild(layerLabel);
   motionSection.body.appendChild(intensityLabel);
   motionSection.body.appendChild(qualityLabel);
+  motionSection.body.appendChild(qualityHint);
   motionSection.body.appendChild(motionLabel);
   motionSection.body.appendChild(pauseLabel);
 

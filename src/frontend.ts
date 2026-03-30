@@ -1,5 +1,6 @@
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 import { buildPresetWeatherState, matchWeatherScenePreset, WEATHER_SCENE_PRESETS } from "./presets";
+import { createWeatherRenderer, type WeatherRendererHandle } from "./render/renderer";
 import { DEFAULT_PREFS, WEATHER_TAG_NAME, clamp, makeDefaultWeatherState } from "./shared";
 import type {
   BackendToFrontend,
@@ -32,6 +33,7 @@ type FloatWidgetHandle = ReturnType<SpindleFrontendContext["ui"]["createFloatWid
 
 type FxRoot = {
   root: HTMLDivElement;
+  renderer: WeatherRendererHandle;
   host: HTMLElement | null;
   releaseHost: (() => void) | null;
   kind: "back" | "front";
@@ -204,6 +206,17 @@ function createDiv(className: string): HTMLDivElement {
   return element;
 }
 
+function createRendererFxRoot(kind: "back" | "front"): FxRoot {
+  const renderer = createWeatherRenderer(kind);
+  return {
+    root: renderer.root,
+    renderer,
+    host: null,
+    releaseHost: null,
+    kind,
+  };
+}
+
 function randomBetween(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
@@ -230,7 +243,7 @@ function createCloudCluster(className: string, styles: Record<string, string>, l
   return cloud;
 }
 
-function createFxMarkup(kind: "back" | "front"): FxRoot {
+function createFxMarkup(kind: "back" | "front"): Omit<FxRoot, "renderer"> {
   const root = document.createElement("div");
   root.className = "weather-fx-root";
   root.dataset.kind = kind;
@@ -1269,6 +1282,7 @@ function createHudWidget(
     qualityText.textContent = "Quality";
     qualitySelect = document.createElement("select");
     qualitySelect.className = "weather-hud-select";
+    qualitySelect.title = "Higher quality adds more scene depth, cloud layering, horizon silhouettes, curtains, mist, and back-glass detail. Cinematic pushes the strongest framing and dimensionality.";
     qualitySelect.innerHTML = WEATHER_QUALITY_OPTIONS.map((option) => `<option value="${option.value}">${option.label}</option>`).join("");
     protectInteractive(qualitySelect);
     qualitySelect.addEventListener("change", (event) => {
@@ -1449,61 +1463,11 @@ function syncHudState(hud: HudElements, prefs: WeatherPrefs, state: WeatherState
 function setFxVisibility(root: FxRoot, visible: boolean): void {
   root.root.classList.toggle("weather-hidden", !visible);
   root.root.classList.toggle("weather-visible", visible);
+  root.renderer.setVisible(visible);
 }
 
 function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs, reducedMotion: boolean): void {
-  const effectiveIntensity = clamp(state.intensity * prefs.intensity, 0, 1.5);
-  const tokens = resolveSceneTokens(state, effectiveIntensity);
-  const isFront = root.kind === "front";
-
-  root.root.dataset.condition = state.condition;
-  root.root.dataset.palette = state.palette;
-  root.root.dataset.quality = prefs.qualityMode;
-  root.root.classList.toggle("weather-reduced-motion", reducedMotion);
-  root.root.classList.toggle("weather-paused", prefs.pauseEffects);
-
-  root.root.style.setProperty("--weather-bg-start", tokens.bgStart);
-  root.root.style.setProperty("--weather-bg-mid", tokens.bgMid);
-  root.root.style.setProperty("--weather-bg-end", tokens.bgEnd);
-  root.root.style.setProperty("--weather-glow", tokens.glow);
-  root.root.style.setProperty("--weather-beam-color", tokens.beamColor);
-  root.root.style.setProperty("--weather-horizon-color", tokens.horizonColor);
-  root.root.style.setProperty("--weather-cloud-core", tokens.cloudCore);
-  root.root.style.setProperty("--weather-cloud-edge", tokens.cloudEdge);
-  root.root.style.setProperty("--weather-fog-color", tokens.fogColor);
-  root.root.style.setProperty("--weather-mist-color", tokens.mistColor);
-  root.root.style.setProperty("--weather-sky-opacity", String(isFront ? 0 : tokens.skyOpacity));
-  root.root.style.setProperty("--weather-glow-opacity", String(isFront ? 0 : tokens.glowOpacity));
-  root.root.style.setProperty("--weather-beam-opacity", String(isFront ? 0 : tokens.beamOpacity));
-  root.root.style.setProperty("--weather-cloud-opacity", String(isFront ? 0 : tokens.cloudOpacity));
-  root.root.style.setProperty("--weather-horizon-opacity", String(isFront ? 0 : tokens.horizonOpacity));
-  root.root.style.setProperty("--weather-mist-opacity", String(isFront ? 0 : tokens.mistOpacity));
-  root.root.style.setProperty("--weather-fog-opacity", String(isFront ? 0 : tokens.fogOpacity));
-  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (isFront ? 0.96 : 0.58)));
-  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (isFront ? 0.98 : 0.54)));
-  root.root.style.setProperty("--weather-mote-opacity", String(isFront ? 0 : tokens.moteOpacity));
-  root.root.style.setProperty("--weather-flash-opacity", String(tokens.flashOpacity));
-  root.root.style.setProperty("--weather-star-opacity", String(isFront ? 0 : tokens.starOpacity));
-  root.root.style.setProperty("--weather-front-cloud-opacity", String(tokens.frontCloudOpacity));
-  root.root.style.setProperty("--weather-front-mist-opacity", String(tokens.frontMistOpacity));
-  root.root.style.setProperty("--weather-rain-sheet-opacity", String(tokens.rainSheetOpacity));
-  root.root.style.setProperty("--weather-canopy-opacity", String(isFront ? 0 : tokens.canopyOpacity));
-  root.root.style.setProperty("--weather-window-overlay-opacity", String(isFront ? 0 : tokens.windowOverlayOpacity));
-  root.root.style.setProperty("--weather-window-streak-opacity", String(isFront ? 0 : tokens.windowStreakOpacity));
-  root.root.style.setProperty(
-    "--weather-rain-color",
-    state.condition === "storm" ? "rgba(212, 231, 255, 0.96)" : "rgba(190, 220, 255, 0.84)",
-  );
-  root.root.style.setProperty(
-    "--weather-snow-color",
-    state.palette === "night" ? "rgba(219, 232, 255, 0.92)" : "rgba(247, 250, 255, 0.95)",
-  );
-  root.root.style.setProperty(
-    "--weather-particle-opacity-static",
-    state.condition === "snow"
-      ? String(clamp(tokens.snowOpacity * 0.2, 0.04, 0.22))
-      : String(clamp(tokens.rainOpacity * 0.12, 0.03, 0.18)),
-  );
+  root.renderer.setScene(state, prefs, reducedMotion);
 }
 
 export function setup(ctx: SpindleFrontendContext) {
@@ -1586,8 +1550,8 @@ export function setup(ctx: SpindleFrontendContext) {
   settingsMount.appendChild(settingsUI.root);
   cleanups.push(() => settingsUI.destroy());
 
-  const backFx = createFxMarkup("back");
-  const frontFx = createFxMarkup("front");
+  const backFx = createRendererFxRoot("back");
+  const frontFx = createRendererFxRoot("front");
   let hostSyncFrame: number | null = null;
   const managedHosts = new Map<HTMLElement, { count: number; restore: () => void }>();
 
@@ -1642,6 +1606,7 @@ export function setup(ctx: SpindleFrontendContext) {
   };
 
   const detachFxRoot = (fxRoot: FxRoot) => {
+    fxRoot.renderer.setVisible(false);
     fxRoot.root.remove();
     fxRoot.host = null;
     if (fxRoot.releaseHost) {
@@ -1673,6 +1638,7 @@ export function setup(ctx: SpindleFrontendContext) {
     } else {
       nextHost.appendChild(fxRoot.root);
     }
+    fxRoot.renderer.refreshLayout();
     return true;
   };
 
@@ -1713,6 +1679,8 @@ export function setup(ctx: SpindleFrontendContext) {
     hostObserver.disconnect();
     detachFxRoot(backFx);
     detachFxRoot(frontFx);
+    backFx.renderer.destroy();
+    frontFx.renderer.destroy();
   });
 
   let hud: HudElements | null = null;
@@ -1798,18 +1766,12 @@ export function setup(ctx: SpindleFrontendContext) {
       currentPrefs.pauseEffects ||
       !currentPrefs.effectsEnabled
     ) {
-      backFx.root.classList.remove("weather-storm-flash");
-      frontFx.root.classList.remove("weather-storm-flash");
       return;
     }
 
     const trigger = () => {
-      backFx.root.classList.add("weather-storm-flash");
-      frontFx.root.classList.add("weather-storm-flash");
-      window.setTimeout(() => {
-        backFx.root.classList.remove("weather-storm-flash");
-        frontFx.root.classList.remove("weather-storm-flash");
-      }, 220);
+      backFx.renderer.triggerLightning();
+      frontFx.renderer.triggerLightning();
       flashTimer = window.setTimeout(trigger, 3600 + Math.random() * 4600);
     };
 

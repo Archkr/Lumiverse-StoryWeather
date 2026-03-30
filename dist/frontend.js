@@ -181,6 +181,2599 @@ function matchWeatherScenePreset(state) {
   return match?.id ?? null;
 }
 
+// src/render/assets.ts
+var readySprites = new Map;
+var pendingSprites = new Map;
+function svgToDataUri(svg) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+function buildSvgDocument(viewBox, defs, body) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" fill="none">${defs}${body}</svg>`;
+}
+function buildCloudWispSvg(colors) {
+  return buildSvgDocument("0 0 720 280", `<defs>
+      <linearGradient id="cloud" x1="0" y1="40" x2="0" y2="240" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}"/>
+        <stop offset="48%" stop-color="${colors.primary}"/>
+        <stop offset="100%" stop-color="${colors.shadow}"/>
+      </linearGradient>
+      <linearGradient id="rim" x1="0" y1="0" x2="0" y2="180" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="${colors.highlight}" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="soft" x="-16%" y="-20%" width="132%" height="160%">
+        <feGaussianBlur stdDeviation="10"/>
+      </filter>
+    </defs>`, `<g filter="url(#soft)">
+      <path d="M34 186C57 131 119 98 196 108c19-46 76-74 140-68 46-47 144-58 215 7 79-20 136 18 135 71 51 15 83 49 83 88H46c-28-1-47-16-46-40 1-28 17-47 34-60Z" fill="url(#cloud)"/>
+      <path d="M118 121c32-32 91-46 148-35 38-33 118-44 170-6 66-9 117 18 138 55-25-20-65-28-107-20-44-44-129-52-190-8-61-16-132 0-159 14Z" fill="url(#rim)" opacity="0.7"/>
+      <path d="M72 197c81 12 224 20 329 16 95-4 191-16 284-41-39 37-128 61-272 67-182 8-290-11-341-42Z" fill="${colors.shadow}" opacity="0.38"/>
+    </g>`);
+}
+function buildCloudBankSvg(colors) {
+  return buildSvgDocument("0 0 720 320", `<defs>
+      <linearGradient id="bank" x1="0" y1="40" x2="0" y2="280" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}"/>
+        <stop offset="42%" stop-color="${colors.secondary}"/>
+        <stop offset="100%" stop-color="${colors.shadow}"/>
+      </linearGradient>
+      <filter id="bank-blur" x="-18%" y="-18%" width="136%" height="170%">
+        <feGaussianBlur stdDeviation="11"/>
+      </filter>
+    </defs>`, `<g filter="url(#bank-blur)">
+      <path d="M41 225c12-81 88-126 183-110 25-63 93-104 179-94 31-33 91-56 147-45 47 9 80 34 93 71 47 0 77 29 77 74 0 38-24 66-67 78H83c-33 0-53-14-54-44 0-16 4-25 12-30Z" fill="url(#bank)"/>
+      <path d="M132 140c37-36 95-51 150-39 61-56 187-62 258 12-36-20-93-25-152-5-68-33-173-24-256 32Z" fill="${colors.highlight}" opacity="0.42"/>
+      <path d="M81 226c118 16 255 16 407 0 76-8 141-22 194-42-44 52-133 87-286 98-159 12-265-4-315-56Z" fill="${colors.shadow}" opacity="0.44"/>
+    </g>`);
+}
+function buildCloudStratusSvg(colors) {
+  return buildSvgDocument("0 0 840 280", `<defs>
+      <linearGradient id="stratus" x1="0" y1="10" x2="0" y2="250" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}"/>
+        <stop offset="35%" stop-color="${colors.primary}"/>
+        <stop offset="100%" stop-color="${colors.shadow}"/>
+      </linearGradient>
+      <filter id="stratus-blur" x="-12%" y="-18%" width="124%" height="160%">
+        <feGaussianBlur stdDeviation="9"/>
+      </filter>
+    </defs>`, `<g filter="url(#stratus-blur)">
+      <path d="M0 103c88-31 166-40 244-31 93-38 230-46 327-18 70-24 150-24 269 6v116H0V103Z" fill="url(#stratus)"/>
+      <path d="M0 143c158-22 292-24 403-5 160-19 305-15 437 19v49H0v-63Z" fill="${colors.secondary}" opacity="0.52"/>
+      <path d="M0 192c161 18 316 20 463 3 146-17 272-47 377-89v134H0V192Z" fill="${colors.shadow}" opacity="0.48"/>
+    </g>`);
+}
+function buildCloudAnvilSvg(colors) {
+  return buildSvgDocument("0 0 760 420", `<defs>
+      <linearGradient id="anvil" x1="0" y1="20" x2="0" y2="360" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}"/>
+        <stop offset="36%" stop-color="${colors.primary}"/>
+        <stop offset="100%" stop-color="${colors.shadow}"/>
+      </linearGradient>
+      <filter id="anvil-blur" x="-18%" y="-18%" width="136%" height="160%">
+        <feGaussianBlur stdDeviation="12"/>
+      </filter>
+    </defs>`, `<g filter="url(#anvil-blur)">
+      <path d="M73 300c-5-56 37-96 103-109 7-108 88-175 188-175 61 0 111 22 146 62 22-7 44-11 67-11 82 0 149 54 165 131 52 12 85 51 85 101 0 67-49 121-109 121H147c-44 0-73-18-74-60 0-21 0-39 0-60Z" fill="url(#anvil)"/>
+      <path d="M179 101c24-48 77-79 138-79 52 0 98 21 127 55 47-5 90 8 131 42-31-12-69-14-112-4-38-40-87-58-147-52-56-16-100-6-137 38Z" fill="${colors.highlight}" opacity="0.48"/>
+      <path d="M94 312c89 14 190 13 303-2 110-15 209-44 299-89-41 76-141 130-306 149-149 17-244 0-296-58Z" fill="${colors.shadow}" opacity="0.56"/>
+    </g>`);
+}
+function buildCloudShelfSvg(colors) {
+  return buildSvgDocument("0 0 840 320", `<defs>
+      <linearGradient id="shelf" x1="0" y1="36" x2="0" y2="286" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.primary}"/>
+        <stop offset="45%" stop-color="${colors.secondary}"/>
+        <stop offset="100%" stop-color="${colors.shadow}"/>
+      </linearGradient>
+      <filter id="shelf-blur" x="-10%" y="-18%" width="120%" height="160%">
+        <feGaussianBlur stdDeviation="9"/>
+      </filter>
+    </defs>`, `<g filter="url(#shelf-blur)">
+      <path d="M0 90c132-34 289-26 426 21 115-33 253-27 414 18v74c-118 38-254 59-408 60C272 264 128 241 0 195V90Z" fill="url(#shelf)"/>
+      <path d="M0 145c139 22 281 33 426 33 147 0 285-13 414-40v61c-121 36-260 55-415 55C279 254 137 236 0 200v-55Z" fill="${colors.shadow}" opacity="0.56"/>
+      <path d="M92 108c91-14 190-12 296 8 121-24 243-25 362-4-106-8-221 4-344 37-96-25-200-36-314-41Z" fill="${colors.highlight}" opacity="0.28"/>
+    </g>`);
+}
+function buildStormScudSvg(colors) {
+  return buildSvgDocument("0 0 820 240", `<defs>
+      <linearGradient id="scud" x1="0" y1="18" x2="0" y2="220" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}"/>
+        <stop offset="34%" stop-color="${colors.primary}"/>
+        <stop offset="100%" stop-color="${colors.shadow}"/>
+      </linearGradient>
+      <filter id="scud-blur" x="-14%" y="-28%" width="128%" height="180%">
+        <feGaussianBlur stdDeviation="8"/>
+      </filter>
+    </defs>`, `<g filter="url(#scud-blur)">
+      <path d="M0 106c67-38 142-45 223-20 78-35 165-38 258-10 64-25 130-21 198 12 56-12 103-6 141 18v61c-77 28-158 42-243 43-142 1-334-22-577-70v-34Z" fill="url(#scud)"/>
+      <path d="M51 134c77-13 157-9 240 14 103-28 213-27 330 6-111-16-222-10-334 17-79-23-157-36-236-37Z" fill="${colors.highlight}" opacity="0.2"/>
+      <path d="M0 170c124 27 248 42 371 44 130 2 280-16 449-55v75H0v-64Z" fill="${colors.shadow}" opacity="0.54"/>
+    </g>`);
+}
+function buildFogWispSvg(colors) {
+  return buildSvgDocument("0 0 900 240", `<defs>
+      <linearGradient id="fog" x1="0" y1="10" x2="0" y2="200" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0.48"/>
+        <stop offset="50%" stop-color="${colors.primary}" stop-opacity="0.82"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0.18"/>
+      </linearGradient>
+      <filter id="fog-blur" x="-14%" y="-40%" width="128%" height="220%">
+        <feGaussianBlur stdDeviation="18"/>
+      </filter>
+    </defs>`, `<g filter="url(#fog-blur)">
+      <path d="M0 133c77-37 166-49 265-33 100-43 225-54 372-32 98-27 186-22 263 16v65c-135 31-253 45-356 44-121-1-303-11-544-28V133Z" fill="url(#fog)"/>
+      <path d="M0 155c216 30 430 31 641 1 85-12 171-29 259-52v61c-201 44-392 61-573 52C195 211 86 190 0 162v-7Z" fill="${colors.glow}" opacity="0.34"/>
+    </g>`);
+}
+function buildHorizonRidgeSvg(colors) {
+  return buildSvgDocument("0 0 1200 220", `<defs>
+      <linearGradient id="ridge" x1="0" y1="36" x2="0" y2="212" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0.18"/>
+        <stop offset="42%" stop-color="${colors.primary}" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0.96"/>
+      </linearGradient>
+      <filter id="ridge-soft" x="-8%" y="-10%" width="116%" height="130%">
+        <feGaussianBlur stdDeviation="2.2"/>
+      </filter>
+    </defs>`, `<g filter="url(#ridge-soft)">
+      <path d="M0 162c92-6 153-34 218-74 47-28 91-33 135-16 43-44 82-53 119-30 58-31 111-30 159 1 70-46 134-42 194 11 38-15 87-6 148 26 56-12 131 6 228 54v86H0v-58Z" fill="url(#ridge)"/>
+    </g>`);
+}
+function buildHorizonTreelineSvg(colors) {
+  return buildSvgDocument("0 0 1200 240", `<defs>
+      <linearGradient id="trees" x1="0" y1="56" x2="0" y2="214" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0.18"/>
+        <stop offset="30%" stop-color="${colors.primary}" stop-opacity="0.86"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0.98"/>
+      </linearGradient>
+    </defs>`, `<path d="M0 176c16-18 33-22 54-12 7-26 21-40 42-42 10-24 28-38 54-41 16-23 30-35 44-35 18 0 35 12 50 37 8-28 24-44 49-48 18-24 35-36 53-36 20 0 39 12 58 37 13-22 28-32 45-32 16 0 29 9 39 28 12-22 29-33 50-33 21 0 41 12 59 36 15-27 33-40 56-40 19 0 38 12 57 35 11-19 28-29 52-29 23 0 45 13 67 38 13-17 27-24 43-24 25 0 47 15 66 46 18-16 34-24 49-24 29 0 49 15 61 45 15-16 31-24 50-24 24 0 44 14 62 43 16-13 34-19 54-19 30 0 56 16 77 49v85H0v-62Z" fill="url(#trees)"/>`);
+}
+function buildHorizonPolesSvg(colors) {
+  return buildSvgDocument("0 0 1200 240", `<defs>
+      <linearGradient id="pole" x1="0" y1="0" x2="0" y2="240" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0.08"/>
+        <stop offset="40%" stop-color="${colors.primary}" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0.96"/>
+      </linearGradient>
+    </defs>`, `<g stroke="url(#pole)" stroke-linecap="round" stroke-width="7">
+      <path d="M126 92v130"/>
+      <path d="M128 118h72"/>
+      <path d="M386 64v158"/>
+      <path d="M388 96h82"/>
+      <path d="M702 86v136"/>
+      <path d="M704 112h68"/>
+      <path d="M986 72v150"/>
+      <path d="M988 102h78"/>
+      <path d="M122 118c94 13 178 10 258-8 124 18 229 17 321-3 97 15 189 9 287-17" stroke-width="4" stroke-opacity="0.66"/>
+    </g>`);
+}
+function buildPrecipCurtainSvg(colors) {
+  return buildSvgDocument("0 0 220 640", `<defs>
+      <linearGradient id="curtain" x1="34" y1="0" x2="176" y2="640" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0"/>
+        <stop offset="18%" stop-color="${colors.highlight}" stop-opacity="0.18"/>
+        <stop offset="56%" stop-color="${colors.primary}" stop-opacity="0.42"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="curtain-blur" x="-30%" y="-8%" width="160%" height="116%">
+        <feGaussianBlur stdDeviation="4.5"/>
+      </filter>
+    </defs>`, `<g filter="url(#curtain-blur)">
+      <path d="M14 8c20 28 38 68 54 118 15 49 35 111 58 186 17 55 35 128 54 220-26-65-49-122-69-171-24-59-46-122-66-189C30 117 20 62 14 8Z" fill="url(#curtain)"/>
+      <path d="M78 0c14 32 29 76 43 130 13 50 31 115 54 194 17 57 32 132 45 226-20-68-39-128-58-180-22-60-42-123-58-190C92 122 83 62 78 0Z" fill="${colors.glow}" opacity="0.34"/>
+    </g>`);
+}
+function buildSurfaceSheenSvg(colors) {
+  return buildSvgDocument("0 0 1200 240", `<defs>
+      <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="240" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0"/>
+        <stop offset="36%" stop-color="${colors.primary}" stop-opacity="0.24"/>
+        <stop offset="58%" stop-color="${colors.accent}" stop-opacity="0.7"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="sheen-blur" x="-8%" y="-50%" width="116%" height="220%">
+        <feGaussianBlur stdDeviation="12"/>
+      </filter>
+    </defs>`, `<g filter="url(#sheen-blur)">
+      <path d="M0 168c128-24 244-30 347-18 103-26 231-29 384-8 103-14 259-12 469 8v90H0v-72Z" fill="url(#sheen)"/>
+      <path d="M96 156c112 13 238 16 378 9 140-6 288-20 444-41 90-12 184-14 282-7-150 30-293 50-431 60-169 12-394 7-673-21Z" fill="${colors.glow}" opacity="0.34"/>
+      <path d="M0 198c160 24 352 32 576 24 222-8 430-30 624-67v85H0v-42Z" fill="${colors.shadow}" opacity="0.18"/>
+    </g>`);
+}
+function buildSurfaceSplashSvg(colors) {
+  return buildSvgDocument("0 0 220 140", `<defs>
+      <radialGradient id="splash-core" cx="50%" cy="58%" r="54%">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0.88"/>
+        <stop offset="54%" stop-color="${colors.primary}" stop-opacity="0.72"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0"/>
+      </radialGradient>
+      <filter id="splash-blur" x="-24%" y="-24%" width="148%" height="168%">
+        <feGaussianBlur stdDeviation="3.6"/>
+      </filter>
+    </defs>`, `<g filter="url(#splash-blur)">
+      <ellipse cx="110" cy="104" rx="84" ry="20" fill="url(#splash-core)"/>
+      <path d="M38 100c12-9 23-24 31-46 9 17 14 33 14 47 11-17 21-39 28-65 10 17 15 33 16 48 12-15 23-35 31-58 10 15 15 31 14 48 11-13 20-30 28-51 11 15 16 29 15 43 10-8 17-18 21-31 2 15-1 30-10 45H38Z" fill="${colors.accent}" opacity="0.56"/>
+      <circle cx="54" cy="54" r="10" fill="${colors.glow}" opacity="0.48"/>
+      <circle cx="92" cy="36" r="7" fill="${colors.highlight}" opacity="0.52"/>
+      <circle cx="148" cy="28" r="8" fill="${colors.highlight}" opacity="0.46"/>
+      <circle cx="186" cy="52" r="9" fill="${colors.glow}" opacity="0.42"/>
+    </g>`);
+}
+function buildSurfaceRunoffSvg(colors) {
+  return buildSvgDocument("0 0 180 560", `<defs>
+      <linearGradient id="runoff" x1="24" y1="0" x2="156" y2="560" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0"/>
+        <stop offset="18%" stop-color="${colors.highlight}" stop-opacity="0.6"/>
+        <stop offset="52%" stop-color="${colors.primary}" stop-opacity="0.66"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="runoff-blur" x="-40%" y="-10%" width="180%" height="120%">
+        <feGaussianBlur stdDeviation="4.4"/>
+      </filter>
+    </defs>`, `<g filter="url(#runoff-blur)">
+      <path d="M32 0c18 42 30 96 36 161 5 54 17 126 36 214 13 60 23 122 28 185-18-53-33-102-43-149-15-67-29-141-42-220C39 112 34 49 32 0Z" fill="url(#runoff)"/>
+      <path d="M82 0c15 38 29 86 40 145 11 56 27 132 47 230 12 61 21 123 25 185-15-52-29-99-40-143-18-71-34-147-48-228C97 110 89 48 82 0Z" fill="${colors.glow}" opacity="0.34"/>
+      <path d="M118 34c12 24 23 56 32 96 8 39 21 93 38 163-16-39-29-75-39-109-13-46-23-96-31-150Z" fill="${colors.accent}" opacity="0.26"/>
+    </g>`);
+}
+function buildSurfaceAccumulationSvg(colors) {
+  return buildSvgDocument("0 0 1200 180", `<defs>
+      <linearGradient id="accum" x1="0" y1="0" x2="0" y2="180" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0.24"/>
+        <stop offset="52%" stop-color="${colors.primary}" stop-opacity="0.88"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0.3"/>
+      </linearGradient>
+      <filter id="accum-soft" x="-6%" y="-20%" width="112%" height="160%">
+        <feGaussianBlur stdDeviation="2.6"/>
+      </filter>
+    </defs>`, `<g filter="url(#accum-soft)">
+      <path d="M0 126c45-18 90-23 133-16 58-23 125-28 199-15 49-14 103-12 160 4 45-17 97-18 156-4 61-18 131-17 209 4 54-14 111-11 171 9 53-10 111-6 172 11v61H0v-54Z" fill="url(#accum)"/>
+      <path d="M44 108c53-6 103-1 150 15 63-18 131-17 203 5 69-16 146-15 232 5 58-13 121-11 187 7 79-12 140-8 183 12-82-12-161-16-237-10-76 7-146 4-211-8-76-14-149-16-218-4-67-19-130-26-189-22Z" fill="${colors.glow}" opacity="0.38"/>
+    </g>`);
+}
+function buildCondensationBloomSvg(colors) {
+  return buildSvgDocument("0 0 260 220", `<defs>
+      <radialGradient id="condense-a" cx="38%" cy="34%" r="48%">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0.88"/>
+        <stop offset="100%" stop-color="${colors.primary}" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="condense-b" cx="68%" cy="58%" r="54%">
+        <stop offset="0%" stop-color="${colors.glow}" stop-opacity="0.58"/>
+        <stop offset="100%" stop-color="${colors.secondary}" stop-opacity="0"/>
+      </radialGradient>
+      <filter id="condense-blur" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="10"/>
+      </filter>
+    </defs>`, `<g filter="url(#condense-blur)">
+      <ellipse cx="88" cy="74" rx="74" ry="54" fill="url(#condense-a)"/>
+      <ellipse cx="160" cy="132" rx="88" ry="58" fill="url(#condense-b)"/>
+      <ellipse cx="176" cy="66" rx="52" ry="34" fill="${colors.accent}" opacity="0.22"/>
+      <path d="M52 132c26 12 54 18 84 18 32 0 64-7 96-22-28 21-63 33-104 35-31 1-57-9-76-31Z" fill="${colors.glow}" opacity="0.28"/>
+    </g>`);
+}
+function buildFogCreepSvg(colors) {
+  return buildSvgDocument("0 0 1200 260", `<defs>
+      <linearGradient id="creep" x1="0" y1="0" x2="0" y2="260" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0"/>
+        <stop offset="44%" stop-color="${colors.primary}" stop-opacity="0.66"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="creep-soft" x="-10%" y="-34%" width="120%" height="200%">
+        <feGaussianBlur stdDeviation="14"/>
+      </filter>
+    </defs>`, `<g filter="url(#creep-soft)">
+      <path d="M0 170c74-30 162-40 263-31 80-26 183-28 308-6 104-26 216-24 335 6 96-14 194-6 294 25v96H0v-90Z" fill="url(#creep)"/>
+      <path d="M0 190c151 24 287 32 408 23 145-11 283-31 415-60 144 31 270 62 377 92v15H0v-70Z" fill="${colors.glow}" opacity="0.26"/>
+    </g>`);
+}
+function buildRainStreakSvg(colors) {
+  return buildSvgDocument("0 0 32 192", `<defs>
+      <linearGradient id="rain" x1="16" y1="0" x2="16" y2="192" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0"/>
+        <stop offset="16%" stop-color="${colors.highlight}" stop-opacity="0.85"/>
+        <stop offset="62%" stop-color="${colors.primary}" stop-opacity="0.94"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="rain-blur" x="-120%" y="-10%" width="240%" height="120%">
+        <feGaussianBlur stdDeviation="1.6"/>
+      </filter>
+    </defs>`, `<g filter="url(#rain-blur)">
+      <path d="M14 6C16 2 20 2 22 6c4 15 4 42-3 100-2 18-4 44-4 74-5-20-7-47-8-73C4 48 8 18 14 6Z" fill="url(#rain)"/>
+      <path d="M16 16c1-4 5-4 6 0 2 18 0 45-4 83-1 11-2 25-2 38-3-9-5-23-5-38 0-40 1-68 5-83Z" fill="${colors.glow}" opacity="0.28"/>
+    </g>`);
+}
+function buildSnowCrystalSvg(colors) {
+  return buildSvgDocument("0 0 96 96", `<defs>
+      <radialGradient id="snow-core" cx="50%" cy="50%" r="60%">
+        <stop offset="0%" stop-color="${colors.highlight}"/>
+        <stop offset="100%" stop-color="${colors.primary}"/>
+      </radialGradient>
+      <filter id="snow-glow" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="1.4"/>
+      </filter>
+    </defs>`, `<g stroke="${colors.primary}" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M48 12v72"/>
+      <path d="M16 30l64 36"/>
+      <path d="M16 66l64-36"/>
+      <path d="M48 12l-7 12m7-12 7 12m-39 6 14 1m-14-1 6 12m43-12-14 1m14-1-6 12m0 36-14-1m14 1-6-12m-43 12 14-1m-14 1 6-12m25 8-7-12m7 12 7-12"/>
+    </g>
+    <circle cx="48" cy="48" r="12" fill="url(#snow-core)" filter="url(#snow-glow)" opacity="0.92"/>
+    <circle cx="48" cy="48" r="6" fill="${colors.glow}" opacity="0.45"/>`);
+}
+function buildGlassDropSvg(colors) {
+  return buildSvgDocument("0 0 96 132", `<defs>
+      <radialGradient id="drop" cx="36%" cy="28%" r="78%">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0.96"/>
+        <stop offset="36%" stop-color="${colors.primary}" stop-opacity="0.94"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0.24"/>
+      </radialGradient>
+      <filter id="drop-shadow" x="-30%" y="-20%" width="160%" height="170%">
+        <feGaussianBlur stdDeviation="2.4"/>
+      </filter>
+    </defs>`, `<g filter="url(#drop-shadow)">
+      <path d="M48 8c17 26 30 41 36 58 8 24 0 53-19 65-11 7-25 8-37 3-24-10-35-38-26-66C10 47 27 34 48 8Z" fill="url(#drop)"/>
+      <path d="M31 32c7-11 14-17 24-19-8 11-12 21-14 33-11 0-16-5-10-14Z" fill="${colors.glow}" opacity="0.58"/>
+      <path d="M62 68c8 14 3 31-10 39-10 6-21 5-31-2 10 4 21 2 29-5 7-6 11-18 12-32Z" fill="${colors.shadow}" opacity="0.26"/>
+    </g>`);
+}
+function buildGlassRivuletSvg(colors) {
+  return buildSvgDocument("0 0 72 420", `<defs>
+      <linearGradient id="rivulet" x1="36" y1="0" x2="36" y2="420" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}" stop-opacity="0"/>
+        <stop offset="12%" stop-color="${colors.highlight}" stop-opacity="0.9"/>
+        <stop offset="52%" stop-color="${colors.primary}" stop-opacity="0.7"/>
+        <stop offset="100%" stop-color="${colors.shadow}" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="rivulet-blur" x="-80%" y="-10%" width="240%" height="120%">
+        <feGaussianBlur stdDeviation="1.9"/>
+      </filter>
+    </defs>`, `<g filter="url(#rivulet-blur)">
+      <path d="M35 8c10 23 13 49 7 79-10 52-14 100-10 141 5 46 0 96-13 150 18-41 29-80 31-115 3-48 4-86 13-128 8-37 8-80-2-127-7-8-18-8-26 0Z" fill="url(#rivulet)"/>
+      <path d="M33 38c4-8 11-8 13 0 5 28 3 58-4 92-6 31-9 63-8 97-3-16-5-42-4-79 1-44 2-81 3-110Z" fill="${colors.glow}" opacity="0.25"/>
+    </g>`);
+}
+function buildLightningForkSvg(colors) {
+  return buildSvgDocument("0 0 220 560", `<defs>
+      <filter id="lightning-glow" x="-40%" y="-10%" width="180%" height="130%">
+        <feGaussianBlur stdDeviation="6"/>
+      </filter>
+      <linearGradient id="bolt" x1="110" y1="0" x2="110" y2="560" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${colors.highlight}"/>
+        <stop offset="50%" stop-color="${colors.accent}"/>
+        <stop offset="100%" stop-color="${colors.primary}"/>
+      </linearGradient>
+    </defs>`, `<g filter="url(#lightning-glow)">
+      <path d="M106 8 72 160l45-3-54 149 53-9-40 163 92-198-44 8 61-143-49 4 31-123Z" fill="url(#bolt)"/>
+      <path d="M86 170 41 252l40-14-18 77 53-108-30 7 22-44-22 0Z" fill="${colors.glow}" opacity="0.56"/>
+      <path d="M142 235 108 298l29-12-9 53 43-82-24 6 11-28-16 0Z" fill="${colors.glow}" opacity="0.42"/>
+    </g>`);
+}
+function buildSpriteSvg(kind, colors) {
+  switch (kind) {
+    case "cloud-wisp":
+      return buildCloudWispSvg(colors);
+    case "cloud-bank":
+      return buildCloudBankSvg(colors);
+    case "cloud-stratus":
+      return buildCloudStratusSvg(colors);
+    case "cloud-anvil":
+      return buildCloudAnvilSvg(colors);
+    case "cloud-shelf":
+      return buildCloudShelfSvg(colors);
+    case "storm-scud":
+      return buildStormScudSvg(colors);
+    case "fog-wisp":
+      return buildFogWispSvg(colors);
+    case "horizon-ridge":
+      return buildHorizonRidgeSvg(colors);
+    case "horizon-treeline":
+      return buildHorizonTreelineSvg(colors);
+    case "horizon-poles":
+      return buildHorizonPolesSvg(colors);
+    case "precip-curtain":
+      return buildPrecipCurtainSvg(colors);
+    case "surface-sheen":
+      return buildSurfaceSheenSvg(colors);
+    case "surface-splash":
+      return buildSurfaceSplashSvg(colors);
+    case "surface-runoff":
+      return buildSurfaceRunoffSvg(colors);
+    case "surface-accumulation":
+      return buildSurfaceAccumulationSvg(colors);
+    case "condensation-bloom":
+      return buildCondensationBloomSvg(colors);
+    case "fog-creep":
+      return buildFogCreepSvg(colors);
+    case "rain-streak":
+      return buildRainStreakSvg(colors);
+    case "snow-crystal":
+      return buildSnowCrystalSvg(colors);
+    case "glass-drop":
+      return buildGlassDropSvg(colors);
+    case "glass-rivulet":
+      return buildGlassRivuletSvg(colors);
+    case "lightning-fork":
+      return buildLightningForkSvg(colors);
+    default:
+      return buildCloudWispSvg(colors);
+  }
+}
+function loadSprite(key, svg) {
+  const existing = pendingSprites.get(key);
+  if (existing)
+    return existing;
+  const promise = new Promise((resolve, reject) => {
+    const image = new Image;
+    image.decoding = "async";
+    image.onload = () => {
+      readySprites.set(key, image);
+      pendingSprites.delete(key);
+      resolve(image);
+    };
+    image.onerror = () => {
+      pendingSprites.delete(key);
+      reject(new Error(`Failed to load weather sprite: ${key}`));
+    };
+    image.src = svgToDataUri(svg);
+  });
+  pendingSprites.set(key, promise);
+  return promise;
+}
+function buildKey(kind, colors) {
+  return [
+    kind,
+    colors.primary,
+    colors.secondary,
+    colors.shadow,
+    colors.highlight,
+    colors.accent,
+    colors.glow
+  ].join("|");
+}
+function requestWeatherSprite(kind, colors, onReady) {
+  const key = buildKey(kind, colors);
+  const ready = readySprites.get(key);
+  if (ready)
+    return ready;
+  const svg = buildSpriteSvg(kind, colors);
+  const pending = loadSprite(key, svg);
+  if (onReady) {
+    pending.then(() => onReady()).catch(() => {
+      return;
+    });
+  }
+  return null;
+}
+
+// src/render/quality.ts
+var WEATHER_QUALITY_BUDGETS = {
+  performance: {
+    resolutionScale: 0.85,
+    maxDevicePixelRatio: 1.2,
+    stars: 18,
+    motes: 8,
+    cloudLayers: 2,
+    cloudSprites: 5,
+    frontCloudSprites: 0,
+    fogWisps: 4,
+    frontMistWisps: 1,
+    anchorBands: 1,
+    scudLayers: 0,
+    shadowPasses: 1,
+    horizonGlowPasses: 1,
+    rainBack: 90,
+    rainFront: 160,
+    rainCurtains: 2,
+    curtainTextures: 1,
+    contactBands: 0,
+    impactBursts: 0,
+    runoffSheets: 0,
+    accumulationBands: 0,
+    condensationBlooms: 0,
+    fogCreepBands: 0,
+    shadowSweepPasses: 0,
+    distortionPasses: 0,
+    snowBack: 56,
+    snowFront: 96,
+    snowGusts: 1,
+    glassBeads: 0,
+    glassRivulets: 0,
+    lightningBranches: 1,
+    lightningForks: 0,
+    lightningGlow: 0.72,
+    flags: {
+      stars: true,
+      motes: false,
+      layeredClouds: false,
+      frontCloudBank: false,
+      deepOvercast: false,
+      distantCurtains: true,
+      texturedCurtains: false,
+      glassOverlay: false,
+      glassDroplets: false,
+      frostOverlay: false,
+      lightningForks: false,
+      relightAnchors: false,
+      horizonPoles: false,
+      multiFlash: false
+    }
+  },
+  lite: {
+    resolutionScale: 1,
+    maxDevicePixelRatio: 1.45,
+    stars: 34,
+    motes: 16,
+    cloudLayers: 3,
+    cloudSprites: 8,
+    frontCloudSprites: 2,
+    fogWisps: 6,
+    frontMistWisps: 2,
+    anchorBands: 2,
+    scudLayers: 1,
+    shadowPasses: 2,
+    horizonGlowPasses: 2,
+    rainBack: 140,
+    rainFront: 260,
+    rainCurtains: 3,
+    curtainTextures: 2,
+    contactBands: 0,
+    impactBursts: 0,
+    runoffSheets: 0,
+    accumulationBands: 0,
+    condensationBlooms: 0,
+    fogCreepBands: 0,
+    shadowSweepPasses: 0,
+    distortionPasses: 1,
+    snowBack: 110,
+    snowFront: 190,
+    snowGusts: 2,
+    glassBeads: 8,
+    glassRivulets: 4,
+    lightningBranches: 2,
+    lightningForks: 1,
+    lightningGlow: 0.86,
+    flags: {
+      stars: true,
+      motes: true,
+      layeredClouds: true,
+      frontCloudBank: false,
+      deepOvercast: false,
+      distantCurtains: true,
+      texturedCurtains: true,
+      glassOverlay: true,
+      glassDroplets: false,
+      frostOverlay: true,
+      lightningForks: true,
+      relightAnchors: true,
+      horizonPoles: false,
+      multiFlash: false
+    }
+  },
+  standard: {
+    resolutionScale: 1.1,
+    maxDevicePixelRatio: 1.8,
+    stars: 64,
+    motes: 28,
+    cloudLayers: 4,
+    cloudSprites: 12,
+    frontCloudSprites: 4,
+    fogWisps: 10,
+    frontMistWisps: 4,
+    anchorBands: 3,
+    scudLayers: 2,
+    shadowPasses: 3,
+    horizonGlowPasses: 3,
+    rainBack: 240,
+    rainFront: 420,
+    rainCurtains: 5,
+    curtainTextures: 3,
+    contactBands: 0,
+    impactBursts: 0,
+    runoffSheets: 0,
+    accumulationBands: 0,
+    condensationBlooms: 0,
+    fogCreepBands: 0,
+    shadowSweepPasses: 0,
+    distortionPasses: 2,
+    snowBack: 180,
+    snowFront: 320,
+    snowGusts: 3,
+    glassBeads: 20,
+    glassRivulets: 8,
+    lightningBranches: 3,
+    lightningForks: 2,
+    lightningGlow: 1,
+    flags: {
+      stars: true,
+      motes: true,
+      layeredClouds: true,
+      frontCloudBank: true,
+      deepOvercast: true,
+      distantCurtains: true,
+      texturedCurtains: true,
+      glassOverlay: true,
+      glassDroplets: true,
+      frostOverlay: true,
+      lightningForks: true,
+      relightAnchors: true,
+      horizonPoles: true,
+      multiFlash: true
+    }
+  },
+  cinematic: {
+    resolutionScale: 1.3,
+    maxDevicePixelRatio: 2.25,
+    stars: 112,
+    motes: 44,
+    cloudLayers: 6,
+    cloudSprites: 18,
+    frontCloudSprites: 7,
+    fogWisps: 16,
+    frontMistWisps: 7,
+    anchorBands: 5,
+    scudLayers: 3,
+    shadowPasses: 5,
+    horizonGlowPasses: 4,
+    rainBack: 360,
+    rainFront: 720,
+    rainCurtains: 8,
+    curtainTextures: 5,
+    contactBands: 0,
+    impactBursts: 0,
+    runoffSheets: 0,
+    accumulationBands: 0,
+    condensationBlooms: 0,
+    fogCreepBands: 0,
+    shadowSweepPasses: 0,
+    distortionPasses: 3,
+    snowBack: 300,
+    snowFront: 620,
+    snowGusts: 5,
+    glassBeads: 40,
+    glassRivulets: 14,
+    lightningBranches: 5,
+    lightningForks: 4,
+    lightningGlow: 1.22,
+    flags: {
+      stars: true,
+      motes: true,
+      layeredClouds: true,
+      frontCloudBank: true,
+      deepOvercast: true,
+      distantCurtains: true,
+      texturedCurtains: true,
+      glassOverlay: true,
+      glassDroplets: true,
+      frostOverlay: true,
+      lightningForks: true,
+      relightAnchors: true,
+      horizonPoles: true,
+      multiFlash: true
+    }
+  }
+};
+function getQualityBudget(quality) {
+  return WEATHER_QUALITY_BUDGETS[quality];
+}
+
+// src/render/renderer.ts
+var PALETTE_BASES = {
+  dawn: {
+    skyTop: "#1f3558",
+    skyMid: "#566fa0",
+    skyBottom: "#efa06a",
+    horizon: "#ffd3a7",
+    sun: "#ffd8a7",
+    moon: "#dce7ff"
+  },
+  day: {
+    skyTop: "#4071a9",
+    skyMid: "#7ca7de",
+    skyBottom: "#dff0ff",
+    horizon: "#f7fbff",
+    sun: "#fff0be",
+    moon: "#dce7ff"
+  },
+  dusk: {
+    skyTop: "#1d1f4a",
+    skyMid: "#6a4a77",
+    skyBottom: "#ea875c",
+    horizon: "#ffccac",
+    sun: "#ffbb8b",
+    moon: "#e0e6ff"
+  },
+  night: {
+    skyTop: "#040f1b",
+    skyMid: "#10263a",
+    skyBottom: "#2b4a69",
+    horizon: "#7ba0d8",
+    sun: "#ffd9a8",
+    moon: "#dce6ff"
+  },
+  storm: {
+    skyTop: "#050f19",
+    skyMid: "#13273a",
+    skyBottom: "#32485d",
+    horizon: "#8ba3b6",
+    sun: "#c9ddff",
+    moon: "#dbe8ff"
+  },
+  "storm-night": {
+    skyTop: "#020910",
+    skyMid: "#0a1826",
+    skyBottom: "#1e3449",
+    horizon: "#6989aa",
+    sun: "#c7dbff",
+    moon: "#dbe8ff"
+  },
+  mist: {
+    skyTop: "#20313d",
+    skyMid: "#5c6d78",
+    skyBottom: "#b5c2c8",
+    horizon: "#eef4f7",
+    sun: "#f9f8ed",
+    moon: "#eef4ff"
+  },
+  snow: {
+    skyTop: "#435c76",
+    skyMid: "#8398ac",
+    skyBottom: "#e4edf6",
+    horizon: "#f9fcff",
+    sun: "#fff5e6",
+    moon: "#eef4ff"
+  }
+};
+function hexToRgb(hex) {
+  const value = hex.replace("#", "");
+  const normalized = value.length === 3 ? value.split("").map((segment) => segment + segment).join("") : value;
+  const parsed = Number.parseInt(normalized, 16);
+  return {
+    r: parsed >> 16 & 255,
+    g: parsed >> 8 & 255,
+    b: parsed & 255
+  };
+}
+function rgbToHex(r, g, b) {
+  return `#${[r, g, b].map((value) => Math.round(clamp(value, 0, 255)).toString(16).padStart(2, "0")).join("")}`;
+}
+function mixHex(a, b, amount) {
+  const left = hexToRgb(a);
+  const right = hexToRgb(b);
+  return rgbToHex(left.r + (right.r - left.r) * amount, left.g + (right.g - left.g) * amount, left.b + (right.b - left.b) * amount);
+}
+function rgba(hex, alpha) {
+  const value = hexToRgb(hex);
+  return `rgba(${value.r}, ${value.g}, ${value.b}, ${clamp(alpha, 0, 1).toFixed(3)})`;
+}
+function withLight(hex, amount) {
+  return mixHex(hex, "#ffffff", amount);
+}
+function withShade(hex, amount) {
+  return mixHex(hex, "#05070b", amount);
+}
+function hashString(value) {
+  let hash = 2166136261;
+  for (let index = 0;index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+function createRng(seed) {
+  let current = seed >>> 0;
+  return () => {
+    current += 1831565813;
+    let output = current;
+    output = Math.imul(output ^ output >>> 15, output | 1);
+    output ^= output + Math.imul(output ^ output >>> 7, output | 61);
+    return ((output ^ output >>> 14) >>> 0) / 4294967296;
+  };
+}
+function pick(rng, values) {
+  return values[Math.floor(rng() * values.length)] ?? values[0];
+}
+function parseHour(value) {
+  const match = value.trim().match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (!match)
+    return null;
+  let hour = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(hour))
+    return null;
+  const meridiem = (match[3] || "").toUpperCase();
+  if (meridiem === "AM" && hour === 12)
+    hour = 0;
+  if (meridiem === "PM" && hour < 12)
+    hour += 12;
+  return clamp(hour, 0, 23);
+}
+function resolvePhase(state) {
+  if (state.palette === "dawn" || state.palette === "day" || state.palette === "dusk" || state.palette === "night") {
+    return state.palette;
+  }
+  const hour = parseHour(state.time);
+  if (hour === null)
+    return state.condition === "storm" ? "night" : "day";
+  if (hour < 6)
+    return "night";
+  if (hour < 9)
+    return "dawn";
+  if (hour < 18)
+    return "day";
+  if (hour < 21)
+    return "dusk";
+  return "night";
+}
+function buildSceneProfile(state, effectiveIntensity) {
+  const phase = resolvePhase(state);
+  const intensity = clamp(effectiveIntensity, 0.2, 1.5);
+  const isNight = phase === "night";
+  const paletteKey = state.condition === "storm" && isNight ? "storm-night" : state.condition === "storm" ? "storm" : state.condition === "fog" ? "mist" : state.condition === "snow" ? "snow" : state.palette;
+  const base = PALETTE_BASES[paletteKey];
+  let skyTop = base.skyTop;
+  let skyMid = base.skyMid;
+  let skyBottom = base.skyBottom;
+  let horizonGlow = withLight(base.horizon, 0.08);
+  let vignette = rgba(withShade(base.skyTop, 0.6), 0.22);
+  let cloudLight = withLight(base.skyMid, 0.48);
+  let cloudMid = mixHex(base.skyMid, base.skyBottom, 0.34);
+  let cloudShadow = withShade(base.skyTop, 0.52);
+  let cloudAccent = withLight(base.skyBottom, 0.24);
+  let fogLight = withLight(base.skyBottom, 0.56);
+  let fogShadow = mixHex(base.skyMid, base.skyTop, 0.62);
+  let mistColor = mixHex(base.skyBottom, base.skyMid, 0.28);
+  let rainColor = isNight ? "#d4e4ff" : "#bed8ff";
+  let snowColor = isNight ? "#e5efff" : "#f8fbff";
+  let lightningColor = "#f6fbff";
+  let lightningGlow = "#b8dcff";
+  let glassTint = rgba(withLight(base.skyMid, 0.3), 0.18);
+  let glassGlow = rgba(withLight(base.skyBottom, 0.4), 0.24);
+  let anchorFarColor = mixHex(base.skyTop, "#0b1015", 0.56);
+  let anchorNearColor = mixHex(base.skyMid, "#0d1218", 0.66);
+  let anchorRimColor = rgba(withLight(base.horizon, 0.16), 0.34);
+  let terrainMistColor = rgba(withLight(base.skyBottom, 0.12), 0.24);
+  let surfaceLight = withLight(base.horizon, 0.18);
+  let surfaceMid = mixHex(base.skyBottom, base.horizon, 0.28);
+  let surfaceShadow = mixHex(base.skyTop, "#091019", 0.72);
+  let celestialAlpha = phase === "day" ? 0.82 : phase === "dawn" || phase === "dusk" ? 0.54 : 0.28;
+  let starAlpha = isNight ? 0.82 : phase === "dusk" || phase === "dawn" ? 0.2 : 0;
+  let overcast = 0.08;
+  let haze = 0.1;
+  let fogDensity = 0.04;
+  let precipitation = 0;
+  let wind = 0.22;
+  let turbulence = 0.12;
+  let cloudCeiling = 0.18;
+  let cloudAlpha = isNight ? 0.2 : 0.28;
+  let frontCloudAlpha = 0.06;
+  let mistAlpha = 0.08;
+  let frontMistAlpha = 0.06;
+  let curtainAlpha = 0;
+  let distantPrecipAlpha = 0;
+  let nearPrecipAlpha = 0;
+  let windowOpacity = 0;
+  let glassBlur = 0;
+  let frostOpacity = 0;
+  let horizonLift = 0.14;
+  let anchorAlpha = 0.2;
+  let relightAlpha = 0.12;
+  let occlusionStrength = 0.18;
+  let contactHazeAlpha = 0.06;
+  let wetSheenAlpha = 0.08;
+  let impactAlpha = 0;
+  let runoffAlpha = 0;
+  let accumulationAlpha = 0;
+  let fogCreepAlpha = 0.04;
+  let condensationAlpha = 0;
+  let distortionAlpha = 0.04;
+  let shadowSweepAlpha = 0.04;
+  let thermalShimmerAlpha = phase === "day" ? 0.1 : phase === "dawn" || phase === "dusk" ? 0.06 : 0.02;
+  let horizonGlintAlpha = phase === "day" ? 0.16 : phase === "dawn" || phase === "dusk" ? 0.24 : 0.04;
+  let surfaceRelightAlpha = 0.08;
+  switch (state.condition) {
+    case "cloudy":
+      skyMid = mixHex(base.skyMid, "#8798ab", 0.34);
+      skyBottom = mixHex(base.skyBottom, "#a8b8c8", 0.5);
+      horizonGlow = withLight(skyBottom, 0.18);
+      cloudLight = withLight(skyMid, 0.34);
+      cloudMid = mixHex(skyMid, skyBottom, 0.24);
+      cloudShadow = withShade(skyTop, 0.42);
+      cloudAccent = withLight(skyBottom, 0.14);
+      fogLight = withLight(skyBottom, 0.28);
+      fogShadow = mixHex(skyMid, skyTop, 0.58);
+      celestialAlpha = 0.16;
+      starAlpha = isNight ? 0.03 : 0;
+      overcast = 0.52;
+      haze = 0.16;
+      fogDensity = 0.12;
+      wind = 0.28;
+      turbulence = 0.22;
+      cloudCeiling = 0.48;
+      cloudAlpha = 0.78;
+      frontCloudAlpha = 0.12;
+      mistAlpha = 0.14;
+      frontMistAlpha = 0.08;
+      anchorFarColor = mixHex(skyTop, "#11161c", 0.54);
+      anchorNearColor = mixHex(skyMid, "#121820", 0.64);
+      anchorRimColor = rgba(withLight(skyBottom, 0.12), 0.22);
+      terrainMistColor = rgba(withLight(skyBottom, 0.04), 0.18);
+      surfaceLight = mixHex(skyBottom, "#e6edf4", 0.24);
+      surfaceMid = mixHex(skyBottom, "#9aa9b8", 0.42);
+      surfaceShadow = mixHex(skyTop, "#0e151d", 0.72);
+      horizonLift = 0.18;
+      anchorAlpha = 0.34;
+      relightAlpha = 0.14;
+      occlusionStrength = 0.28;
+      contactHazeAlpha = 0.05;
+      wetSheenAlpha = 0.02;
+      fogCreepAlpha = 0.06;
+      shadowSweepAlpha = 0.12;
+      thermalShimmerAlpha = 0.02;
+      horizonGlintAlpha = 0.06;
+      surfaceRelightAlpha = 0.1;
+      break;
+    case "rain":
+      skyTop = withShade(base.skyTop, 0.24);
+      skyMid = mixHex(base.skyMid, "#44556a", 0.56);
+      skyBottom = mixHex(base.skyBottom, "#6d8094", 0.64);
+      horizonGlow = withLight(skyBottom, 0.12);
+      cloudLight = withLight(skyMid, 0.2);
+      cloudMid = mixHex(skyMid, skyBottom, 0.14);
+      cloudShadow = withShade(skyTop, 0.24);
+      cloudAccent = mixHex(skyBottom, "#b0c3d8", 0.34);
+      fogLight = mixHex(skyBottom, "#b6c4d2", 0.4);
+      fogShadow = mixHex(skyMid, skyTop, 0.7);
+      mistColor = mixHex(skyBottom, "#d9e6f4", 0.24);
+      celestialAlpha = 0.08;
+      starAlpha = 0;
+      overcast = 0.84;
+      haze = 0.24;
+      fogDensity = 0.22;
+      precipitation = 0.76;
+      wind = 0.44;
+      turbulence = 0.3;
+      cloudCeiling = 0.76;
+      cloudAlpha = 0.98;
+      frontCloudAlpha = 0.38;
+      mistAlpha = 0.28;
+      frontMistAlpha = 0.24;
+      curtainAlpha = 0.44;
+      distantPrecipAlpha = 0.36;
+      nearPrecipAlpha = 0.86;
+      windowOpacity = 0.24;
+      glassBlur = 0.8;
+      anchorFarColor = mixHex(skyTop, "#0c1116", 0.48);
+      anchorNearColor = mixHex(skyMid, "#11161c", 0.72);
+      anchorRimColor = rgba(withLight(skyBottom, 0.08), 0.14);
+      terrainMistColor = rgba(withLight(skyBottom, 0.06), 0.24);
+      surfaceLight = mixHex(skyBottom, "#c8d6e6", 0.26);
+      surfaceMid = mixHex(skyBottom, "#6b8094", 0.46);
+      surfaceShadow = mixHex(skyTop, "#091018", 0.78);
+      horizonLift = 0.22;
+      anchorAlpha = 0.28;
+      relightAlpha = 0.2;
+      occlusionStrength = 0.42;
+      contactHazeAlpha = 0.1;
+      wetSheenAlpha = 0.18;
+      impactAlpha = 0.36;
+      runoffAlpha = 0.38;
+      fogCreepAlpha = 0.08;
+      condensationAlpha = 0.12;
+      distortionAlpha = 0.08;
+      shadowSweepAlpha = 0.1;
+      horizonGlintAlpha = 0.08;
+      surfaceRelightAlpha = 0.24;
+      break;
+    case "storm":
+      skyTop = withShade(base.skyTop, 0.12);
+      skyMid = mixHex(base.skyMid, "#2e3b4f", 0.56);
+      skyBottom = mixHex(base.skyBottom, "#44586e", 0.52);
+      horizonGlow = withLight(skyBottom, 0.12);
+      cloudLight = mixHex(skyMid, "#8298af", 0.18);
+      cloudMid = mixHex(skyMid, skyBottom, 0.08);
+      cloudShadow = withShade(skyTop, 0.16);
+      cloudAccent = mixHex("#97abc0", skyBottom, 0.5);
+      fogLight = mixHex(skyBottom, "#9bb0c1", 0.24);
+      fogShadow = mixHex(skyMid, skyTop, 0.78);
+      mistColor = mixHex(skyBottom, "#bfd1e0", 0.22);
+      rainColor = "#d7e8ff";
+      lightningColor = "#fbfeff";
+      lightningGlow = "#c4e1ff";
+      glassTint = rgba("#87a3bc", 0.22);
+      glassGlow = rgba("#dcecff", 0.26);
+      celestialAlpha = 0.04;
+      starAlpha = 0;
+      overcast = 1;
+      haze = 0.32;
+      fogDensity = 0.32;
+      precipitation = 1;
+      wind = 0.72;
+      turbulence = 0.72;
+      cloudCeiling = 0.9;
+      cloudAlpha = 1;
+      frontCloudAlpha = 0.58;
+      mistAlpha = 0.32;
+      frontMistAlpha = 0.3;
+      curtainAlpha = 0.62;
+      distantPrecipAlpha = 0.46;
+      nearPrecipAlpha = 0.98;
+      windowOpacity = 0.32;
+      glassBlur = 1;
+      anchorFarColor = mixHex(skyTop, "#06090d", 0.42);
+      anchorNearColor = mixHex(skyMid, "#0d1218", 0.78);
+      anchorRimColor = rgba(withLight(lightningGlow, 0.16), 0.28);
+      terrainMistColor = rgba(withLight(skyBottom, 0.08), 0.2);
+      surfaceLight = mixHex(lightningGlow, skyBottom, 0.42);
+      surfaceMid = mixHex(skyBottom, "#4e6072", 0.56);
+      surfaceShadow = mixHex(skyTop, "#05080c", 0.84);
+      horizonLift = 0.16;
+      anchorAlpha = 0.4;
+      relightAlpha = 0.42;
+      occlusionStrength = 0.58;
+      contactHazeAlpha = 0.14;
+      wetSheenAlpha = 0.24;
+      impactAlpha = 0.52;
+      runoffAlpha = 0.58;
+      fogCreepAlpha = 0.12;
+      condensationAlpha = 0.18;
+      distortionAlpha = 0.12;
+      shadowSweepAlpha = 0.14;
+      horizonGlintAlpha = 0.04;
+      thermalShimmerAlpha = 0;
+      surfaceRelightAlpha = 0.48;
+      break;
+    case "snow":
+      skyTop = mixHex(base.skyTop, "#557190", 0.22);
+      skyMid = mixHex(base.skyMid, "#c1d0dd", 0.28);
+      skyBottom = mixHex(base.skyBottom, "#f6f9fd", 0.14);
+      horizonGlow = withLight(skyBottom, 0.06);
+      cloudLight = withLight(skyMid, 0.24);
+      cloudMid = mixHex(skyMid, skyBottom, 0.18);
+      cloudShadow = mixHex(skyTop, "#455a72", 0.54);
+      cloudAccent = withLight(skyBottom, 0.08);
+      fogLight = mixHex(skyBottom, "#ffffff", 0.2);
+      fogShadow = mixHex(skyMid, skyTop, 0.5);
+      mistColor = mixHex(skyBottom, "#f5fbff", 0.1);
+      celestialAlpha = isNight ? 0.22 : 0.34;
+      starAlpha = 0;
+      overcast = 0.62;
+      haze = 0.22;
+      fogDensity = 0.18;
+      precipitation = 0.78;
+      wind = 0.36;
+      turbulence = 0.24;
+      cloudCeiling = 0.66;
+      cloudAlpha = 0.58;
+      frontCloudAlpha = 0.08;
+      mistAlpha = 0.18;
+      frontMistAlpha = 0.2;
+      curtainAlpha = 0.08;
+      distantPrecipAlpha = 0.12;
+      nearPrecipAlpha = 0.82;
+      windowOpacity = 0.1;
+      glassBlur = 0.45;
+      frostOpacity = 0.34;
+      anchorFarColor = mixHex(skyTop, "#17212b", 0.42);
+      anchorNearColor = mixHex(skyMid, "#243341", 0.56);
+      anchorRimColor = rgba(withLight(skyBottom, 0.1), 0.2);
+      terrainMistColor = rgba(withLight(skyBottom, 0.08), 0.28);
+      surfaceLight = mixHex("#ffffff", skyBottom, 0.42);
+      surfaceMid = mixHex(skyBottom, "#d7e3ed", 0.34);
+      surfaceShadow = mixHex(skyTop, "#24313d", 0.52);
+      horizonLift = 0.28;
+      anchorAlpha = 0.18;
+      relightAlpha = 0.12;
+      occlusionStrength = 0.22;
+      contactHazeAlpha = 0.08;
+      wetSheenAlpha = 0.02;
+      accumulationAlpha = 0.24;
+      fogCreepAlpha = 0.08;
+      condensationAlpha = 0.08;
+      distortionAlpha = 0.03;
+      shadowSweepAlpha = 0.03;
+      horizonGlintAlpha = 0.06;
+      surfaceRelightAlpha = 0.12;
+      break;
+    case "fog":
+      skyTop = mixHex(base.skyTop, "#71808b", 0.3);
+      skyMid = mixHex(base.skyMid, "#b9c4ca", 0.4);
+      skyBottom = mixHex(base.skyBottom, "#edf2f4", 0.24);
+      horizonGlow = withLight(skyBottom, 0.08);
+      cloudLight = withLight(skyMid, 0.18);
+      cloudMid = mixHex(skyMid, skyBottom, 0.12);
+      cloudShadow = mixHex(skyTop, "#566771", 0.58);
+      cloudAccent = mixHex(skyBottom, "#ffffff", 0.1);
+      fogLight = mixHex(skyBottom, "#ffffff", 0.16);
+      fogShadow = mixHex(skyMid, skyTop, 0.32);
+      mistColor = mixHex(skyBottom, "#f8fcff", 0.08);
+      celestialAlpha = 0.12;
+      starAlpha = 0;
+      overcast = 0.18;
+      haze = 0.46;
+      fogDensity = 0.92;
+      precipitation = 0.08;
+      wind = 0.16;
+      turbulence = 0.12;
+      cloudCeiling = 0.28;
+      cloudAlpha = 0.18;
+      frontCloudAlpha = 0.02;
+      mistAlpha = 0.46;
+      frontMistAlpha = 0.68;
+      windowOpacity = 0.18;
+      glassBlur = 0.7;
+      frostOpacity = 0.24;
+      anchorFarColor = mixHex(skyTop, "#1b232b", 0.34);
+      anchorNearColor = mixHex(skyMid, "#263038", 0.42);
+      anchorRimColor = rgba(withLight(skyBottom, 0.04), 0.12);
+      terrainMistColor = rgba(withLight(skyBottom, 0.12), 0.36);
+      surfaceLight = mixHex("#ffffff", skyBottom, 0.22);
+      surfaceMid = mixHex(skyBottom, "#c9d4d8", 0.3);
+      surfaceShadow = mixHex(skyTop, "#394953", 0.58);
+      horizonLift = 0.38;
+      anchorAlpha = 0.12;
+      relightAlpha = 0.08;
+      occlusionStrength = 0.14;
+      contactHazeAlpha = 0.14;
+      wetSheenAlpha = 0.04;
+      fogCreepAlpha = 0.22;
+      condensationAlpha = 0.14;
+      distortionAlpha = 0.06;
+      shadowSweepAlpha = 0.04;
+      thermalShimmerAlpha = 0;
+      horizonGlintAlpha = 0.03;
+      surfaceRelightAlpha = 0.08;
+      break;
+    case "clear":
+    default:
+      if (phase === "day") {
+        celestialAlpha = 0.88;
+      } else if (phase === "dawn" || phase === "dusk") {
+        celestialAlpha = 0.6;
+      } else {
+        celestialAlpha = 0.34;
+      }
+      anchorFarColor = mixHex(skyTop, "#10161d", 0.46);
+      anchorNearColor = mixHex(skyMid, "#17222d", 0.52);
+      anchorRimColor = rgba(withLight(base.horizon, 0.24), 0.34);
+      terrainMistColor = rgba(withLight(base.skyBottom, 0.12), 0.2);
+      surfaceLight = withLight(base.horizon, phase === "day" ? 0.22 : 0.18);
+      surfaceMid = mixHex(base.skyBottom, base.horizon, phase === "night" ? 0.18 : 0.3);
+      surfaceShadow = mixHex(base.skyTop, "#0b1118", 0.64);
+      horizonLift = phase === "day" ? 0.12 : phase === "dawn" || phase === "dusk" ? 0.2 : 0.1;
+      anchorAlpha = phase === "night" ? 0.24 : 0.18;
+      relightAlpha = 0.12;
+      occlusionStrength = 0.14;
+      contactHazeAlpha = phase === "night" ? 0.04 : 0.06;
+      wetSheenAlpha = phase === "night" ? 0.04 : 0.12;
+      fogCreepAlpha = phase === "night" ? 0.02 : 0.04;
+      horizonGlintAlpha = phase === "night" ? 0.05 : phase === "day" ? 0.18 : 0.26;
+      thermalShimmerAlpha = phase === "day" ? 0.12 : phase === "dawn" || phase === "dusk" ? 0.08 : 0.02;
+      surfaceRelightAlpha = 0.08;
+      break;
+  }
+  const atmosphereScale = clamp(0.78 + intensity * 0.26, 0.72, 1.12);
+  const detailScale = clamp(0.84 + intensity * 0.24, 0.8, 1.16);
+  return {
+    phase,
+    isNight,
+    skyTop,
+    skyMid,
+    skyBottom,
+    horizonGlow,
+    vignette,
+    sunColor: base.sun,
+    moonColor: base.moon,
+    celestialGlow: rgba(withLight(base.sun, isNight ? 0.12 : 0.08), isNight ? 0.32 : 0.52),
+    celestialAlpha: celestialAlpha * atmosphereScale,
+    starColor: withLight(base.moon, 0.08),
+    starAlpha: starAlpha * atmosphereScale,
+    cloudLight,
+    cloudMid,
+    cloudShadow,
+    cloudAccent,
+    fogLight,
+    fogShadow,
+    mistColor,
+    rainColor,
+    snowColor,
+    lightningColor,
+    lightningGlow,
+    glassTint,
+    glassGlow,
+    anchorFarColor,
+    anchorNearColor,
+    anchorRimColor,
+    terrainMistColor,
+    surfaceLight,
+    surfaceMid,
+    surfaceShadow,
+    overcast: clamp(overcast * detailScale, 0, 1),
+    haze: clamp(haze * atmosphereScale, 0, 1),
+    fogDensity: clamp(fogDensity * detailScale, 0, 1),
+    precipitation: clamp(precipitation * detailScale, 0, 1.2),
+    wind: clamp(wind * (0.82 + intensity * 0.26), 0.08, 1.2),
+    turbulence: clamp(turbulence * detailScale, 0.08, 1.2),
+    cloudCeiling: clamp(cloudCeiling, 0.1, 1),
+    cloudAlpha: clamp(cloudAlpha * detailScale, 0, 1.2),
+    frontCloudAlpha: clamp(frontCloudAlpha * detailScale, 0, 1.1),
+    mistAlpha: clamp(mistAlpha * detailScale, 0, 1),
+    frontMistAlpha: clamp(frontMistAlpha * detailScale, 0, 1),
+    curtainAlpha: clamp(curtainAlpha * detailScale, 0, 1),
+    distantPrecipAlpha: clamp(distantPrecipAlpha * detailScale, 0, 1),
+    nearPrecipAlpha: clamp(nearPrecipAlpha * detailScale, 0, 1.2),
+    windowOpacity: clamp(windowOpacity * detailScale, 0, 1),
+    glassBlur,
+    frostOpacity: clamp(frostOpacity * detailScale, 0, 1),
+    horizonLift: clamp(horizonLift * atmosphereScale, 0.06, 0.44),
+    anchorAlpha: clamp(anchorAlpha * detailScale, 0.08, 0.5),
+    relightAlpha: clamp(relightAlpha * detailScale, 0.06, 0.6),
+    occlusionStrength: clamp(occlusionStrength * detailScale, 0.08, 0.7),
+    contactHazeAlpha: clamp(contactHazeAlpha * detailScale, 0, 0.72),
+    wetSheenAlpha: clamp(wetSheenAlpha * detailScale, 0, 0.8),
+    impactAlpha: clamp(impactAlpha * detailScale, 0, 0.9),
+    runoffAlpha: clamp(runoffAlpha * detailScale, 0, 0.9),
+    accumulationAlpha: clamp(accumulationAlpha * detailScale, 0, 0.9),
+    fogCreepAlpha: clamp(fogCreepAlpha * detailScale, 0, 0.9),
+    condensationAlpha: clamp(condensationAlpha * detailScale, 0, 0.9),
+    distortionAlpha: clamp(distortionAlpha * detailScale, 0, 0.8),
+    shadowSweepAlpha: clamp(shadowSweepAlpha * detailScale, 0, 0.6),
+    thermalShimmerAlpha: clamp(thermalShimmerAlpha * atmosphereScale, 0, 0.36),
+    horizonGlintAlpha: clamp(horizonGlintAlpha * atmosphereScale, 0, 0.5),
+    surfaceRelightAlpha: clamp(surfaceRelightAlpha * detailScale, 0, 0.7)
+  };
+}
+function createSpritePalette(profile, useAccent = false) {
+  const overcastMix = clamp(profile.overcast * 0.65 + profile.haze * 0.15, 0, 0.75);
+  const primary = mixHex(profile.cloudMid, profile.cloudShadow, overcastMix * 0.16);
+  const secondary = mixHex(primary, profile.cloudShadow, 0.25 + overcastMix * 0.16);
+  return {
+    primary,
+    secondary,
+    shadow: profile.cloudShadow,
+    highlight: mixHex(profile.cloudLight, profile.cloudMid, 0.18 + overcastMix * 0.74),
+    accent: mixHex(useAccent ? profile.cloudAccent : profile.cloudLight, profile.cloudMid, 0.22 + overcastMix * 0.58),
+    glow: rgba(mixHex(profile.cloudAccent, profile.cloudMid, 0.36 + overcastMix * 0.34), 0.18 - overcastMix * 0.08)
+  };
+}
+function buildCloudPalette(profile, kind) {
+  if (kind === "cloud-shelf" || kind === "cloud-anvil") {
+    return {
+      primary: mixHex(profile.cloudMid, profile.cloudShadow, 0.16),
+      secondary: profile.cloudMid,
+      shadow: withShade(profile.cloudShadow, 0.06),
+      highlight: mixHex(profile.cloudLight, profile.cloudMid, 0.54),
+      accent: mixHex(profile.cloudAccent, profile.cloudMid, 0.52),
+      glow: rgba(profile.cloudAccent, 0.14)
+    };
+  }
+  if (kind === "fog-wisp") {
+    return {
+      primary: profile.fogLight,
+      secondary: profile.mistColor,
+      shadow: profile.fogShadow,
+      highlight: withLight(profile.fogLight, 0.12),
+      accent: withLight(profile.mistColor, 0.14),
+      glow: rgba(profile.fogLight, 0.28)
+    };
+  }
+  return createSpritePalette(profile);
+}
+function buildRainPalette(profile) {
+  return {
+    primary: profile.rainColor,
+    secondary: profile.rainColor,
+    shadow: rgba(profile.rainColor, 0.08),
+    highlight: withLight(profile.rainColor, 0.18),
+    accent: withLight(profile.rainColor, 0.3),
+    glow: rgba(profile.rainColor, 0.34)
+  };
+}
+function buildSnowPalette(profile) {
+  return {
+    primary: profile.snowColor,
+    secondary: withLight(profile.snowColor, 0.08),
+    shadow: rgba(profile.snowColor, 0.12),
+    highlight: withLight(profile.snowColor, 0.06),
+    accent: withLight(profile.snowColor, 0.18),
+    glow: rgba(profile.snowColor, 0.16)
+  };
+}
+function buildGlassPalette(profile) {
+  return {
+    primary: profile.glassTint,
+    secondary: profile.glassTint,
+    shadow: rgba(withShade("#55718f", 0.3), 0.12),
+    highlight: "#ffffff",
+    accent: rgba("#d8e8ff", 0.76),
+    glow: profile.glassGlow
+  };
+}
+function buildLightningPalette(profile) {
+  return {
+    primary: profile.lightningColor,
+    secondary: profile.lightningColor,
+    shadow: rgba(profile.lightningGlow, 0.12),
+    highlight: "#ffffff",
+    accent: profile.lightningGlow,
+    glow: rgba(profile.lightningGlow, 0.55)
+  };
+}
+function buildAnchorPalette(profile, depth) {
+  const primary = mixHex(profile.anchorNearColor, profile.anchorFarColor, depth);
+  const secondary = mixHex(primary, profile.anchorFarColor, 0.4);
+  return {
+    primary,
+    secondary,
+    shadow: mixHex(primary, "#06090d", 0.5),
+    highlight: profile.anchorRimColor,
+    accent: mixHex(profile.anchorRimColor, profile.terrainMistColor, 0.35),
+    glow: profile.terrainMistColor
+  };
+}
+function buildCurtainPalette(profile, condition) {
+  const precipitationBase = condition === "snow" ? profile.snowColor : profile.rainColor;
+  return {
+    primary: rgba(precipitationBase, condition === "snow" ? 0.24 : 0.18),
+    secondary: rgba(precipitationBase, condition === "snow" ? 0.18 : 0.14),
+    shadow: rgba(precipitationBase, 0.04),
+    highlight: rgba(withLight(precipitationBase, 0.16), 0.22),
+    accent: rgba(withLight(precipitationBase, 0.24), 0.18),
+    glow: rgba(precipitationBase, condition === "snow" ? 0.18 : 0.14)
+  };
+}
+function buildScudPalette(profile) {
+  return {
+    primary: mixHex(profile.cloudShadow, profile.cloudMid, 0.18),
+    secondary: mixHex(profile.cloudShadow, profile.cloudMid, 0.28),
+    shadow: withShade(profile.cloudShadow, 0.08),
+    highlight: mixHex(profile.cloudLight, "#dbe8f7", 0.12),
+    accent: mixHex(profile.cloudAccent, profile.cloudMid, 0.3),
+    glow: rgba(profile.cloudAccent, 0.18)
+  };
+}
+function buildInteractionPalette(profile, variant) {
+  switch (variant) {
+    case "impact":
+      return {
+        primary: rgba(profile.rainColor, 0.28),
+        secondary: rgba(profile.surfaceLight, 0.16),
+        shadow: rgba(profile.surfaceShadow, 0.06),
+        highlight: rgba(withLight(profile.rainColor, 0.2), 0.34),
+        accent: rgba(withLight(profile.rainColor, 0.34), 0.4),
+        glow: rgba(profile.rainColor, 0.3)
+      };
+    case "runoff":
+      return {
+        primary: rgba(profile.surfaceMid, 0.26),
+        secondary: rgba(profile.rainColor, 0.18),
+        shadow: rgba(profile.surfaceShadow, 0.08),
+        highlight: rgba(withLight(profile.surfaceLight, 0.14), 0.3),
+        accent: rgba(withLight(profile.rainColor, 0.26), 0.3),
+        glow: rgba(profile.surfaceLight, 0.26)
+      };
+    case "accumulation":
+      return {
+        primary: rgba(profile.snowColor, 0.44),
+        secondary: rgba(profile.surfaceMid, 0.3),
+        shadow: rgba(profile.surfaceShadow, 0.12),
+        highlight: rgba(withLight(profile.snowColor, 0.12), 0.42),
+        accent: rgba(withLight(profile.surfaceLight, 0.16), 0.32),
+        glow: rgba(profile.snowColor, 0.26)
+      };
+    case "condensation":
+      return {
+        primary: profile.glassTint,
+        secondary: rgba(profile.mistColor, 0.18),
+        shadow: rgba(profile.surfaceShadow, 0.06),
+        highlight: rgba(withLight(profile.fogLight, 0.12), 0.34),
+        accent: rgba(withLight(profile.surfaceLight, 0.18), 0.26),
+        glow: profile.glassGlow
+      };
+    case "fog-creep":
+      return {
+        primary: rgba(profile.fogLight, 0.28),
+        secondary: rgba(profile.mistColor, 0.2),
+        shadow: rgba(profile.surfaceShadow, 0.08),
+        highlight: rgba(withLight(profile.fogLight, 0.12), 0.32),
+        accent: rgba(withLight(profile.surfaceLight, 0.14), 0.22),
+        glow: rgba(profile.fogLight, 0.24)
+      };
+    case "contact":
+    default:
+      return {
+        primary: rgba(profile.surfaceMid, 0.34),
+        secondary: rgba(profile.surfaceMid, 0.24),
+        shadow: rgba(profile.surfaceShadow, 0.12),
+        highlight: rgba(withLight(profile.surfaceLight, 0.1), 0.32),
+        accent: rgba(withLight(profile.surfaceLight, 0.18), 0.28),
+        glow: rgba(profile.surfaceLight, 0.22)
+      };
+  }
+}
+function buildCelestialPosition(phase, width, height) {
+  switch (phase) {
+    case "dawn":
+      return { x: width * 0.22, y: height * 0.28, radius: Math.min(width, height) * 0.08 };
+    case "dusk":
+      return { x: width * 0.76, y: height * 0.32, radius: Math.min(width, height) * 0.082 };
+    case "night":
+      return { x: width * 0.74, y: height * 0.2, radius: Math.min(width, height) * 0.054 };
+    case "day":
+    default:
+      return { x: width * 0.68, y: height * 0.22, radius: Math.min(width, height) * 0.092 };
+  }
+}
+function buildSceneSignature(kind, state, prefs, phase, intensity) {
+  return [
+    kind,
+    state.condition,
+    state.palette,
+    phase,
+    prefs.qualityMode,
+    intensity.toFixed(2),
+    state.date,
+    state.time,
+    state.layer
+  ].join("|");
+}
+function conditionCloudSprites(condition) {
+  switch (condition) {
+    case "cloudy":
+      return ["cloud-stratus", "cloud-bank", "cloud-stratus"];
+    case "rain":
+      return ["cloud-stratus", "cloud-bank", "cloud-stratus", "cloud-stratus"];
+    case "storm":
+      return ["cloud-anvil", "cloud-shelf", "cloud-bank", "cloud-stratus"];
+    case "snow":
+      return ["cloud-stratus", "cloud-bank", "cloud-stratus"];
+    case "fog":
+      return ["fog-wisp", "cloud-stratus", "fog-wisp"];
+    case "clear":
+    default:
+      return ["cloud-wisp", "cloud-bank"];
+  }
+}
+function createStars(rng, profile, budget) {
+  if (!budget.flags.stars || profile.starAlpha <= 0.01)
+    return [];
+  const count = Math.round(budget.stars * (profile.isNight ? 1 : profile.phase === "dusk" || profile.phase === "dawn" ? 0.38 : 0.08));
+  return Array.from({ length: count }, () => ({
+    x: rng(),
+    y: rng() * 0.72,
+    radius: 0.7 + rng() * 1.8,
+    alpha: 0.3 + rng() * 0.7,
+    twinkleSpeed: 0.2 + rng() * 0.9,
+    phase: rng() * Math.PI * 2
+  }));
+}
+function createMotes(rng, profile, budget, kind) {
+  if (!budget.flags.motes || kind !== "back")
+    return [];
+  const weight = profile.phase === "day" && profile.overcast < 0.2 ? 1 : profile.phase === "dawn" || profile.phase === "dusk" ? 0.44 : 0.18;
+  const count = Math.round(budget.motes * weight);
+  return Array.from({ length: count }, () => ({
+    x: rng(),
+    y: 0.12 + rng() * 0.72,
+    radius: 1.6 + rng() * 3.8,
+    alpha: 0.18 + rng() * 0.44,
+    driftX: (rng() - 0.5) * 0.04,
+    driftY: (rng() - 0.5) * 0.05,
+    speed: 0.22 + rng() * 0.45,
+    phase: rng() * Math.PI * 2
+  }));
+}
+function createCloudLayers(rng, condition, profile, budget, kind) {
+  const isFront = kind === "front";
+  const total = condition === "clear" && isFront ? budget.frontCloudSprites > 0 && budget.flags.frontCloudBank ? 1 : 0 : isFront ? budget.frontCloudSprites : budget.cloudSprites;
+  if (total <= 0)
+    return [];
+  const layerCount = Math.max(1, isFront ? Math.min(2, budget.cloudLayers) : budget.cloudLayers);
+  const sprites = conditionCloudSprites(condition);
+  const result = [];
+  for (let layerIndex = 0;layerIndex < layerCount; layerIndex += 1) {
+    const depth = layerCount === 1 ? 0.5 : layerIndex / (layerCount - 1);
+    const perLayer = Math.max(1, Math.round(total / layerCount + depth * (isFront ? 0.5 : 1.2)));
+    for (let itemIndex = 0;itemIndex < perLayer; itemIndex += 1) {
+      const sprite = pick(rng, sprites);
+      const widthScale = sprite === "cloud-anvil" ? 1.9 : sprite === "cloud-shelf" ? 2.1 : sprite === "cloud-stratus" ? 2 : sprite === "cloud-bank" ? 1.45 : 1.18;
+      const baseWidth = condition === "storm" ? isFront ? 420 : 360 : condition === "rain" || condition === "snow" || condition === "cloudy" ? isFront ? 390 : 320 : condition === "fog" ? isFront ? 360 : 300 : isFront ? 340 : 260;
+      const width = baseWidth * widthScale * (0.8 + rng() * 0.9) * (1 + depth * 0.45);
+      const heightRatio = sprite === "cloud-stratus" || sprite === "cloud-shelf" ? 0.34 : sprite === "cloud-anvil" ? 0.62 : 0.42;
+      const yBase = condition === "fog" ? 0.24 + depth * 0.2 : condition === "storm" ? 0.01 + depth * 0.14 : condition === "rain" ? 0.02 + depth * 0.12 : condition === "snow" ? 0.03 + depth * 0.12 : condition === "cloudy" ? 0.04 + depth * 0.14 : 0.04 + depth * 0.22;
+      result.push({
+        sprite,
+        palette: buildCloudPalette(profile, sprite),
+        x: rng() * 1.6 - 0.3,
+        y: yBase + (rng() - 0.5) * (isFront ? 0.05 : 0.08),
+        width,
+        height: width * heightRatio,
+        alpha: (isFront ? profile.frontCloudAlpha : profile.cloudAlpha) * clamp((condition === "rain" || condition === "storm" || condition === "snow" || condition === "cloudy" ? 0.16 : 0.22) + (1 - depth) * 0.14 + rng() * 0.18, 0.08, 0.72),
+        speed: (isFront ? 10 : 6) + rng() * 12 + depth * 8,
+        driftY: 3 + rng() * 12 + depth * 6,
+        phase: rng() * Math.PI * 2,
+        rotation: sprite === "cloud-shelf" ? -3 + rng() * 6 : sprite === "cloud-anvil" ? -2 + rng() * 4 : -1.5 + rng() * 3
+      });
+    }
+  }
+  if (!budget.flags.deepOvercast && !isFront) {
+    return result.slice(0, Math.max(1, Math.round(result.length * 0.65)));
+  }
+  if (condition === "clear") {
+    return result.slice(0, Math.max(1, isFront ? 1 : Math.round(result.length * 0.42)));
+  }
+  return result;
+}
+function createFogWisps(rng, profile, budget, kind) {
+  const count = kind === "front" ? budget.frontMistWisps : budget.fogWisps;
+  const alphaBase = kind === "front" ? profile.frontMistAlpha : profile.mistAlpha;
+  if (count <= 0 || alphaBase <= 0.01)
+    return [];
+  return Array.from({ length: count }, (_, index) => {
+    const layer = index / Math.max(count - 1, 1);
+    const width = (kind === "front" ? 320 : 420) + rng() * (kind === "front" ? 420 : 560);
+    return {
+      sprite: "fog-wisp",
+      palette: buildCloudPalette(profile, "fog-wisp"),
+      x: rng() * 1.4 - 0.2,
+      y: kind === "front" ? 0.54 + layer * 0.18 + rng() * 0.1 : 0.46 + layer * 0.13 + rng() * 0.1,
+      width,
+      height: width * 0.22,
+      alpha: alphaBase * clamp(0.28 + rng() * 0.34, 0.12, 0.72),
+      speed: 4 + rng() * 8 + layer * 4,
+      driftY: 5 + rng() * 10,
+      phase: rng() * Math.PI * 2,
+      rotation: -2 + rng() * 4
+    };
+  });
+}
+function createAnchorLayers(rng, condition, profile, budget) {
+  const count = Math.max(1, budget.anchorBands);
+  const densityScale = condition === "storm" ? 1.08 : condition === "cloudy" || condition === "rain" ? 1 : condition === "snow" ? 0.84 : condition === "fog" ? 0.72 : 0.68;
+  const total = Math.max(1, Math.round(count * densityScale));
+  const anchors = [];
+  for (let index = 0;index < total; index += 1) {
+    const depth = total === 1 ? 0.5 : index / (total - 1);
+    let sprite = depth < 0.22 ? "horizon-ridge" : depth < 0.74 ? "horizon-treeline" : "horizon-ridge";
+    if (budget.flags.horizonPoles && depth > 0.66 && (condition === "clear" || condition === "cloudy" || condition === "rain")) {
+      sprite = index % 2 === 0 ? "horizon-poles" : "horizon-treeline";
+    }
+    const width = sprite === "horizon-poles" ? 1260 + rng() * 260 : sprite === "horizon-treeline" ? 1180 + rng() * 320 : 1220 + rng() * 280;
+    const height = sprite === "horizon-poles" ? 154 + rng() * 44 : sprite === "horizon-treeline" ? 132 + rng() * 44 : 110 + rng() * 38;
+    const blurBase = condition === "fog" ? 14 : condition === "snow" ? 10 : condition === "rain" ? 6 : condition === "storm" ? 4 : 3;
+    anchors.push({
+      sprite,
+      palette: buildAnchorPalette(profile, depth),
+      x: rng() * 0.18 - 0.08,
+      y: 0.67 + depth * 0.12 + (rng() - 0.5) * 0.03,
+      width,
+      height,
+      alpha: profile.anchorAlpha * (condition === "fog" ? 0.42 : condition === "snow" ? 0.58 : condition === "rain" ? 0.84 : condition === "storm" ? 0.92 : 0.76) * (0.42 + depth * 0.36),
+      blur: blurBase + depth * (condition === "fog" ? 10 : condition === "snow" ? 6 : 4),
+      speed: 0.8 + rng() * 2 + depth * 2.2,
+      parallax: 0.015 + depth * 0.03,
+      depth,
+      relight: 0.18 + depth * 0.36
+    });
+  }
+  return anchors.sort((left, right) => left.depth - right.depth);
+}
+function createScudLayers(rng, condition, profile, budget) {
+  const count = condition === "storm" ? Math.max(1, budget.scudLayers) : condition === "rain" && budget.scudLayers > 0 ? Math.max(1, budget.scudLayers - 1) : 0;
+  if (count <= 0)
+    return [];
+  return Array.from({ length: count }, (_, index) => {
+    const depth = count === 1 ? 0.5 : index / (count - 1);
+    const width = 560 + rng() * 480;
+    return {
+      sprite: "storm-scud",
+      palette: buildScudPalette(profile),
+      x: rng() * 1.4 - 0.2,
+      y: (condition === "storm" ? 0.18 : 0.24) + depth * 0.12 + (rng() - 0.5) * 0.04,
+      width,
+      height: width * 0.24,
+      alpha: (condition === "storm" ? 0.34 : 0.18) + depth * 0.12,
+      speed: 8 + rng() * 8 + depth * 4,
+      driftY: 4 + rng() * 10,
+      phase: rng() * Math.PI * 2,
+      rotation: -4 + rng() * 8
+    };
+  });
+}
+function createCurtainTextures(rng, condition, profile, budget) {
+  if (!budget.flags.texturedCurtains)
+    return [];
+  if (condition !== "rain" && condition !== "storm" && condition !== "snow")
+    return [];
+  const count = Math.max(1, budget.curtainTextures);
+  const alphaBase = condition === "snow" ? profile.curtainAlpha * 0.72 : profile.curtainAlpha;
+  return Array.from({ length: count }, (_, index) => {
+    const depth = count === 1 ? 0.5 : index / (count - 1);
+    const width = condition === "snow" ? 90 + rng() * 80 : 80 + rng() * 72;
+    const height = condition === "snow" ? 360 + rng() * 240 : 420 + rng() * 260;
+    return {
+      sprite: "precip-curtain",
+      palette: buildCurtainPalette(profile, condition),
+      x: rng() * 1.2 - 0.1,
+      y: 0.28 + depth * 0.14 + (rng() - 0.5) * 0.06,
+      width,
+      height,
+      alpha: alphaBase * (0.3 + depth * 0.28 + rng() * 0.12),
+      speed: condition === "snow" ? 2.6 + rng() * 4 : 4 + rng() * 7,
+      driftY: 6 + rng() * 12,
+      phase: rng() * Math.PI * 2,
+      rotation: condition === "snow" ? -6 + rng() * 12 : 10 + rng() * 10
+    };
+  });
+}
+function createRainParticles(rng, profile, budget, kind) {
+  if (profile.precipitation <= 0.04)
+    return [];
+  const target = kind === "front" ? budget.rainFront : budget.rainBack;
+  if (target <= 0)
+    return [];
+  const count = Math.round(target * clamp(profile.precipitation, 0.18, 1.15));
+  return Array.from({ length: count }, () => ({
+    x: rng(),
+    offset: rng(),
+    width: kind === "front" ? 3 + rng() * 3.8 : 1.4 + rng() * 1.8,
+    height: kind === "front" ? 42 + rng() * 124 : 20 + rng() * 78,
+    alpha: (kind === "front" ? profile.nearPrecipAlpha : profile.distantPrecipAlpha) * (0.35 + rng() * 0.65),
+    cycle: kind === "front" ? 0.58 + rng() * 0.48 : 0.78 + rng() * 0.68,
+    drift: (0.04 + rng() * 0.08) * (kind === "front" ? 1.6 : 1),
+    sway: rng() * 0.02,
+    phase: rng() * Math.PI * 2
+  }));
+}
+function createSnowParticles(rng, profile, budget, kind) {
+  if (profile.precipitation <= 0.04)
+    return [];
+  const target = kind === "front" ? budget.snowFront : budget.snowBack;
+  if (target <= 0)
+    return [];
+  const count = Math.round(target * clamp(profile.precipitation, 0.22, 1.1));
+  return Array.from({ length: count }, () => ({
+    x: rng(),
+    offset: rng(),
+    size: kind === "front" ? 8 + rng() * 16 : 5 + rng() * 10,
+    alpha: (kind === "front" ? profile.nearPrecipAlpha : profile.distantPrecipAlpha) * (0.4 + rng() * 0.6),
+    cycle: kind === "front" ? 3.2 + rng() * 2.8 : 4.1 + rng() * 4.2,
+    drift: (0.05 + rng() * 0.18) * (kind === "front" ? 1.05 : 0.88),
+    sway: 0.02 + rng() * 0.06,
+    phase: rng() * Math.PI * 2,
+    rotation: rng() * 360
+  }));
+}
+function createCurtains(rng, profile, budget, condition) {
+  if (!budget.flags.distantCurtains || profile.curtainAlpha <= 0.02)
+    return [];
+  const count = condition === "snow" ? Math.max(1, Math.round(budget.snowGusts * clamp(profile.precipitation, 0.25, 1))) : Math.max(1, Math.round(budget.rainCurtains * clamp(profile.precipitation, 0.25, 1)));
+  return Array.from({ length: count }, () => ({
+    x: rng(),
+    width: 0.12 + rng() * 0.2,
+    alpha: profile.curtainAlpha * (0.35 + rng() * 0.5),
+    slant: condition === "snow" ? -0.03 + rng() * 0.06 : 0.08 + rng() * 0.08,
+    speed: 6 + rng() * 12,
+    phase: rng() * Math.PI * 2,
+    blur: condition === "snow" ? 28 + rng() * 24 : 18 + rng() * 18
+  }));
+}
+function createContactBands(rng, condition, profile, budget) {
+  const base = budget.contactBands;
+  const alphaBase = Math.max(profile.wetSheenAlpha, profile.horizonGlintAlpha * 0.88);
+  if (base <= 0 || alphaBase <= 0.01)
+    return [];
+  const conditionScale = condition === "storm" ? 1.16 : condition === "rain" ? 1 : condition === "fog" ? 0.92 : condition === "cloudy" ? 0.8 : condition === "snow" ? 0.66 : 0.52;
+  const count = Math.max(1, Math.round(base * conditionScale));
+  return Array.from({ length: count }, (_, index) => {
+    const depth = count === 1 ? 0.5 : index / (count - 1);
+    const yBase = condition === "storm" ? 0.72 : condition === "rain" ? 0.74 : condition === "snow" ? 0.78 : condition === "fog" ? 0.7 : condition === "cloudy" ? 0.76 : 0.8;
+    const width = 620 + rng() * 780;
+    const alphaScale = condition === "clear" ? profile.horizonGlintAlpha : condition === "cloudy" ? profile.wetSheenAlpha * 0.9 : profile.wetSheenAlpha;
+    return {
+      sprite: "surface-sheen",
+      palette: buildInteractionPalette(profile, "contact"),
+      x: rng() * 0.22 - 0.08,
+      y: yBase + depth * 0.08 + (rng() - 0.5) * 0.03,
+      width,
+      height: 48 + rng() * 92 + depth * 18,
+      alpha: alphaScale * (0.28 + depth * 0.3 + rng() * 0.14),
+      speed: 1.2 + rng() * 3.2 + depth * 1.2,
+      driftY: 1.5 + rng() * 5.5,
+      phase: rng() * Math.PI * 2,
+      rotation: -2 + rng() * 4
+    };
+  });
+}
+function createImpactBursts(rng, profile, budget, condition) {
+  if (condition !== "rain" && condition !== "storm" || profile.impactAlpha <= 0.01 || budget.impactBursts <= 0)
+    return [];
+  const count = Math.max(1, Math.round(budget.impactBursts * clamp(profile.precipitation, 0.2, 1.2) * (condition === "storm" ? 1.22 : 1)));
+  return Array.from({ length: count }, () => {
+    const width = 56 + rng() * 124;
+    return {
+      sprite: "surface-splash",
+      palette: buildInteractionPalette(profile, "impact"),
+      x: rng() * 1.15 - 0.08,
+      y: 0.66 + rng() * 0.28,
+      width,
+      height: width * (0.44 + rng() * 0.22),
+      alpha: profile.impactAlpha * (0.28 + rng() * 0.34),
+      speed: 3.2 + rng() * 8,
+      driftY: 2 + rng() * 10,
+      phase: rng() * Math.PI * 2,
+      rotation: -12 + rng() * 24
+    };
+  });
+}
+function createRunoffSheets(rng, profile, budget, condition) {
+  if (condition !== "rain" && condition !== "storm" || profile.runoffAlpha <= 0.01 || budget.runoffSheets <= 0)
+    return [];
+  const count = Math.max(1, Math.round(budget.runoffSheets * clamp(profile.precipitation, 0.3, 1.2)));
+  return Array.from({ length: count }, (_, index) => {
+    const depth = count === 1 ? 0.5 : index / (count - 1);
+    const width = 72 + rng() * 112;
+    return {
+      sprite: "surface-runoff",
+      palette: buildInteractionPalette(profile, "runoff"),
+      x: rng() * 1.1 - 0.06,
+      y: 0.46 + depth * 0.16 + rng() * 0.08,
+      width,
+      height: 220 + rng() * 320,
+      alpha: profile.runoffAlpha * (0.26 + depth * 0.26 + rng() * 0.1),
+      speed: 2.2 + rng() * 5.6 + depth * 1.8,
+      driftY: 6 + rng() * 14,
+      phase: rng() * Math.PI * 2,
+      rotation: condition === "storm" ? 14 + rng() * 18 : 8 + rng() * 12
+    };
+  });
+}
+function createAccumulationBands(rng, profile, budget, condition) {
+  if (condition !== "snow" || profile.accumulationAlpha <= 0.01 || budget.accumulationBands <= 0)
+    return [];
+  const count = Math.max(1, budget.accumulationBands);
+  return Array.from({ length: count }, (_, index) => {
+    const depth = count === 1 ? 0.5 : index / (count - 1);
+    const width = 980 + rng() * 420;
+    return {
+      sprite: "surface-accumulation",
+      palette: buildInteractionPalette(profile, "accumulation"),
+      x: rng() * 0.14 - 0.08,
+      y: 0.78 + depth * 0.07 + rng() * 0.02,
+      width,
+      height: 64 + rng() * 76,
+      alpha: profile.accumulationAlpha * (0.34 + depth * 0.28 + rng() * 0.12),
+      speed: 0.8 + rng() * 1.8,
+      driftY: 1 + rng() * 4,
+      phase: rng() * Math.PI * 2,
+      rotation: -1.4 + rng() * 2.8
+    };
+  });
+}
+function createFogCreepLayers(rng, condition, profile, budget) {
+  if (profile.fogCreepAlpha <= 0.01 || budget.fogCreepBands <= 0)
+    return [];
+  const conditionScale = condition === "fog" ? 1.1 : condition === "snow" ? 0.86 : condition === "rain" || condition === "storm" ? 0.72 : condition === "cloudy" ? 0.62 : 0.42;
+  const count = Math.max(1, Math.round(budget.fogCreepBands * conditionScale));
+  return Array.from({ length: count }, (_, index) => {
+    const depth = count === 1 ? 0.5 : index / (count - 1);
+    const width = 900 + rng() * 520;
+    return {
+      sprite: "fog-creep",
+      palette: buildInteractionPalette(profile, "fog-creep"),
+      x: rng() * 0.2 - 0.08,
+      y: 0.7 + depth * 0.1 + rng() * 0.04,
+      width,
+      height: 88 + rng() * 140,
+      alpha: profile.fogCreepAlpha * (0.24 + depth * 0.3 + rng() * 0.16),
+      speed: 0.8 + rng() * 2.4 + depth,
+      driftY: 2 + rng() * 8,
+      phase: rng() * Math.PI * 2,
+      rotation: -2 + rng() * 4
+    };
+  });
+}
+function createCondensationBlooms(rng, profile, budget, condition) {
+  if (!budget.flags.glassOverlay || condition !== "rain" && condition !== "storm" && condition !== "snow" && condition !== "fog" || profile.condensationAlpha <= 0.01 || budget.condensationBlooms <= 0) {
+    return [];
+  }
+  const count = Math.max(1, Math.round(budget.condensationBlooms * clamp(profile.windowOpacity, 0.3, 1)));
+  return Array.from({ length: count }, () => {
+    const edgeWeightedX = rng() > 0.55 ? rng() * 0.22 : 0.68 + rng() * 0.28;
+    const width = 72 + rng() * 210;
+    return {
+      sprite: "condensation-bloom",
+      palette: buildInteractionPalette(profile, "condensation"),
+      x: rng() > 0.28 ? edgeWeightedX : 0.18 + rng() * 0.5,
+      y: rng() * 0.86,
+      width,
+      height: width * (0.72 + rng() * 0.28),
+      alpha: profile.condensationAlpha * (0.24 + rng() * 0.34),
+      speed: 0.3 + rng() * 1.6,
+      driftY: 1.5 + rng() * 7,
+      phase: rng() * Math.PI * 2,
+      rotation: -20 + rng() * 40
+    };
+  });
+}
+function createGlassParticles(rng, profile, budget, condition) {
+  if (!budget.flags.glassOverlay || profile.windowOpacity <= 0.02) {
+    return { beads: [], rivulets: [] };
+  }
+  const conditionScale = condition === "storm" ? 1.16 : condition === "rain" ? 1 : condition === "snow" ? 0.7 : condition === "fog" ? 0.56 : 0;
+  const moistureScale = clamp(profile.windowOpacity + profile.condensationAlpha * 0.5, 0.2, 1.2);
+  const beadCount = budget.flags.glassDroplets ? Math.round(budget.glassBeads * moistureScale * conditionScale) : 0;
+  const rivuletCount = budget.flags.glassDroplets ? Math.round(budget.glassRivulets * moistureScale * conditionScale) : 0;
+  const condensationScale = condition === "snow" || condition === "fog" ? 0.55 : 1;
+  return {
+    beads: Array.from({ length: beadCount }, () => ({
+      x: rng(),
+      y: rng(),
+      width: 10 + rng() * 24,
+      height: 12 + rng() * 28,
+      alpha: profile.windowOpacity * condensationScale * (0.36 + rng() * 0.54),
+      speed: condition === "fog" ? 0.02 + rng() * 0.04 : 0.06 + rng() * 0.12,
+      drift: (rng() - 0.5) * 0.015,
+      phase: rng() * Math.PI * 2
+    })),
+    rivulets: Array.from({ length: rivuletCount }, () => ({
+      x: rng(),
+      y: rng() * 0.35,
+      width: 8 + rng() * 10,
+      height: 120 + rng() * 260,
+      alpha: profile.windowOpacity * (0.3 + rng() * 0.5),
+      speed: condition === "snow" || condition === "fog" ? 0.03 + rng() * 0.04 : 0.08 + rng() * 0.1,
+      drift: (rng() - 0.5) * 0.02,
+      phase: rng() * Math.PI * 2
+    }))
+  };
+}
+function buildComposition(kind, state, prefs) {
+  const effectiveIntensity = clamp(state.intensity * prefs.intensity, 0.2, 1.5);
+  const profile = buildSceneProfile(state, effectiveIntensity);
+  const budget = getQualityBudget(prefs.qualityMode);
+  const signature = buildSceneSignature(kind, state, prefs, profile.phase, effectiveIntensity);
+  const rng = createRng(hashString(signature));
+  const anchors = kind === "back" ? createAnchorLayers(rng, state.condition, profile, budget) : [];
+  const clouds = kind === "back" ? createCloudLayers(rng, state.condition, profile, budget, "back") : [];
+  const scud = kind === "back" ? createScudLayers(rng, state.condition, profile, budget) : [];
+  const frontClouds = kind === "front" && budget.flags.frontCloudBank ? createCloudLayers(rng, state.condition, profile, budget, "front") : [];
+  const fogWisps = kind === "back" ? createFogWisps(rng, profile, budget, "back") : [];
+  const frontMist = kind === "front" ? createFogWisps(rng, profile, budget, "front") : [];
+  const rain = state.condition === "rain" || state.condition === "storm" ? createRainParticles(rng, profile, budget, kind) : [];
+  const snow = state.condition === "snow" ? createSnowParticles(rng, profile, budget, kind) : [];
+  const curtains = kind === "back" ? createCurtains(rng, profile, budget, state.condition) : [];
+  const curtainTextures = kind === "back" ? createCurtainTextures(rng, state.condition, profile, budget) : [];
+  const contactBands = kind === "back" ? createContactBands(rng, state.condition, profile, budget) : [];
+  const impactBursts = kind === "back" ? createImpactBursts(rng, profile, budget, state.condition) : [];
+  const runoffSheets = kind === "back" ? createRunoffSheets(rng, profile, budget, state.condition) : [];
+  const accumulationBands = kind === "back" ? createAccumulationBands(rng, profile, budget, state.condition) : [];
+  const fogCreep = kind === "back" ? createFogCreepLayers(rng, state.condition, profile, budget) : [];
+  const condensationBlooms = kind === "back" ? createCondensationBlooms(rng, profile, budget, state.condition) : [];
+  const glass = kind === "back" ? createGlassParticles(rng, profile, budget, state.condition) : { beads: [], rivulets: [] };
+  return {
+    signature,
+    budget,
+    profile,
+    stars: kind === "back" ? createStars(rng, profile, budget) : [],
+    motes: createMotes(rng, profile, budget, kind),
+    anchors,
+    clouds,
+    scud,
+    frontClouds,
+    fogWisps,
+    frontMist,
+    rain,
+    snow,
+    curtains,
+    curtainTextures,
+    contactBands,
+    impactBursts,
+    runoffSheets,
+    accumulationBands,
+    fogCreep,
+    condensationBlooms,
+    glassBeads: glass.beads,
+    glassRivulets: glass.rivulets
+  };
+}
+function drawSprite(ctx, sprite, palette, x, y, width, height, alpha, rotation, onReady) {
+  const image = requestWeatherSprite(sprite, palette, onReady);
+  if (!image)
+    return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x + width / 2, y + height / 2);
+  ctx.rotate(rotation * Math.PI / 180);
+  ctx.drawImage(image, -width / 2, -height / 2, width, height);
+  ctx.restore();
+}
+
+class CanvasWeatherRenderer {
+  root;
+  kind;
+  canvas;
+  context;
+  glassOverlay;
+  resizeObserver;
+  onAssetReady = () => this.drawOnce();
+  composition = null;
+  prefs = DEFAULT_PREFS;
+  state = makeDefaultWeatherState();
+  reducedMotion = false;
+  visible = false;
+  rafId = null;
+  animationTime = 0;
+  lastFrameAt = null;
+  width = 1;
+  height = 1;
+  dpr = 1;
+  lightningEvents = [];
+  constructor(kind) {
+    this.kind = kind;
+    this.root = document.createElement("div");
+    this.root.className = "weather-fx-root weather-fx-renderer-root";
+    this.root.dataset.kind = kind;
+    this.root.dataset.glass = "none";
+    this.root.setAttribute("aria-hidden", "true");
+    this.canvas = document.createElement("canvas");
+    this.canvas.className = "weather-fx-canvas";
+    this.root.appendChild(this.canvas);
+    this.context = this.canvas.getContext("2d", { alpha: true });
+    if (kind === "back") {
+      this.glassOverlay = document.createElement("div");
+      this.glassOverlay.className = "weather-fx-glass";
+      this.root.appendChild(this.glassOverlay);
+    } else {
+      this.glassOverlay = null;
+    }
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.resizeCanvas()) {
+        this.drawOnce();
+      }
+    });
+    this.resizeObserver.observe(this.root);
+  }
+  setScene(state, prefs, reducedMotion) {
+    this.state = state;
+    this.prefs = prefs;
+    this.reducedMotion = reducedMotion;
+    const nextComposition = buildComposition(this.kind, state, prefs);
+    this.composition = nextComposition;
+    this.lightningEvents = [];
+    this.root.dataset.condition = state.condition;
+    this.root.dataset.palette = state.palette;
+    this.root.dataset.quality = prefs.qualityMode;
+    this.root.classList.toggle("weather-paused", prefs.pauseEffects);
+    this.root.classList.toggle("weather-reduced-motion", reducedMotion);
+    this.syncGlassOverlay();
+    this.drawOnce();
+    this.refreshLoop();
+  }
+  setVisible(visible) {
+    this.visible = visible;
+    this.root.classList.toggle("weather-hidden", !visible);
+    this.root.classList.toggle("weather-visible", visible);
+    this.drawOnce();
+    this.refreshLoop();
+  }
+  refreshLayout() {
+    if (this.resizeCanvas()) {
+      this.drawOnce();
+    }
+  }
+  triggerLightning() {
+    if (!this.visible || this.state.condition !== "storm" || this.reducedMotion || this.prefs.pauseEffects || !this.composition) {
+      return;
+    }
+    const budget = this.composition.budget;
+    const flashCount = budget.flags.multiFlash ? 2 + (Math.random() > 0.65 ? 1 : 0) : 1;
+    for (let flashIndex = 0;flashIndex < flashCount; flashIndex += 1) {
+      const bolts = [];
+      const boltCount = budget.flags.lightningForks ? Math.max(1, budget.lightningForks - flashIndex) : 0;
+      for (let index = 0;index < boltCount; index += 1) {
+        bolts.push({
+          x: 0.12 + Math.random() * 0.72,
+          y: 0.04 + Math.random() * 0.18,
+          width: this.kind === "front" ? 90 + Math.random() * 120 : 70 + Math.random() * 90,
+          height: this.kind === "front" ? 200 + Math.random() * 210 : 140 + Math.random() * 180,
+          alpha: 0.68 + Math.random() * 0.3,
+          rotation: -16 + Math.random() * 32
+        });
+      }
+      this.lightningEvents.push({
+        start: this.animationTime + flashIndex * (0.08 + Math.random() * 0.08),
+        duration: 0.18 + Math.random() * 0.08,
+        flash: (0.58 + Math.random() * 0.34) * budget.lightningGlow,
+        bolts
+      });
+    }
+    this.refreshLoop();
+  }
+  destroy() {
+    this.stopLoop();
+    this.resizeObserver.disconnect();
+    this.root.remove();
+  }
+  syncGlassOverlay() {
+    if (!this.glassOverlay || !this.composition)
+      return;
+    const variant = !this.composition.budget.flags.glassOverlay ? "none" : this.state.condition === "rain" || this.state.condition === "storm" ? "rain" : this.state.condition === "snow" ? "snow" : this.state.condition === "fog" ? "fog" : "none";
+    this.root.dataset.glass = variant;
+    this.root.style.setProperty("--weather-glass-opacity", this.composition.profile.windowOpacity.toFixed(3));
+    this.root.style.setProperty("--weather-glass-blur", this.composition.profile.glassBlur.toFixed(2));
+    this.root.style.setProperty("--weather-glass-tint", this.composition.profile.glassTint);
+    this.root.style.setProperty("--weather-glass-glow", this.composition.profile.glassGlow);
+    this.root.style.setProperty("--weather-frost-opacity", this.composition.profile.frostOpacity.toFixed(3));
+    this.root.style.setProperty("--weather-glass-condensation", this.composition.profile.condensationAlpha.toFixed(3));
+    this.root.style.setProperty("--weather-glass-distortion", this.composition.profile.distortionAlpha.toFixed(3));
+    this.root.style.setProperty("--weather-glass-edge-opacity", clamp(this.composition.profile.condensationAlpha * 0.74 + this.composition.profile.windowOpacity * 0.22, 0, 1).toFixed(3));
+  }
+  resizeCanvas() {
+    if (!this.root.isConnected)
+      return false;
+    const rect = this.root.getBoundingClientRect();
+    const nextWidth = Math.max(1, Math.round(rect.width));
+    const nextHeight = Math.max(1, Math.round(rect.height));
+    const budget = getQualityBudget(this.prefs.qualityMode);
+    const nextDpr = clamp(window.devicePixelRatio * budget.resolutionScale, 1, budget.maxDevicePixelRatio);
+    const pixelWidth = Math.max(1, Math.round(nextWidth * nextDpr));
+    const pixelHeight = Math.max(1, Math.round(nextHeight * nextDpr));
+    if (this.width === nextWidth && this.height === nextHeight && this.dpr === nextDpr)
+      return false;
+    this.width = nextWidth;
+    this.height = nextHeight;
+    this.dpr = nextDpr;
+    this.canvas.width = pixelWidth;
+    this.canvas.height = pixelHeight;
+    this.canvas.style.width = `${nextWidth}px`;
+    this.canvas.style.height = `${nextHeight}px`;
+    return true;
+  }
+  refreshLoop() {
+    const shouldRun = this.visible && this.root.isConnected && !this.reducedMotion && !this.prefs.pauseEffects && !!this.composition;
+    if (shouldRun) {
+      if (this.rafId === null) {
+        this.lastFrameAt = null;
+        this.rafId = window.requestAnimationFrame(this.step);
+      }
+      return;
+    }
+    this.stopLoop();
+  }
+  stopLoop() {
+    if (this.rafId !== null) {
+      window.cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    this.lastFrameAt = null;
+  }
+  step = (now) => {
+    this.rafId = null;
+    if (!this.composition || !this.visible || !this.root.isConnected || this.reducedMotion || this.prefs.pauseEffects) {
+      this.stopLoop();
+      return;
+    }
+    if (this.lastFrameAt === null) {
+      this.lastFrameAt = now;
+    }
+    const delta = Math.min(0.06, Math.max(0, (now - this.lastFrameAt) / 1000));
+    this.lastFrameAt = now;
+    this.animationTime += delta;
+    this.render(this.animationTime);
+    this.refreshLoop();
+  };
+  drawOnce() {
+    if (!this.composition)
+      return;
+    this.resizeCanvas();
+    this.render(this.animationTime);
+  }
+  clearCanvas() {
+    this.context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.context.clearRect(0, 0, this.width, this.height);
+  }
+  render(time) {
+    if (!this.composition || this.width <= 0 || this.height <= 0)
+      return;
+    this.clearCanvas();
+    if (this.kind === "back") {
+      this.drawBack(time);
+    } else {
+      this.drawFront(time);
+    }
+  }
+  drawBack(time) {
+    if (!this.composition)
+      return;
+    const ctx = this.context;
+    const {
+      profile,
+      stars,
+      motes,
+      anchors,
+      clouds,
+      scud,
+      fogWisps,
+      curtains,
+      curtainTextures,
+      condensationBlooms,
+      rain,
+      snow,
+      glassBeads,
+      glassRivulets
+    } = this.composition;
+    const lightning = this.resolveLightningState(time);
+    const sky = ctx.createLinearGradient(0, 0, 0, this.height);
+    sky.addColorStop(0, profile.skyTop);
+    sky.addColorStop(0.52, profile.skyMid);
+    sky.addColorStop(1, profile.skyBottom);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, this.width, this.height);
+    const skyGlow = ctx.createRadialGradient(this.width * 0.5, this.height * 0.08, 0, this.width * 0.5, this.height * 0.08, this.width);
+    skyGlow.addColorStop(0, rgba(profile.cloudAccent, 0.08 + profile.haze * 0.18));
+    skyGlow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = skyGlow;
+    ctx.fillRect(0, 0, this.width, this.height);
+    this.drawCelestialOrb(profile);
+    this.drawStars(time, stars, profile);
+    this.drawAtmosphericDepth(profile, lightning.flash);
+    this.drawAnchorLayers(time, anchors, profile, lightning.flash);
+    this.drawCloudLayers(time, clouds);
+    this.drawCloudLayers(time, scud);
+    this.drawCurtainTextures(time, curtainTextures);
+    this.drawCurtains(time, curtains, profile);
+    this.drawFogWisps(time, fogWisps);
+    this.drawRain(time, rain, profile, "back");
+    this.drawSnow(time, snow, profile, "back");
+    this.drawMotes(time, motes, profile);
+    this.drawHorizon(profile, lightning.flash);
+    this.drawGlass(profile, time, glassRivulets, glassBeads, condensationBlooms, lightning.flash);
+    this.drawVignette(profile);
+    this.drawLightningState(profile, lightning);
+  }
+  drawFront(time) {
+    if (!this.composition)
+      return;
+    const ctx = this.context;
+    const { profile, frontClouds, frontMist, rain, snow } = this.composition;
+    const lightning = this.resolveLightningState(time);
+    if (profile.frontCloudAlpha > 0.02) {
+      const topShadow = ctx.createLinearGradient(0, 0, 0, this.height * 0.5);
+      topShadow.addColorStop(0, rgba(profile.cloudShadow, 0.26 + profile.frontCloudAlpha * 0.34));
+      topShadow.addColorStop(0.34, rgba(profile.cloudMid, profile.frontCloudAlpha * 0.18));
+      topShadow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = topShadow;
+      ctx.fillRect(0, 0, this.width, this.height * 0.54);
+    }
+    this.drawCloudLayers(time, frontClouds);
+    this.drawFogWisps(time, frontMist);
+    this.drawRain(time, rain, profile, "front");
+    this.drawSnow(time, snow, profile, "front");
+    this.drawLightningState(profile, lightning);
+  }
+  drawCelestialOrb(profile) {
+    if (profile.celestialAlpha <= 0.02)
+      return;
+    const ctx = this.context;
+    const celestial = buildCelestialPosition(profile.phase, this.width, this.height);
+    const coreColor = profile.isNight ? profile.moonColor : profile.sunColor;
+    const glow = ctx.createRadialGradient(celestial.x, celestial.y, celestial.radius * 0.24, celestial.x, celestial.y, celestial.radius * 4.4);
+    glow.addColorStop(0, rgba(coreColor, profile.celestialAlpha * 0.95));
+    glow.addColorStop(0.4, profile.celestialGlow);
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(celestial.x, celestial.y, celestial.radius * 4.4, 0, Math.PI * 2);
+    ctx.fill();
+    const core = ctx.createRadialGradient(celestial.x, celestial.y, celestial.radius * 0.12, celestial.x, celestial.y, celestial.radius);
+    core.addColorStop(0, rgba("#ffffff", profile.isNight ? 0.94 : 0.98));
+    core.addColorStop(0.4, rgba(coreColor, profile.celestialAlpha * 0.9));
+    core.addColorStop(1, rgba(coreColor, profile.celestialAlpha * 0.1));
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(celestial.x, celestial.y, celestial.radius, 0, Math.PI * 2);
+    ctx.fill();
+    if (profile.horizonGlintAlpha > 0.02) {
+      const flare = ctx.createLinearGradient(celestial.x - this.width * 0.22, 0, celestial.x + this.width * 0.22, 0);
+      flare.addColorStop(0, "rgba(255,255,255,0)");
+      flare.addColorStop(0.5, rgba(coreColor, profile.horizonGlintAlpha * 0.22));
+      flare.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.save();
+      ctx.globalAlpha = 0.42;
+      ctx.fillStyle = flare;
+      ctx.fillRect(celestial.x - this.width * 0.22, celestial.y - 2, this.width * 0.44, 4);
+      ctx.restore();
+    }
+  }
+  drawStars(time, stars, profile) {
+    if (stars.length === 0 || profile.starAlpha <= 0.01)
+      return;
+    const ctx = this.context;
+    for (const star of stars) {
+      const twinkle = 0.58 + 0.42 * Math.sin(time * star.twinkleSpeed * 2.3 + star.phase);
+      const alpha = profile.starAlpha * star.alpha * twinkle;
+      if (alpha <= 0.01)
+        continue;
+      const x = star.x * this.width;
+      const y = star.y * this.height;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = profile.starColor;
+      ctx.shadowColor = rgba(profile.starColor, alpha);
+      ctx.shadowBlur = star.radius * 7;
+      ctx.beginPath();
+      ctx.arc(x, y, star.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  drawAtmosphericDepth(profile, lightningFlash) {
+    if (!this.composition)
+      return;
+    const ctx = this.context;
+    const glowPasses = Math.max(1, this.composition.budget.horizonGlowPasses);
+    const shadowPasses = Math.max(1, this.composition.budget.shadowPasses);
+    for (let index = 0;index < glowPasses; index += 1) {
+      const depth = index / glowPasses;
+      const glow = ctx.createRadialGradient(this.width * 0.5, this.height * (1.02 + depth * 0.03), this.width * 0.06, this.width * 0.5, this.height * (0.98 + depth * 0.02), this.width * (0.38 + depth * 0.24));
+      glow.addColorStop(0, rgba(profile.horizonGlow, profile.horizonLift * (0.22 + depth * 0.18) + lightningFlash * 0.08));
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, this.height * 0.45, this.width, this.height * 0.6);
+    }
+    for (let index = 0;index < shadowPasses; index += 1) {
+      const depth = index / shadowPasses;
+      const ceiling = ctx.createLinearGradient(0, 0, 0, this.height * (0.52 + depth * 0.08));
+      ceiling.addColorStop(0, rgba(profile.cloudShadow, 0.18 + profile.overcast * (0.24 + depth * 0.08) + lightningFlash * 0.05));
+      ceiling.addColorStop(0.32, rgba(profile.cloudMid, profile.cloudCeiling * (0.16 + depth * 0.06)));
+      ceiling.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = ceiling;
+      ctx.fillRect(0, 0, this.width, this.height * (0.62 + depth * 0.04));
+    }
+    const horizonMist = ctx.createLinearGradient(0, this.height * 0.5, 0, this.height);
+    horizonMist.addColorStop(0, "rgba(0,0,0,0)");
+    horizonMist.addColorStop(0.58, profile.terrainMistColor);
+    horizonMist.addColorStop(1, rgba(profile.fogLight, 0.1 + profile.haze * 0.12));
+    ctx.fillStyle = horizonMist;
+    ctx.fillRect(0, this.height * 0.48, this.width, this.height * 0.52);
+  }
+  drawAnchorLayers(time, anchors, profile, lightningFlash) {
+    if (!anchors.length)
+      return;
+    const ctx = this.context;
+    for (const anchor of anchors) {
+      const travel = this.width * anchor.parallax;
+      const x = anchor.x * this.width + Math.sin(time * 0.02 + anchor.depth) * travel;
+      const y = anchor.y * this.height;
+      ctx.save();
+      ctx.filter = `blur(${anchor.blur}px)`;
+      drawSprite(ctx, anchor.sprite, anchor.palette, x, y, anchor.width, anchor.height, anchor.alpha, 0, this.onAssetReady);
+      ctx.restore();
+      if (this.composition?.budget.flags.relightAnchors && lightningFlash > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = lightningFlash * profile.relightAlpha * anchor.relight;
+        const relight = ctx.createLinearGradient(0, y, 0, y + anchor.height * 0.6);
+        relight.addColorStop(0, profile.anchorRimColor);
+        relight.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = relight;
+        ctx.fillRect(x, y, anchor.width, anchor.height * 0.56);
+        ctx.restore();
+      }
+    }
+  }
+  drawMotes(time, motes, profile) {
+    if (motes.length === 0)
+      return;
+    const ctx = this.context;
+    for (const mote of motes) {
+      const x = (mote.x + Math.sin(time * mote.speed + mote.phase) * mote.driftX) * this.width;
+      const y = (mote.y + Math.cos(time * mote.speed * 0.7 + mote.phase) * mote.driftY) * this.height;
+      ctx.save();
+      ctx.globalAlpha = mote.alpha * (0.26 + profile.haze * 0.26);
+      ctx.fillStyle = rgba(profile.sunColor, 0.18);
+      ctx.beginPath();
+      ctx.arc(x, y, mote.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  drawThermalShimmer(time, profile) {
+    if (!this.composition || profile.thermalShimmerAlpha <= 0.01 || this.composition.budget.distortionPasses <= 0)
+      return;
+    const ctx = this.context;
+    const passCount = Math.max(1, this.composition.budget.distortionPasses);
+    for (let index = 0;index < passCount; index += 1) {
+      const alpha = profile.thermalShimmerAlpha * (0.18 + index * 0.06);
+      const yBase = this.height * (0.66 + index * 0.03);
+      ctx.save();
+      ctx.strokeStyle = rgba(profile.sunColor, alpha);
+      ctx.lineWidth = 1.1 + index * 0.5;
+      ctx.filter = `blur(${1.2 + index * 0.8}px)`;
+      ctx.beginPath();
+      for (let x = -40;x <= this.width + 40; x += 42) {
+        const wave = Math.sin(x * 0.012 + time * (0.7 + index * 0.14) + index * 0.8) * (3 + index * 1.6);
+        if (x === -40) {
+          ctx.moveTo(x, yBase + wave);
+        } else {
+          ctx.lineTo(x, yBase + wave);
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+  drawSurfaceLayers(time, layers, speedScale = 1) {
+    if (layers.length === 0 || !this.composition)
+      return;
+    for (const layer of layers) {
+      const travel = this.width + layer.width * 0.9;
+      const offset = (layer.x * travel + time * layer.speed * speedScale * (0.08 + this.composition.profile.wind * 0.12)) % travel;
+      const x = offset - layer.width * 0.35;
+      const y = layer.y * this.height + Math.sin(time * 0.1 + layer.phase) * layer.driftY;
+      drawSprite(this.context, layer.sprite, layer.palette, x, y, layer.width, layer.height, layer.alpha, layer.rotation + Math.sin(time * 0.06 + layer.phase) * 0.8, this.onAssetReady);
+    }
+  }
+  drawShadowSweeps(time, profile, lightningFlash) {
+    if (!this.composition || profile.shadowSweepAlpha <= 0.01 || this.composition.budget.shadowSweepPasses <= 0)
+      return;
+    const ctx = this.context;
+    const passes = this.composition.budget.shadowSweepPasses;
+    for (let index = 0;index < passes; index += 1) {
+      const width = this.width * (0.26 + index * 0.08);
+      const x = (time * (18 + index * 6) + index * this.width * 0.22) % (this.width + width * 2) - width;
+      const gradient = ctx.createLinearGradient(x, 0, x + width, 0);
+      gradient.addColorStop(0, "rgba(0,0,0,0)");
+      gradient.addColorStop(0.48, rgba(profile.surfaceShadow, profile.shadowSweepAlpha * (0.18 + index * 0.06)));
+      gradient.addColorStop(0.52, rgba(profile.surfaceLight, (profile.shadowSweepAlpha * 0.06 + lightningFlash * 0.04) * (0.7 + index * 0.1)));
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.save();
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, this.height * 0.08, width, this.height * 0.86);
+      ctx.restore();
+    }
+  }
+  drawWorldInteraction(time, profile, lightningFlash, contactBands, impactBursts, runoffSheets, accumulationBands, fogCreep) {
+    const ctx = this.context;
+    this.drawShadowSweeps(time, profile, lightningFlash);
+    if (profile.contactHazeAlpha > 0.01) {
+      const contactHaze = ctx.createLinearGradient(0, this.height * 0.72, 0, this.height);
+      contactHaze.addColorStop(0, "rgba(0,0,0,0)");
+      contactHaze.addColorStop(0.5, rgba(profile.surfaceLight, profile.contactHazeAlpha * 0.08 + lightningFlash * profile.surfaceRelightAlpha * 0.03));
+      contactHaze.addColorStop(1, rgba(profile.surfaceShadow, profile.contactHazeAlpha * 0.16));
+      ctx.fillStyle = contactHaze;
+      ctx.fillRect(0, this.height * 0.68, this.width, this.height * 0.32);
+    }
+    this.drawSurfaceLayers(time, fogCreep, 0.7);
+    this.drawSurfaceLayers(time, contactBands, 0.84);
+    this.drawSurfaceLayers(time, runoffSheets, 1.16);
+    this.drawSurfaceLayers(time, accumulationBands, 0.46);
+    this.drawSurfaceLayers(time, impactBursts, 1.52);
+    if (profile.wetSheenAlpha > 0.01 || lightningFlash > 0.01) {
+      const wetGlow = ctx.createRadialGradient(this.width * 0.5, this.height * 1.02, this.width * 0.06, this.width * 0.5, this.height * 0.99, this.width * 0.46);
+      wetGlow.addColorStop(0, rgba(profile.surfaceLight, profile.wetSheenAlpha * 0.1 + lightningFlash * profile.surfaceRelightAlpha * 0.08));
+      wetGlow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = wetGlow;
+      ctx.fillRect(0, this.height * 0.78, this.width, this.height * 0.22);
+    }
+  }
+  drawCloudLayers(time, layers) {
+    if (layers.length === 0 || !this.composition)
+      return;
+    for (const layer of layers) {
+      const travel = this.width + layer.width * 1.6;
+      const offset = (layer.x * travel + time * layer.speed * (0.45 + this.composition.profile.wind)) % travel;
+      const x = offset - layer.width * 0.8;
+      const y = layer.y * this.height + Math.sin(time * 0.14 + layer.phase) * layer.driftY;
+      drawSprite(this.context, layer.sprite, layer.palette, x, y, layer.width, layer.height, layer.alpha, layer.rotation + Math.sin(time * 0.05 + layer.phase) * 1.1, this.onAssetReady);
+    }
+  }
+  drawFogWisps(time, wisps) {
+    if (wisps.length === 0 || !this.composition)
+      return;
+    for (const wisp of wisps) {
+      const travel = this.width + wisp.width * 1.3;
+      const offset = (wisp.x * travel + time * wisp.speed * (0.28 + this.composition.profile.wind * 0.5)) % travel;
+      const x = offset - wisp.width * 0.6;
+      const y = wisp.y * this.height + Math.sin(time * 0.12 + wisp.phase) * wisp.driftY;
+      drawSprite(this.context, wisp.sprite, wisp.palette, x, y, wisp.width, wisp.height, wisp.alpha, wisp.rotation, this.onAssetReady);
+    }
+  }
+  drawCurtainTextures(time, textures) {
+    if (textures.length === 0 || !this.composition)
+      return;
+    for (const texture of textures) {
+      const travel = this.width + texture.width * 0.6;
+      const offset = (texture.x * travel + time * texture.speed * (0.16 + this.composition.profile.wind * 0.22)) % travel;
+      const x = offset - texture.width * 0.3;
+      const y = texture.y * this.height + Math.sin(time * 0.08 + texture.phase) * texture.driftY;
+      drawSprite(this.context, texture.sprite, texture.palette, x, y, texture.width, texture.height, texture.alpha, texture.rotation, this.onAssetReady);
+    }
+  }
+  drawCurtains(time, curtains, profile) {
+    if (curtains.length === 0)
+      return;
+    const ctx = this.context;
+    for (const curtain of curtains) {
+      const drift = (curtain.x + time * curtain.speed * 0.005) % 1 * this.width;
+      const width = curtain.width * this.width;
+      ctx.save();
+      ctx.filter = `blur(${curtain.blur}px)`;
+      ctx.globalAlpha = curtain.alpha;
+      const gradient = ctx.createLinearGradient(drift, this.height * 0.18, drift + width * curtain.slant, this.height);
+      if (this.state.condition === "snow") {
+        gradient.addColorStop(0, "rgba(255,255,255,0)");
+        gradient.addColorStop(0.36, rgba(profile.snowColor, 0.18));
+        gradient.addColorStop(1, rgba(profile.snowColor, 0.34));
+      } else {
+        gradient.addColorStop(0, "rgba(255,255,255,0)");
+        gradient.addColorStop(0.24, rgba(profile.rainColor, 0.12));
+        gradient.addColorStop(1, rgba(profile.rainColor, 0.32));
+      }
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(drift, this.height * 0.12);
+      ctx.lineTo(drift + width, this.height * 0.12);
+      ctx.lineTo(drift + width + width * curtain.slant, this.height);
+      ctx.lineTo(drift + width * curtain.slant, this.height);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  drawRain(time, particles, profile, kind) {
+    if (particles.length === 0)
+      return;
+    const palette = buildRainPalette(profile);
+    for (const particle of particles) {
+      const progress = (time / particle.cycle + particle.offset) % 1;
+      const x = (particle.x + progress * particle.drift + Math.sin(time * 2.2 + particle.phase) * particle.sway) * this.width;
+      const y = -particle.height + progress * (this.height + particle.height * 1.4);
+      drawSprite(this.context, "rain-streak", palette, x, y, particle.width, particle.height, particle.alpha * (kind === "front" ? 1 : 0.86), kind === "front" ? 10 : 8, this.onAssetReady);
+    }
+  }
+  drawSnow(time, particles, profile, kind) {
+    if (particles.length === 0)
+      return;
+    const palette = buildSnowPalette(profile);
+    for (const particle of particles) {
+      const progress = (time / particle.cycle + particle.offset) % 1;
+      const x = (particle.x + Math.sin(time * particle.sway + particle.phase) * particle.drift + progress * particle.drift * 0.18) * this.width;
+      const y = -particle.size + progress * (this.height + particle.size * 1.4);
+      const rotation = particle.rotation + time * (kind === "front" ? 46 : 28);
+      drawSprite(this.context, "snow-crystal", palette, x, y, particle.size, particle.size, particle.alpha, rotation, this.onAssetReady);
+    }
+  }
+  drawHorizon(profile, lightningFlash) {
+    const ctx = this.context;
+    const gradient = ctx.createLinearGradient(0, this.height * 0.44, 0, this.height);
+    gradient.addColorStop(0, "rgba(0,0,0,0)");
+    gradient.addColorStop(0.68, rgba(profile.surfaceLight, profile.horizonGlintAlpha * 0.08 + lightningFlash * 0.03));
+    gradient.addColorStop(0.8, rgba(profile.fogLight, 0.08 + lightningFlash * 0.03));
+    gradient.addColorStop(1, rgba(profile.fogLight, 0.18 + lightningFlash * 0.06));
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, this.height * 0.4, this.width, this.height * 0.6);
+    const lowMist = ctx.createRadialGradient(this.width * 0.5, this.height * 1.05, this.width * 0.08, this.width * 0.5, this.height * 1.02, this.width * 0.8);
+    lowMist.addColorStop(0, rgba(profile.fogLight, 0.08 + profile.fogDensity * 0.1));
+    lowMist.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = lowMist;
+    ctx.fillRect(0, this.height * 0.56, this.width, this.height * 0.5);
+    const terrainFade = ctx.createLinearGradient(0, this.height * 0.58, 0, this.height);
+    terrainFade.addColorStop(0, "rgba(0,0,0,0)");
+    terrainFade.addColorStop(0.5, rgba(profile.anchorNearColor, 0.08 + profile.anchorAlpha * 0.16));
+    terrainFade.addColorStop(1, rgba(profile.anchorNearColor, 0.24 + profile.anchorAlpha * 0.14));
+    ctx.fillStyle = terrainFade;
+    ctx.fillRect(0, this.height * 0.58, this.width, this.height * 0.42);
+  }
+  drawVignette(profile) {
+    this.context.fillStyle = profile.vignette;
+    this.context.fillRect(0, 0, this.width, this.height);
+  }
+  drawGlass(profile, time, rivulets, beads, condensationBlooms, lightningFlash) {
+    if (!this.composition?.budget.flags.glassOverlay || this.kind !== "back" || profile.windowOpacity <= 0.02 || !rivulets.length && !beads.length && condensationBlooms.length === 0 && profile.condensationAlpha <= 0.01) {
+      return;
+    }
+    const palette = buildGlassPalette(profile);
+    const ctx = this.context;
+    if (profile.condensationAlpha > 0.01) {
+      const edgePool = ctx.createLinearGradient(0, 0, 0, this.height * 0.22);
+      edgePool.addColorStop(0, rgba(profile.fogLight, profile.condensationAlpha * 0.12));
+      edgePool.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = edgePool;
+      ctx.fillRect(0, 0, this.width, this.height * 0.22);
+      const leftEdge = ctx.createLinearGradient(0, 0, this.width * 0.08, 0);
+      leftEdge.addColorStop(0, rgba(profile.fogLight, profile.condensationAlpha * 0.08));
+      leftEdge.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = leftEdge;
+      ctx.fillRect(0, 0, this.width * 0.1, this.height);
+      const rightEdge = ctx.createLinearGradient(this.width, 0, this.width * 0.92, 0);
+      rightEdge.addColorStop(0, rgba(profile.fogLight, profile.condensationAlpha * 0.08));
+      rightEdge.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = rightEdge;
+      ctx.fillRect(this.width * 0.9, 0, this.width * 0.1, this.height);
+      const bottomPool = ctx.createRadialGradient(this.width * 0.5, this.height * 1.04, this.width * 0.08, this.width * 0.5, this.height * 1.02, this.width * 0.46);
+      bottomPool.addColorStop(0, rgba(profile.fogLight, profile.condensationAlpha * 0.12 + lightningFlash * 0.02));
+      bottomPool.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = bottomPool;
+      ctx.fillRect(0, this.height * 0.78, this.width, this.height * 0.22);
+    }
+    if (condensationBlooms.length > 0) {
+      this.drawSurfaceLayers(time, condensationBlooms, 0.38);
+    }
+    if (this.composition && this.composition.budget.distortionPasses > 0 && profile.distortionAlpha > 0.01) {
+      for (let index = 0;index < this.composition.budget.distortionPasses; index += 1) {
+        const x = (time * (10 + index * 4) + index * this.width * 0.18) % (this.width * 1.4) - this.width * 0.2;
+        const distortion = ctx.createLinearGradient(x, 0, x + this.width * 0.18, 0);
+        distortion.addColorStop(0, "rgba(255,255,255,0)");
+        distortion.addColorStop(0.5, rgba(profile.fogLight, profile.distortionAlpha * (0.04 + index * 0.02)));
+        distortion.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.save();
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = distortion;
+        ctx.fillRect(x, 0, this.width * 0.18, this.height);
+        ctx.restore();
+      }
+    }
+    for (const rivulet of rivulets) {
+      const progress = (time * rivulet.speed + rivulet.phase / (Math.PI * 2)) % 1;
+      const x = (rivulet.x + Math.sin(time * 0.28 + rivulet.phase) * rivulet.drift) * this.width;
+      const y = -rivulet.height * 0.4 + progress * (this.height + rivulet.height * 0.8);
+      drawSprite(ctx, "glass-rivulet", palette, x, y, rivulet.width, rivulet.height, rivulet.alpha, 0, this.onAssetReady);
+    }
+    for (const bead of beads) {
+      const offset = this.state.condition === "fog" ? Math.sin(time * bead.speed + bead.phase) * 0.01 : time * bead.speed;
+      const x = (bead.x + Math.cos(time * 0.2 + bead.phase) * bead.drift) * this.width;
+      const y = (bead.y + offset) * this.height;
+      drawSprite(ctx, "glass-drop", palette, x, y, bead.width, bead.height, bead.alpha, 0, this.onAssetReady);
+    }
+  }
+  resolveLightningState(time) {
+    if (!this.lightningEvents.length)
+      return { flash: 0, bolts: [] };
+    const now = time;
+    this.lightningEvents = this.lightningEvents.filter((event) => event.start + event.duration > now);
+    if (!this.lightningEvents.length)
+      return { flash: 0, bolts: [] };
+    let flash = 0;
+    const bolts = [];
+    for (const event of this.lightningEvents) {
+      if (now < event.start)
+        continue;
+      const progress = clamp((now - event.start) / event.duration, 0, 1);
+      const strength = Math.sin((1 - progress) * Math.PI) * event.flash;
+      flash = Math.max(flash, strength);
+      for (const bolt of event.bolts) {
+        bolts.push({ ...bolt, alpha: bolt.alpha * (1 - progress) });
+      }
+    }
+    return { flash, bolts };
+  }
+  drawLightningState(profile, lightning) {
+    if (lightning.flash <= 0.001 && lightning.bolts.length === 0)
+      return;
+    const palette = buildLightningPalette(profile);
+    const ctx = this.context;
+    ctx.save();
+    ctx.globalAlpha = lightning.flash * (this.kind === "back" ? 0.46 : 0.26);
+    ctx.fillStyle = rgba(profile.lightningGlow, 0.72);
+    ctx.fillRect(0, 0, this.width, this.height);
+    ctx.restore();
+    for (const bolt of lightning.bolts) {
+      drawSprite(ctx, "lightning-fork", palette, bolt.x * this.width, bolt.y * this.height, bolt.width, bolt.height, bolt.alpha, bolt.rotation, this.onAssetReady);
+    }
+  }
+}
+function createWeatherRenderer(kind) {
+  const renderer = new CanvasWeatherRenderer(kind);
+  return {
+    root: renderer.root,
+    destroy: () => renderer.destroy(),
+    refreshLayout: () => renderer.refreshLayout(),
+    setScene: (state, prefs, reducedMotion) => renderer.setScene(state, prefs, reducedMotion),
+    setVisible: (visible) => renderer.setVisible(visible),
+    triggerLightning: () => renderer.triggerLightning()
+  };
+}
+
 // src/ui/settings.ts
 var CONDITIONS = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
 var PALETTES = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
@@ -266,7 +2859,7 @@ function createSettingsUI(sendToBackend) {
   const promptSection = createSection("Prompt integration", "To make the main model emit the hidden weather tag consistently, add the recommended macro to your system prompt or preset, just like simtracker uses {{sim_tracker}}.");
   const effectsSection = createSection("Effects", "Overall ambience, density, and motion.");
   const placementSection = createSection("Placement", "Control whether the weather stays behind the chat, in front, or both.");
-  const motionSection = createSection("Motion", "Fine-tune animation pacing without breaking story sync.");
+  const motionSection = createSection("Motion", "Fine-tune motion budgets and pacing. Higher quality increases scene depth, atmospheric layering, and back-glass detail.");
   const promptRecommended = document.createElement("div");
   promptRecommended.className = "weather-settings-copy-group";
   const promptRecommendedLabel = document.createElement("strong");
@@ -347,6 +2940,9 @@ function createSettingsUI(sendToBackend) {
     sendToBackend({ type: "save_prefs", prefs: { qualityMode: qualitySelect.value } });
   });
   qualityLabel.appendChild(qualitySelect);
+  const qualityHint = document.createElement("p");
+  qualityHint.className = "weather-settings-section-copy";
+  qualityHint.textContent = "Performance and Lite keep the renderer restrained. Standard adds fuller horizon layering and cloud depth, while Cinematic pushes the richest framing, silhouettes, curtains, mist, and back-glass detail.";
   const motionLabel = document.createElement("label");
   motionLabel.className = "weather-settings-label";
   motionLabel.textContent = "Reduced motion";
@@ -375,6 +2971,7 @@ function createSettingsUI(sendToBackend) {
   placementSection.body.appendChild(layerLabel);
   motionSection.body.appendChild(intensityLabel);
   motionSection.body.appendChild(qualityLabel);
+  motionSection.body.appendChild(qualityHint);
   motionSection.body.appendChild(motionLabel);
   motionSection.body.appendChild(pauseLabel);
   const manualCard = document.createElement("section");
@@ -2474,6 +5071,87 @@ var WEATHER_HUD_CSS = `
     font-size: 24px;
   }
 }
+
+.weather-fx-renderer-root {
+  overflow: hidden;
+}
+
+.weather-fx-renderer-root .weather-fx-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.weather-fx-renderer-root[data-kind="front"] .weather-fx-canvas {
+  mix-blend-mode: screen;
+  opacity: 0.98;
+}
+
+.weather-fx-renderer-root[data-kind="front"][data-condition="snow"] .weather-fx-canvas,
+.weather-fx-renderer-root[data-kind="front"][data-condition="fog"] .weather-fx-canvas {
+  mix-blend-mode: normal;
+  opacity: 0.88;
+}
+
+.weather-fx-glass {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: var(--weather-glass-opacity, 0);
+  transition: opacity 280ms ease;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-edge-opacity, 0) * 0.08)), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, calc(0.01 + var(--weather-glass-condensation, 0) * 0.04)), transparent 10%, transparent 70%, rgba(255, 255, 255, calc(0.02 + var(--weather-glass-edge-opacity, 0) * 0.05)) 100%),
+    linear-gradient(90deg, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.05)), transparent 10%, transparent 90%, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.05))),
+    radial-gradient(circle at 84% 16%, var(--weather-glass-glow, rgba(216, 232, 255, 0.2)), transparent 30%);
+  backdrop-filter:
+    blur(calc(var(--weather-glass-blur, 0) * 0.9px + var(--weather-glass-distortion, 0) * 0.6px))
+    saturate(calc(104% + var(--weather-glass-distortion, 0) * 8%))
+    contrast(calc(100% + var(--weather-glass-condensation, 0) * 3%));
+  mix-blend-mode: normal;
+}
+
+.weather-fx-glass::before,
+.weather-fx-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.weather-fx-glass::before {
+  opacity: calc(var(--weather-frost-opacity, 0) * 0.72 + var(--weather-glass-condensation, 0) * 0.08);
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-condensation, 0) * 0.08)), transparent 18%),
+    radial-gradient(circle at 78% 18%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-condensation, 0) * 0.06)), transparent 16%),
+    linear-gradient(180deg, rgba(255, 255, 255, calc(0.02 + var(--weather-frost-opacity, 0) * 0.04)), transparent 16%, transparent 62%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-edge-opacity, 0) * 0.06)) 100%);
+}
+
+.weather-fx-glass::after {
+  background:
+    radial-gradient(circle at 50% 108%, rgba(255, 255, 255, calc(0.03 + var(--weather-glass-edge-opacity, 0) * 0.08)), transparent 38%),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, calc(0.01 + var(--weather-glass-distortion, 0) * 0.03)) 50%, transparent),
+    linear-gradient(180deg, transparent 72%, rgba(255, 255, 255, calc(var(--weather-glass-edge-opacity, 0) * 0.06)) 100%);
+  opacity: calc(0.16 + var(--weather-glass-edge-opacity, 0) * 0.12);
+}
+
+.weather-fx-renderer-root[data-glass="none"] .weather-fx-glass {
+  opacity: 0;
+  backdrop-filter: none;
+}
+
+.weather-fx-renderer-root[data-glass="rain"] .weather-fx-glass,
+.weather-fx-renderer-root[data-glass="storm"] .weather-fx-glass {
+  opacity: calc(var(--weather-glass-opacity, 0) * 0.72);
+}
+
+.weather-fx-renderer-root[data-glass="snow"] .weather-fx-glass,
+.weather-fx-renderer-root[data-glass="fog"] .weather-fx-glass {
+  opacity: calc(var(--weather-glass-opacity, 0) * 0.64);
+}
 `;
 
 // src/frontend.ts
@@ -2550,279 +5228,21 @@ function formatHudPaletteLabel(state, phase) {
 function sendToBackend(ctx, payload) {
   ctx.sendToBackend(payload);
 }
-function createSpan(className, styles) {
-  const span = document.createElement("span");
-  span.className = className;
-  for (const [key, value] of Object.entries(styles)) {
-    span.style.setProperty(key, value);
-  }
-  return span;
-}
 function protectInteractive(element) {
   const stop = (event) => event.stopPropagation();
   element.addEventListener("pointerdown", stop);
   element.addEventListener("mousedown", stop);
   element.addEventListener("touchstart", stop);
 }
-function createDiv(className) {
-  const element = document.createElement("div");
-  element.className = className;
-  return element;
-}
-function randomBetween(min, max) {
-  return min + Math.random() * (max - min);
-}
-function createCloudCluster(className, styles, lobeCount) {
-  const cloud = createSpan(className, styles);
-  cloud.appendChild(createSpan("weather-fx-cloud-shadow", {}));
-  cloud.appendChild(createSpan("weather-fx-cloud-core", {}));
-  for (let index = 0;index < lobeCount; index += 1) {
-    cloud.appendChild(createSpan("weather-fx-cloud-lobe", {
-      "--cloud-lobe-width": `${randomBetween(18, 38).toFixed(2)}%`,
-      "--cloud-lobe-height": `${randomBetween(42, 82).toFixed(2)}%`,
-      "--cloud-lobe-left": `${randomBetween(-6, 76).toFixed(2)}%`,
-      "--cloud-lobe-top": `${randomBetween(2, 44).toFixed(2)}%`,
-      "--cloud-lobe-rotate": `${Math.round(randomBetween(-16, 16))}deg`,
-      "--cloud-lobe-opacity": `${randomBetween(0.76, 1.18).toFixed(2)}`
-    }));
-  }
-  cloud.appendChild(createSpan("weather-fx-cloud-highlight", {}));
-  return cloud;
-}
-function createFxMarkup(kind) {
-  const root = document.createElement("div");
-  root.className = "weather-fx-root";
-  root.dataset.kind = kind;
-  const flash = document.createElement("div");
-  flash.className = "weather-fx-flash";
-  if (kind === "back") {
-    const sky = createDiv("weather-fx-sky");
-    root.appendChild(sky);
-    const stars = createDiv("weather-fx-stars");
-    root.appendChild(stars);
-    const glow = createDiv("weather-fx-glow");
-    root.appendChild(glow);
-    const beams = createDiv("weather-fx-beams");
-    root.appendChild(beams);
-    const canopy = createDiv("weather-fx-canopy");
-    root.appendChild(canopy);
-    const cloudShadows = createDiv("weather-fx-cloud-shadows");
-    root.appendChild(cloudShadows);
-    const clouds = createDiv("weather-fx-clouds");
-    root.appendChild(clouds);
-    const horizon = createDiv("weather-fx-horizon");
-    root.appendChild(horizon);
-    const mist = createDiv("weather-fx-mist");
-    root.appendChild(mist);
-    const fog = createDiv("weather-fx-fog");
-    root.appendChild(fog);
-    const motes = createDiv("weather-fx-motes");
-    root.appendChild(motes);
-    const rain = createDiv("weather-fx-rain");
-    root.appendChild(rain);
-    const snow = createDiv("weather-fx-snow");
-    root.appendChild(snow);
-    const windowLayer = createDiv("weather-fx-window");
-    root.appendChild(windowLayer);
-    for (let index = 0;index < 18; index += 1) {
-      stars.appendChild(createSpan("weather-fx-star", {
-        "--star-left": `${randomBetween(0, 100).toFixed(2)}%`,
-        "--star-top": `${randomBetween(4, 72).toFixed(2)}%`,
-        "--star-size": `${randomBetween(1, 3.4).toFixed(2)}px`,
-        "--star-duration": `${randomBetween(3.8, 8.2).toFixed(2)}s`,
-        "--star-delay": `${randomBetween(-7, 0).toFixed(2)}s`,
-        "--star-opacity-scale": `${randomBetween(0.42, 1).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 3; index += 1) {
-      cloudShadows.appendChild(createSpan("weather-fx-cloud-shadow-band", {
-        "--shadow-width": `${randomBetween(280, 620).toFixed(2)}px`,
-        "--shadow-height": `${randomBetween(80, 170).toFixed(2)}px`,
-        "--shadow-top": `${randomBetween(10, 54).toFixed(2)}%`,
-        "--shadow-left": `${randomBetween(-16, 76).toFixed(2)}%`,
-        "--shadow-duration": `${randomBetween(34, 60).toFixed(2)}s`,
-        "--shadow-delay": `${randomBetween(-28, 0).toFixed(2)}s`,
-        "--shadow-opacity-scale": `${randomBetween(0.5, 0.94).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 5; index += 1) {
-      clouds.appendChild(createCloudCluster("weather-fx-cloud", {
-        "--cloud-width": `${randomBetween(240, 520).toFixed(2)}px`,
-        "--cloud-height": `${randomBetween(90, 188).toFixed(2)}px`,
-        "--cloud-top": `${(4 + index * 7 + randomBetween(-2, 4)).toFixed(2)}%`,
-        "--cloud-left": `${randomBetween(-24, 82).toFixed(2)}%`,
-        "--cloud-duration": `${randomBetween(32, 62).toFixed(2)}s`,
-        "--cloud-delay": `${randomBetween(-32, 0).toFixed(2)}s`,
-        "--cloud-blur": `${randomBetween(2, 8).toFixed(2)}px`,
-        "--cloud-opacity-scale": `${randomBetween(0.56, 1.1).toFixed(2)}`,
-        "--cloud-depth": `${randomBetween(0.88, 1.08).toFixed(2)}`,
-        "--cloud-rise": `${randomBetween(-1.4, 2).toFixed(2)}vh`
-      }, 3 + Math.floor(Math.random() * 2)));
-    }
-    for (let index = 0;index < 4; index += 1) {
-      fog.appendChild(createSpan("weather-fx-fog-band", {
-        "--fog-width": `${240 + Math.round(Math.random() * 320)}px`,
-        "--fog-height": `${52 + Math.round(Math.random() * 44)}px`,
-        "--fog-top": `${14 + index * 12 + Math.round(Math.random() * 5)}%`,
-        "--fog-left": `${-14 + Math.round(Math.random() * 90)}%`,
-        "--fog-duration": `${18 + Math.round(Math.random() * 16)}s`,
-        "--fog-delay": `${Math.round(Math.random() * -18)}s`,
-        "--fog-opacity-scale": `${(0.55 + Math.random() * 0.6).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 3; index += 1) {
-      mist.appendChild(createSpan("weather-fx-mist-plume", {
-        "--mist-width": `${randomBetween(260, 560).toFixed(2)}px`,
-        "--mist-height": `${randomBetween(78, 138).toFixed(2)}px`,
-        "--mist-left": `${randomBetween(-14, 82).toFixed(2)}%`,
-        "--mist-bottom": `${randomBetween(-6, 16).toFixed(2)}%`,
-        "--mist-duration": `${randomBetween(16, 30).toFixed(2)}s`,
-        "--mist-delay": `${randomBetween(-16, 0).toFixed(2)}s`,
-        "--mist-opacity-scale": `${randomBetween(0.64, 1.12).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 10; index += 1) {
-      motes.appendChild(createSpan("weather-fx-mote", {
-        "--mote-left": `${Math.round(Math.random() * 100)}%`,
-        "--mote-top": `${18 + Math.round(Math.random() * 64)}%`,
-        "--mote-size": `${2 + Math.random() * 4}px`,
-        "--mote-duration": `${10 + Math.random() * 10}s`,
-        "--mote-delay": `${Math.random() * -10}s`,
-        "--mote-drift-x": `${(-2 + Math.random() * 4).toFixed(2)}vw`,
-        "--mote-drift-y": `${(-1 + Math.random() * 3).toFixed(2)}vh`,
-        "--mote-opacity-scale": `${(0.45 + Math.random() * 0.7).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 40; index += 1) {
-      rain.appendChild(createSpan("weather-fx-rain-drop", {
-        "--drop-left": `${Math.round(Math.random() * 104)}%`,
-        "--drop-top": `${(-20 - Math.random() * 28).toFixed(2)}%`,
-        "--drop-width": `${1 + Math.round(Math.random())}px`,
-        "--drop-length": `${20 + Math.round(Math.random() * 28)}px`,
-        "--drop-duration": `${0.9 + Math.random() * 0.85}s`,
-        "--drop-delay": `${Math.random() * -2.3}s`,
-        "--drop-drift": `${(-4.5 - Math.random() * 5.5).toFixed(2)}vw`,
-        "--drop-opacity-scale": `${(0.4 + Math.random() * 0.7).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 26; index += 1) {
-      snow.appendChild(createSpan("weather-fx-snow-flake", {
-        "--flake-left": `${Math.round(Math.random() * 102)}%`,
-        "--flake-top": `${(-18 - Math.random() * 18).toFixed(2)}%`,
-        "--flake-size": `${2 + Math.random() * 4}px`,
-        "--flake-duration": `${6.4 + Math.random() * 4.6}s`,
-        "--flake-delay": `${Math.random() * -6}s`,
-        "--flake-drift-mid": `${(-1.8 + Math.random() * 3.6).toFixed(2)}vw`,
-        "--flake-drift-end": `${(-4 + Math.random() * 8).toFixed(2)}vw`,
-        "--flake-spin-mid": `${Math.round(-18 + Math.random() * 36)}deg`,
-        "--flake-spin-end": `${Math.round(-32 + Math.random() * 64)}deg`,
-        "--flake-opacity-scale": `${(0.48 + Math.random() * 0.62).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 14; index += 1) {
-      windowLayer.appendChild(createSpan("weather-fx-window-streak weather-fx-window-streak-deep", {
-        "--window-left": `${randomBetween(-4, 102).toFixed(2)}%`,
-        "--window-top": `${randomBetween(-18, 24).toFixed(2)}%`,
-        "--window-width": `${randomBetween(2.2, 5.6).toFixed(2)}px`,
-        "--window-length": `${randomBetween(110, 240).toFixed(2)}px`,
-        "--window-duration": `${randomBetween(5.8, 11.8).toFixed(2)}s`,
-        "--window-delay": `${randomBetween(-10, 0).toFixed(2)}s`,
-        "--window-drift": `${randomBetween(-0.9, 1.1).toFixed(2)}vw`,
-        "--window-opacity-scale": `${randomBetween(0.42, 0.96).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 20; index += 1) {
-      windowLayer.appendChild(createSpan("weather-fx-window-bead", {
-        "--bead-left": `${randomBetween(0, 100).toFixed(2)}%`,
-        "--bead-top": `${randomBetween(4, 88).toFixed(2)}%`,
-        "--bead-size": `${randomBetween(5, 15).toFixed(2)}px`,
-        "--bead-stretch": `${randomBetween(1, 1.9).toFixed(2)}`,
-        "--bead-duration": `${randomBetween(7.5, 16).toFixed(2)}s`,
-        "--bead-delay": `${randomBetween(-12, 0).toFixed(2)}s`,
-        "--bead-drift": `${randomBetween(-0.55, 0.65).toFixed(2)}vw`,
-        "--bead-drop": `${randomBetween(4, 20).toFixed(2)}vh`,
-        "--bead-opacity-scale": `${randomBetween(0.34, 0.94).toFixed(2)}`
-      }));
-    }
-  } else {
-    const frontHaze = createDiv("weather-fx-front-haze");
-    root.appendChild(frontHaze);
-    const frontClouds = createDiv("weather-fx-front-clouds");
-    root.appendChild(frontClouds);
-    const frontMist = createDiv("weather-fx-front-mist");
-    root.appendChild(frontMist);
-    const rainSheet = createDiv("weather-fx-rain-sheet");
-    root.appendChild(rainSheet);
-    const rain = createDiv("weather-fx-rain weather-fx-rain-front");
-    root.appendChild(rain);
-    const snow = createDiv("weather-fx-snow weather-fx-snow-front");
-    root.appendChild(snow);
-    for (let index = 0;index < 3; index += 1) {
-      frontClouds.appendChild(createCloudCluster("weather-fx-cloud weather-fx-cloud-front", {
-        "--cloud-width": `${randomBetween(320, 680).toFixed(2)}px`,
-        "--cloud-height": `${randomBetween(120, 240).toFixed(2)}px`,
-        "--cloud-top": `${randomBetween(-8, 40).toFixed(2)}%`,
-        "--cloud-left": `${randomBetween(-26, 78).toFixed(2)}%`,
-        "--cloud-duration": `${randomBetween(28, 54).toFixed(2)}s`,
-        "--cloud-delay": `${randomBetween(-26, 0).toFixed(2)}s`,
-        "--cloud-blur": `${randomBetween(8, 20).toFixed(2)}px`,
-        "--cloud-opacity-scale": `${randomBetween(0.48, 0.86).toFixed(2)}`,
-        "--cloud-depth": `${randomBetween(1.02, 1.2).toFixed(2)}`,
-        "--cloud-rise": `${randomBetween(-1.2, 1.6).toFixed(2)}vh`
-      }, 3 + Math.floor(Math.random() * 2)));
-    }
-    for (let index = 0;index < 2; index += 1) {
-      frontMist.appendChild(createSpan("weather-fx-mist-plume weather-fx-mist-plume-front", {
-        "--mist-width": `${randomBetween(320, 640).toFixed(2)}px`,
-        "--mist-height": `${randomBetween(110, 220).toFixed(2)}px`,
-        "--mist-left": `${randomBetween(-18, 70).toFixed(2)}%`,
-        "--mist-bottom": `${randomBetween(-8, 18).toFixed(2)}%`,
-        "--mist-duration": `${randomBetween(12, 22).toFixed(2)}s`,
-        "--mist-delay": `${randomBetween(-12, 0).toFixed(2)}s`,
-        "--mist-opacity-scale": `${randomBetween(0.68, 1.08).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 10; index += 1) {
-      rainSheet.appendChild(createSpan("weather-fx-rain-sheet-line", {
-        "--sheet-left": `${randomBetween(-8, 108).toFixed(2)}%`,
-        "--sheet-top": `${randomBetween(-24, 18).toFixed(2)}%`,
-        "--sheet-width": `${randomBetween(3, 7).toFixed(2)}px`,
-        "--sheet-length": `${randomBetween(100, 220).toFixed(2)}px`,
-        "--sheet-duration": `${randomBetween(0.8, 1.35).toFixed(2)}s`,
-        "--sheet-delay": `${randomBetween(-1.8, 0).toFixed(2)}s`,
-        "--sheet-drift": `${randomBetween(-10, -5.6).toFixed(2)}vw`,
-        "--sheet-opacity-scale": `${randomBetween(0.3, 0.84).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 56; index += 1) {
-      rain.appendChild(createSpan("weather-fx-rain-drop weather-fx-rain-drop-front", {
-        "--drop-left": `${Math.round(Math.random() * 104)}%`,
-        "--drop-top": `${(-24 - Math.random() * 30).toFixed(2)}%`,
-        "--drop-width": `${2 + Math.round(Math.random())}px`,
-        "--drop-length": `${26 + Math.round(Math.random() * 34)}px`,
-        "--drop-duration": `${0.75 + Math.random() * 0.65}s`,
-        "--drop-delay": `${Math.random() * -2.1}s`,
-        "--drop-drift": `${(-7 - Math.random() * 8).toFixed(2)}vw`,
-        "--drop-opacity-scale": `${(0.48 + Math.random() * 0.75).toFixed(2)}`
-      }));
-    }
-    for (let index = 0;index < 34; index += 1) {
-      snow.appendChild(createSpan("weather-fx-snow-flake weather-fx-snow-flake-front", {
-        "--flake-left": `${Math.round(Math.random() * 102)}%`,
-        "--flake-top": `${(-18 - Math.random() * 20).toFixed(2)}%`,
-        "--flake-size": `${4 + Math.random() * 6}px`,
-        "--flake-duration": `${5.2 + Math.random() * 3.8}s`,
-        "--flake-delay": `${Math.random() * -5.4}s`,
-        "--flake-drift-mid": `${(-2.6 + Math.random() * 5.2).toFixed(2)}vw`,
-        "--flake-drift-end": `${(-6 + Math.random() * 12).toFixed(2)}vw`,
-        "--flake-spin-mid": `${Math.round(-28 + Math.random() * 56)}deg`,
-        "--flake-spin-end": `${Math.round(-60 + Math.random() * 120)}deg`,
-        "--flake-opacity-scale": `${(0.56 + Math.random() * 0.72).toFixed(2)}`
-      }));
-    }
-  }
-  root.appendChild(flash);
-  return { root, host: null, releaseHost: null, kind };
+function createRendererFxRoot(kind) {
+  const renderer = createWeatherRenderer(kind);
+  return {
+    root: renderer.root,
+    renderer,
+    host: null,
+    releaseHost: null,
+    kind
+  };
 }
 function asHTMLElement(element) {
   return element instanceof HTMLElement ? element : null;
@@ -2974,266 +5394,6 @@ function readMessageContext(payload) {
     content,
     messageId: messageId ?? null,
     isUser
-  };
-}
-function resolveSceneTokens(state, intensity) {
-  const paletteMap = {
-    dawn: {
-      start: "#20385f",
-      mid: "#5a77a9",
-      end: "#f0a56e",
-      glow: "rgba(255, 203, 145, 0.82)",
-      beam: "rgba(255, 218, 165, 0.48)",
-      horizon: "rgba(255, 182, 125, 0.44)"
-    },
-    day: {
-      start: "#4d77ad",
-      mid: "#7fa8de",
-      end: "#d8ebff",
-      glow: "rgba(255, 243, 202, 0.78)",
-      beam: "rgba(255, 244, 212, 0.44)",
-      horizon: "rgba(185, 212, 244, 0.28)"
-    },
-    dusk: {
-      start: "#221f4c",
-      mid: "#68487a",
-      end: "#f09067",
-      glow: "rgba(255, 173, 128, 0.72)",
-      beam: "rgba(255, 189, 150, 0.38)",
-      horizon: "rgba(224, 149, 114, 0.34)"
-    },
-    night: {
-      start: "#05101d",
-      mid: "#10253c",
-      end: "#274768",
-      glow: "rgba(143, 180, 255, 0.48)",
-      beam: "rgba(130, 164, 234, 0.2)",
-      horizon: "rgba(74, 104, 154, 0.26)"
-    },
-    storm: {
-      start: "#04101a",
-      mid: "#13283a",
-      end: "#33475f",
-      glow: "rgba(188, 220, 255, 0.26)",
-      beam: "rgba(168, 203, 236, 0.16)",
-      horizon: "rgba(108, 139, 170, 0.26)"
-    },
-    mist: {
-      start: "#213141",
-      mid: "#586c7d",
-      end: "#a7bac2",
-      glow: "rgba(226, 240, 255, 0.32)",
-      beam: "rgba(228, 239, 248, 0.18)",
-      horizon: "rgba(206, 220, 228, 0.36)"
-    },
-    snow: {
-      start: "#415b76",
-      mid: "#7d93a8",
-      end: "#e0e9f1",
-      glow: "rgba(255, 252, 244, 0.66)",
-      beam: "rgba(242, 245, 255, 0.32)",
-      horizon: "rgba(229, 238, 248, 0.4)"
-    }
-  };
-  const basePalette = paletteMap[state.palette];
-  const palette = state.condition === "storm" ? paletteMap.storm : state.condition === "rain" ? {
-    start: state.palette === "night" ? "#07131f" : "#102032",
-    mid: state.palette === "night" ? "#1d3148" : "#324b67",
-    end: state.palette === "night" ? "#41566e" : "#61748b",
-    glow: "rgba(176, 206, 240, 0.22)",
-    beam: "rgba(135, 165, 198, 0.1)",
-    horizon: "rgba(120, 147, 174, 0.24)"
-  } : state.condition === "cloudy" && (state.palette === "dawn" || state.palette === "dusk") ? {
-    ...basePalette,
-    end: state.palette === "dawn" ? "#9baec3" : "#7f90a6",
-    glow: "rgba(214, 224, 238, 0.24)",
-    beam: "rgba(176, 191, 209, 0.12)",
-    horizon: "rgba(154, 169, 187, 0.24)"
-  } : basePalette;
-  const baseIntensity = clamp(intensity, 0, 1.5);
-  let cloudCore = "rgba(237, 244, 255, 0.34)";
-  let cloudEdge = "rgba(255, 255, 255, 0.12)";
-  let fogColor = "rgba(236, 241, 255, 0.18)";
-  let mistColor = "rgba(228, 238, 248, 0.24)";
-  const values = {
-    skyOpacity: 0.08,
-    glowOpacity: 0.13,
-    beamOpacity: 0.14,
-    cloudOpacity: 0.1,
-    horizonOpacity: 0.06,
-    mistOpacity: 0.03,
-    fogOpacity: 0,
-    rainOpacity: 0,
-    snowOpacity: 0,
-    moteOpacity: 0.06,
-    flashOpacity: 0.26,
-    starOpacity: state.palette === "night" ? 0.46 : state.palette === "dusk" ? 0.1 : state.palette === "dawn" ? 0.06 : 0.02,
-    frontCloudOpacity: 0.04,
-    frontMistOpacity: 0.03,
-    rainSheetOpacity: 0,
-    canopyOpacity: 0.04,
-    windowOverlayOpacity: 0,
-    windowStreakOpacity: 0
-  };
-  switch (state.condition) {
-    case "cloudy":
-      values.skyOpacity = 0.17;
-      values.glowOpacity = 0.04;
-      values.beamOpacity = 0;
-      values.cloudOpacity = 0.6;
-      values.horizonOpacity = 0.12;
-      values.mistOpacity = 0.08;
-      values.moteOpacity = 0.02;
-      values.starOpacity = state.palette === "night" ? 0.08 : 0;
-      values.frontCloudOpacity = 0.12;
-      values.frontMistOpacity = 0.05;
-      values.canopyOpacity = 0.44;
-      cloudCore = "rgba(174, 189, 208, 0.44)";
-      cloudEdge = "rgba(224, 232, 242, 0.11)";
-      fogColor = "rgba(196, 210, 228, 0.2)";
-      mistColor = "rgba(204, 216, 229, 0.18)";
-      break;
-    case "rain":
-      values.skyOpacity = 0.24;
-      values.glowOpacity = 0.02;
-      values.beamOpacity = 0;
-      values.cloudOpacity = 0.82;
-      values.horizonOpacity = 0.22;
-      values.mistOpacity = 0.26;
-      values.fogOpacity = 0.16;
-      values.rainOpacity = 0.88;
-      values.moteOpacity = 0;
-      values.starOpacity = 0;
-      values.frontCloudOpacity = 0.16;
-      values.frontMistOpacity = 0.2;
-      values.rainSheetOpacity = 0.4;
-      values.canopyOpacity = 0.72;
-      values.windowOverlayOpacity = 0.22;
-      values.windowStreakOpacity = 0.54;
-      cloudCore = "rgba(70, 86, 105, 0.58)";
-      cloudEdge = "rgba(136, 154, 177, 0.1)";
-      fogColor = "rgba(145, 162, 182, 0.22)";
-      mistColor = "rgba(154, 169, 186, 0.24)";
-      break;
-    case "storm":
-      values.skyOpacity = 0.28;
-      values.glowOpacity = 0.015;
-      values.beamOpacity = 0;
-      values.cloudOpacity = 0.96;
-      values.horizonOpacity = 0.28;
-      values.mistOpacity = 0.32;
-      values.fogOpacity = 0.22;
-      values.rainOpacity = 1.08;
-      values.flashOpacity = 0.64;
-      values.moteOpacity = 0;
-      values.starOpacity = 0;
-      values.frontCloudOpacity = 0.22;
-      values.frontMistOpacity = 0.24;
-      values.rainSheetOpacity = 0.66;
-      values.canopyOpacity = 0.92;
-      values.windowOverlayOpacity = 0.3;
-      values.windowStreakOpacity = 0.72;
-      cloudCore = "rgba(42, 55, 74, 0.72)";
-      cloudEdge = "rgba(102, 121, 148, 0.1)";
-      fogColor = "rgba(116, 134, 154, 0.24)";
-      mistColor = "rgba(135, 150, 170, 0.26)";
-      break;
-    case "snow":
-      values.skyOpacity = 0.17;
-      values.glowOpacity = 0.18;
-      values.beamOpacity = 0.03;
-      values.cloudOpacity = 0.42;
-      values.horizonOpacity = 0.24;
-      values.mistOpacity = 0.16;
-      values.fogOpacity = 0.12;
-      values.snowOpacity = 0.84;
-      values.moteOpacity = 0.02;
-      values.starOpacity = state.palette === "night" ? 0.12 : 0.02;
-      values.frontCloudOpacity = 0.1;
-      values.frontMistOpacity = 0.16;
-      values.canopyOpacity = 0.32;
-      values.windowOverlayOpacity = 0.18;
-      values.windowStreakOpacity = 0.12;
-      cloudCore = "rgba(222, 230, 242, 0.38)";
-      cloudEdge = "rgba(255, 255, 255, 0.18)";
-      fogColor = "rgba(222, 231, 241, 0.24)";
-      mistColor = "rgba(228, 236, 245, 0.24)";
-      break;
-    case "fog":
-      values.skyOpacity = 0.1;
-      values.glowOpacity = 0.03;
-      values.beamOpacity = 0.02;
-      values.cloudOpacity = 0.12;
-      values.horizonOpacity = 0.26;
-      values.mistOpacity = 0.44;
-      values.fogOpacity = 0.78;
-      values.moteOpacity = 0.01;
-      values.starOpacity = 0;
-      values.frontCloudOpacity = 0.06;
-      values.frontMistOpacity = 0.62;
-      values.canopyOpacity = 0.12;
-      values.windowOverlayOpacity = 0.38;
-      values.windowStreakOpacity = 0.08;
-      cloudCore = "rgba(180, 192, 204, 0.24)";
-      cloudEdge = "rgba(226, 233, 239, 0.08)";
-      fogColor = "rgba(219, 227, 234, 0.28)";
-      mistColor = "rgba(213, 221, 229, 0.32)";
-      break;
-    case "clear":
-    default:
-      if (state.palette === "night") {
-        values.skyOpacity = 0.05;
-        values.glowOpacity = 0.06;
-        values.beamOpacity = 0.03;
-        values.cloudOpacity = 0.02;
-        values.moteOpacity = 0.02;
-        values.starOpacity = 0.62;
-        values.frontCloudOpacity = 0.03;
-        values.frontMistOpacity = 0.02;
-      } else if (state.palette === "dusk" || state.palette === "dawn") {
-        values.starOpacity = 0.08;
-        values.frontCloudOpacity = 0.04;
-        values.frontMistOpacity = 0.03;
-        values.glowOpacity = 0.16;
-        values.beamOpacity = 0.1;
-      } else {
-        values.glowOpacity = 0.18;
-        values.beamOpacity = 0.16;
-        values.cloudOpacity = 0.03;
-      }
-      break;
-  }
-  const detailScale = clamp(0.82 + baseIntensity * 0.28, 0.75, 1.18);
-  const atmosphereScale = clamp(0.92 + baseIntensity * 0.24, 0.84, 1.2);
-  return {
-    bgStart: palette.start,
-    bgMid: palette.mid,
-    bgEnd: palette.end,
-    glow: palette.glow,
-    beamColor: palette.beam,
-    horizonColor: palette.horizon,
-    cloudCore,
-    cloudEdge,
-    fogColor,
-    mistColor,
-    skyOpacity: values.skyOpacity * atmosphereScale,
-    glowOpacity: values.glowOpacity * atmosphereScale,
-    beamOpacity: values.beamOpacity * atmosphereScale,
-    cloudOpacity: values.cloudOpacity * detailScale,
-    horizonOpacity: values.horizonOpacity * atmosphereScale,
-    mistOpacity: values.mistOpacity * detailScale,
-    fogOpacity: values.fogOpacity * detailScale,
-    rainOpacity: values.rainOpacity * detailScale,
-    snowOpacity: values.snowOpacity * detailScale,
-    moteOpacity: state.condition === "clear" && baseIntensity > 0.48 ? values.moteOpacity * detailScale : values.moteOpacity * 0.4,
-    flashOpacity: values.flashOpacity,
-    starOpacity: values.starOpacity * atmosphereScale,
-    frontCloudOpacity: values.frontCloudOpacity * detailScale,
-    frontMistOpacity: values.frontMistOpacity * detailScale,
-    rainSheetOpacity: values.rainSheetOpacity * detailScale,
-    canopyOpacity: values.canopyOpacity * detailScale,
-    windowOverlayOpacity: values.windowOverlayOpacity * detailScale,
-    windowStreakOpacity: values.windowStreakOpacity * detailScale
   };
 }
 function getEffectiveLayerMode(prefs, state) {
@@ -3456,6 +5616,7 @@ function createHudWidget(ctx, initialPosition, expanded, callbacks) {
     qualityText.textContent = "Quality";
     qualitySelect = document.createElement("select");
     qualitySelect.className = "weather-hud-select";
+    qualitySelect.title = "Higher quality adds more scene depth, cloud layering, horizon silhouettes, curtains, mist, and back-glass detail. Cinematic pushes the strongest framing and dimensionality.";
     qualitySelect.innerHTML = WEATHER_QUALITY_OPTIONS.map((option) => `<option value="${option.value}">${option.label}</option>`).join("");
     protectInteractive(qualitySelect);
     qualitySelect.addEventListener("change", (event) => {
@@ -3614,47 +5775,10 @@ function syncHudState(hud, prefs, state, expanded) {
 function setFxVisibility(root, visible) {
   root.root.classList.toggle("weather-hidden", !visible);
   root.root.classList.toggle("weather-visible", visible);
+  root.renderer.setVisible(visible);
 }
 function applySceneState(root, state, prefs, reducedMotion) {
-  const effectiveIntensity = clamp(state.intensity * prefs.intensity, 0, 1.5);
-  const tokens = resolveSceneTokens(state, effectiveIntensity);
-  const isFront = root.kind === "front";
-  root.root.dataset.condition = state.condition;
-  root.root.dataset.palette = state.palette;
-  root.root.dataset.quality = prefs.qualityMode;
-  root.root.classList.toggle("weather-reduced-motion", reducedMotion);
-  root.root.classList.toggle("weather-paused", prefs.pauseEffects);
-  root.root.style.setProperty("--weather-bg-start", tokens.bgStart);
-  root.root.style.setProperty("--weather-bg-mid", tokens.bgMid);
-  root.root.style.setProperty("--weather-bg-end", tokens.bgEnd);
-  root.root.style.setProperty("--weather-glow", tokens.glow);
-  root.root.style.setProperty("--weather-beam-color", tokens.beamColor);
-  root.root.style.setProperty("--weather-horizon-color", tokens.horizonColor);
-  root.root.style.setProperty("--weather-cloud-core", tokens.cloudCore);
-  root.root.style.setProperty("--weather-cloud-edge", tokens.cloudEdge);
-  root.root.style.setProperty("--weather-fog-color", tokens.fogColor);
-  root.root.style.setProperty("--weather-mist-color", tokens.mistColor);
-  root.root.style.setProperty("--weather-sky-opacity", String(isFront ? 0 : tokens.skyOpacity));
-  root.root.style.setProperty("--weather-glow-opacity", String(isFront ? 0 : tokens.glowOpacity));
-  root.root.style.setProperty("--weather-beam-opacity", String(isFront ? 0 : tokens.beamOpacity));
-  root.root.style.setProperty("--weather-cloud-opacity", String(isFront ? 0 : tokens.cloudOpacity));
-  root.root.style.setProperty("--weather-horizon-opacity", String(isFront ? 0 : tokens.horizonOpacity));
-  root.root.style.setProperty("--weather-mist-opacity", String(isFront ? 0 : tokens.mistOpacity));
-  root.root.style.setProperty("--weather-fog-opacity", String(isFront ? 0 : tokens.fogOpacity));
-  root.root.style.setProperty("--weather-rain-opacity", String(tokens.rainOpacity * (isFront ? 0.96 : 0.58)));
-  root.root.style.setProperty("--weather-snow-opacity", String(tokens.snowOpacity * (isFront ? 0.98 : 0.54)));
-  root.root.style.setProperty("--weather-mote-opacity", String(isFront ? 0 : tokens.moteOpacity));
-  root.root.style.setProperty("--weather-flash-opacity", String(tokens.flashOpacity));
-  root.root.style.setProperty("--weather-star-opacity", String(isFront ? 0 : tokens.starOpacity));
-  root.root.style.setProperty("--weather-front-cloud-opacity", String(tokens.frontCloudOpacity));
-  root.root.style.setProperty("--weather-front-mist-opacity", String(tokens.frontMistOpacity));
-  root.root.style.setProperty("--weather-rain-sheet-opacity", String(tokens.rainSheetOpacity));
-  root.root.style.setProperty("--weather-canopy-opacity", String(isFront ? 0 : tokens.canopyOpacity));
-  root.root.style.setProperty("--weather-window-overlay-opacity", String(isFront ? 0 : tokens.windowOverlayOpacity));
-  root.root.style.setProperty("--weather-window-streak-opacity", String(isFront ? 0 : tokens.windowStreakOpacity));
-  root.root.style.setProperty("--weather-rain-color", state.condition === "storm" ? "rgba(212, 231, 255, 0.96)" : "rgba(190, 220, 255, 0.84)");
-  root.root.style.setProperty("--weather-snow-color", state.palette === "night" ? "rgba(219, 232, 255, 0.92)" : "rgba(247, 250, 255, 0.95)");
-  root.root.style.setProperty("--weather-particle-opacity-static", state.condition === "snow" ? String(clamp(tokens.snowOpacity * 0.2, 0.04, 0.22)) : String(clamp(tokens.rainOpacity * 0.12, 0.03, 0.18)));
+  root.renderer.setScene(state, prefs, reducedMotion);
 }
 function setup(ctx) {
   console.info("[weather_hud] frontend build 2026-03-29.0");
@@ -3720,8 +5844,8 @@ function setup(ctx) {
   });
   settingsMount.appendChild(settingsUI.root);
   cleanups.push(() => settingsUI.destroy());
-  const backFx = createFxMarkup("back");
-  const frontFx = createFxMarkup("front");
+  const backFx = createRendererFxRoot("back");
+  const frontFx = createRendererFxRoot("front");
   let hostSyncFrame = null;
   const managedHosts = new Map;
   const prepareHostStyles = (host) => {
@@ -3772,6 +5896,7 @@ function setup(ctx) {
     };
   };
   const detachFxRoot = (fxRoot) => {
+    fxRoot.renderer.setVisible(false);
     fxRoot.root.remove();
     fxRoot.host = null;
     if (fxRoot.releaseHost) {
@@ -3796,6 +5921,7 @@ function setup(ctx) {
     } else {
       nextHost.appendChild(fxRoot.root);
     }
+    fxRoot.renderer.refreshLayout();
     return true;
   };
   const attachFxRoots = () => {
@@ -3829,6 +5955,8 @@ function setup(ctx) {
     hostObserver.disconnect();
     detachFxRoot(backFx);
     detachFxRoot(frontFx);
+    backFx.renderer.destroy();
+    frontFx.renderer.destroy();
   });
   let hud = null;
   let removeHudDragListener = null;
@@ -3897,17 +6025,11 @@ function setup(ctx) {
   const scheduleStormFlash = () => {
     resetFlashTimer();
     if (currentState.condition !== "storm" || getReducedMotion() || currentPrefs.pauseEffects || !currentPrefs.effectsEnabled) {
-      backFx.root.classList.remove("weather-storm-flash");
-      frontFx.root.classList.remove("weather-storm-flash");
       return;
     }
     const trigger = () => {
-      backFx.root.classList.add("weather-storm-flash");
-      frontFx.root.classList.add("weather-storm-flash");
-      window.setTimeout(() => {
-        backFx.root.classList.remove("weather-storm-flash");
-        frontFx.root.classList.remove("weather-storm-flash");
-      }, 220);
+      backFx.renderer.triggerLightning();
+      frontFx.renderer.triggerLightning();
       flashTimer = window.setTimeout(trigger, 3600 + Math.random() * 4600);
     };
     flashTimer = window.setTimeout(trigger, 1800 + Math.random() * 2400);
