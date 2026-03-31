@@ -157,7 +157,7 @@ export function parseStoryDateTime(dateValue: string, timeValue: string): number
   return Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
 }
 
-function derivePalette(condition: WeatherCondition, dateValue: string, timeValue: string): WeatherPalette {
+export function derivePalette(condition: WeatherCondition, dateValue: string, timeValue: string): WeatherPalette {
   if (condition === "storm") return "storm";
   if (condition === "fog") return "mist";
   if (condition === "snow") return "snow";
@@ -173,11 +173,11 @@ function derivePalette(condition: WeatherCondition, dateValue: string, timeValue
   }
 
   const hour = parseHourFromTimeString(timeValue);
-  if (hour === null) return condition === "cloudy" || condition === "rain" ? "dusk" : "day";
-  if (hour < 6) return "night";
-  if (hour < 10) return "dawn";
-  if (hour < 18) return "day";
-  if (hour < 21) return "dusk";
+  const resolvedHour = hour ?? new Date().getHours();
+  if (resolvedHour < 6) return "night";
+  if (resolvedHour < 10) return "dawn";
+  if (resolvedHour < 18) return "day";
+  if (resolvedHour < 21) return "dusk";
   return "night";
 }
 

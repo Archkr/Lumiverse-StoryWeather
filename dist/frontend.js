@@ -24,6 +24,98 @@ function formatTime(date) {
   const hours12 = hours24 % 12 || 12;
   return `${hours12}:${pad2(date.getMinutes())} ${suffix}`;
 }
+function parseHourFromTimeString(timeValue) {
+  const time12 = timeValue.match(/^(\d{1,2}):(\d{2})(?:\s*:\s*(\d{2}))?\s*([AP]M)$/i);
+  if (time12) {
+    let hours2 = Number.parseInt(time12[1], 10);
+    if (hours2 < 1 || hours2 > 12)
+      return null;
+    const minutes2 = Number.parseInt(time12[2], 10);
+    if (minutes2 > 59)
+      return null;
+    const meridiem = time12[4].toUpperCase();
+    if (meridiem === "PM" && hours2 < 12)
+      hours2 += 12;
+    if (meridiem === "AM" && hours2 === 12)
+      hours2 = 0;
+    return hours2;
+  }
+  const time24 = timeValue.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!time24)
+    return null;
+  const hours = Number.parseInt(time24[1], 10);
+  const minutes = Number.parseInt(time24[2], 10);
+  if (hours > 23 || minutes > 59)
+    return null;
+  return hours;
+}
+function parseStoryDateTime(dateValue, timeValue) {
+  const dateMatch = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!dateMatch)
+    return null;
+  const time12 = timeValue.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AP]M)$/i);
+  const time24 = timeValue.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  let hours = 0;
+  let minutes = 0;
+  let seconds = 0;
+  if (time12) {
+    hours = Number.parseInt(time12[1], 10);
+    minutes = Number.parseInt(time12[2], 10);
+    seconds = time12[3] ? Number.parseInt(time12[3], 10) : 0;
+    if (hours < 1 || hours > 12 || minutes > 59 || seconds > 59)
+      return null;
+    const meridiem = time12[4].toUpperCase();
+    if (meridiem === "PM" && hours < 12)
+      hours += 12;
+    if (meridiem === "AM" && hours === 12)
+      hours = 0;
+  } else if (time24) {
+    hours = Number.parseInt(time24[1], 10);
+    minutes = Number.parseInt(time24[2], 10);
+    seconds = time24[3] ? Number.parseInt(time24[3], 10) : 0;
+    if (hours > 23 || minutes > 59 || seconds > 59)
+      return null;
+  } else {
+    return null;
+  }
+  const year = Number.parseInt(dateMatch[1], 10);
+  const month = Number.parseInt(dateMatch[2], 10);
+  const day = Number.parseInt(dateMatch[3], 10);
+  const parsed = new Date(year, month - 1, day, hours, minutes, seconds, 0);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
+}
+function derivePalette(condition, dateValue, timeValue) {
+  if (condition === "storm")
+    return "storm";
+  if (condition === "fog")
+    return "mist";
+  if (condition === "snow")
+    return "snow";
+  const timestamp = parseStoryDateTime(dateValue, timeValue);
+  if (timestamp !== null) {
+    const hour2 = new Date(timestamp).getHours();
+    if (hour2 < 6)
+      return "night";
+    if (hour2 < 10)
+      return "dawn";
+    if (hour2 < 18)
+      return "day";
+    if (hour2 < 21)
+      return "dusk";
+    return "night";
+  }
+  const hour = parseHourFromTimeString(timeValue);
+  const resolvedHour = hour ?? new Date().getHours();
+  if (resolvedHour < 6)
+    return "night";
+  if (resolvedHour < 10)
+    return "dawn";
+  if (resolvedHour < 18)
+    return "day";
+  if (resolvedHour < 21)
+    return "dusk";
+  return "night";
+}
 function makeDefaultWeatherState(now = Date.now()) {
   const date = new Date(now);
   return {
@@ -83,13 +175,13 @@ var WEATHER_SCENE_PRESETS = [
     shortLabel: "Rain",
     description: "Steady angled rain with a low mist at the base of the scene.",
     state: {
-      time: "5:42 PM",
+      time: "2:42 PM",
       condition: "rain",
       summary: "Rain sweeping through",
       temperature: "61F",
       wind: "steady rainwind",
       layer: "both",
-      palette: "dusk",
+      palette: "day",
       intensity: 0.74
     }
   },
@@ -1072,7 +1164,7 @@ function buildSceneProfile(state, effectiveIntensity) {
   let surfaceLight = withLight(base.horizon, 0.18);
   let surfaceMid = mixHex(base.skyBottom, base.horizon, 0.28);
   let surfaceShadow = mixHex(base.skyTop, "#091019", 0.72);
-  let celestialAlpha = phase === "day" ? 0.82 : phase === "dawn" || phase === "dusk" ? 0.54 : 0.28;
+  let celestialAlpha = phase === "day" ? 0.78 : phase === "dawn" || phase === "dusk" ? 0.4 : 0.2;
   let starAlpha = isNight ? 0.82 : phase === "dusk" || phase === "dawn" ? 0.2 : 0;
   let overcast = 0.08;
   let haze = 0.1;
@@ -1104,8 +1196,8 @@ function buildSceneProfile(state, effectiveIntensity) {
   let condensationAlpha = 0;
   let distortionAlpha = 0.04;
   let shadowSweepAlpha = 0.04;
-  let thermalShimmerAlpha = phase === "day" ? 0.1 : phase === "dawn" || phase === "dusk" ? 0.06 : 0.02;
-  let horizonGlintAlpha = phase === "day" ? 0.16 : phase === "dawn" || phase === "dusk" ? 0.24 : 0.04;
+  let thermalShimmerAlpha = phase === "day" ? 0.1 : phase === "dawn" || phase === "dusk" ? 0.06 : 0;
+  let horizonGlintAlpha = phase === "day" ? 0.16 : phase === "dawn" || phase === "dusk" ? 0.22 : 0.02;
   let surfaceRelightAlpha = 0.08;
   switch (state.condition) {
     case "cloudy":
@@ -1118,7 +1210,7 @@ function buildSceneProfile(state, effectiveIntensity) {
       cloudAccent = withLight(skyBottom, 0.14);
       fogLight = withLight(skyBottom, 0.28);
       fogShadow = mixHex(skyMid, skyTop, 0.58);
-      celestialAlpha = 0.16;
+      celestialAlpha = 0;
       starAlpha = isNight ? 0.03 : 0;
       overcast = 0.52;
       haze = 0.16;
@@ -1146,7 +1238,7 @@ function buildSceneProfile(state, effectiveIntensity) {
       fogCreepAlpha = 0.06;
       shadowSweepAlpha = 0.12;
       thermalShimmerAlpha = 0.02;
-      horizonGlintAlpha = 0.06;
+      horizonGlintAlpha = 0.02;
       surfaceRelightAlpha = 0.1;
       break;
     case "rain":
@@ -1161,7 +1253,7 @@ function buildSceneProfile(state, effectiveIntensity) {
       fogLight = mixHex(skyBottom, "#b6c4d2", 0.4);
       fogShadow = mixHex(skyMid, skyTop, 0.7);
       mistColor = mixHex(skyBottom, "#d9e6f4", 0.24);
-      celestialAlpha = 0.08;
+      celestialAlpha = 0;
       starAlpha = 0;
       overcast = 0.84;
       haze = 0.24;
@@ -1198,7 +1290,7 @@ function buildSceneProfile(state, effectiveIntensity) {
       condensationAlpha = 0.12;
       distortionAlpha = 0.08;
       shadowSweepAlpha = 0.1;
-      horizonGlintAlpha = 0.08;
+      horizonGlintAlpha = 0;
       surfaceRelightAlpha = 0.24;
       break;
     case "storm":
@@ -1218,7 +1310,7 @@ function buildSceneProfile(state, effectiveIntensity) {
       lightningGlow = "#c4e1ff";
       glassTint = rgba("#87a3bc", 0.22);
       glassGlow = rgba("#dcecff", 0.26);
-      celestialAlpha = 0.04;
+      celestialAlpha = 0;
       starAlpha = 0;
       overcast = 1;
       haze = 0.32;
@@ -1255,7 +1347,7 @@ function buildSceneProfile(state, effectiveIntensity) {
       condensationAlpha = 0.18;
       distortionAlpha = 0.12;
       shadowSweepAlpha = 0.14;
-      horizonGlintAlpha = 0.04;
+      horizonGlintAlpha = 0;
       thermalShimmerAlpha = 0;
       surfaceRelightAlpha = 0.48;
       break;
@@ -1271,7 +1363,7 @@ function buildSceneProfile(state, effectiveIntensity) {
       fogLight = mixHex(skyBottom, "#ffffff", 0.2);
       fogShadow = mixHex(skyMid, skyTop, 0.5);
       mistColor = mixHex(skyBottom, "#f5fbff", 0.1);
-      celestialAlpha = isNight ? 0.22 : 0.34;
+      celestialAlpha = 0;
       starAlpha = 0;
       overcast = 0.62;
       haze = 0.22;
@@ -1308,7 +1400,7 @@ function buildSceneProfile(state, effectiveIntensity) {
       condensationAlpha = 0.08;
       distortionAlpha = 0.03;
       shadowSweepAlpha = 0.03;
-      horizonGlintAlpha = 0.06;
+      horizonGlintAlpha = 0.02;
       surfaceRelightAlpha = 0.12;
       break;
     case "fog":
@@ -1323,7 +1415,7 @@ function buildSceneProfile(state, effectiveIntensity) {
       fogLight = mixHex(skyBottom, "#ffffff", 0.16);
       fogShadow = mixHex(skyMid, skyTop, 0.32);
       mistColor = mixHex(skyBottom, "#f8fcff", 0.08);
-      celestialAlpha = 0.12;
+      celestialAlpha = 0;
       starAlpha = 0;
       overcast = 0.18;
       haze = 0.46;
@@ -1357,17 +1449,17 @@ function buildSceneProfile(state, effectiveIntensity) {
       distortionAlpha = 0.06;
       shadowSweepAlpha = 0.04;
       thermalShimmerAlpha = 0;
-      horizonGlintAlpha = 0.03;
+      horizonGlintAlpha = 0;
       surfaceRelightAlpha = 0.08;
       break;
     case "clear":
     default:
       if (phase === "day") {
-        celestialAlpha = 0.88;
+        celestialAlpha = 0.84;
       } else if (phase === "dawn" || phase === "dusk") {
-        celestialAlpha = 0.6;
+        celestialAlpha = 0.46;
       } else {
-        celestialAlpha = 0.34;
+        celestialAlpha = 0.2;
       }
       anchorFarColor = mixHex(skyTop, "#10161d", 0.46);
       anchorNearColor = mixHex(skyMid, "#17222d", 0.52);
@@ -1383,8 +1475,8 @@ function buildSceneProfile(state, effectiveIntensity) {
       contactHazeAlpha = phase === "night" ? 0.04 : 0.06;
       wetSheenAlpha = phase === "night" ? 0.04 : 0.12;
       fogCreepAlpha = phase === "night" ? 0.02 : 0.04;
-      horizonGlintAlpha = phase === "night" ? 0.05 : phase === "day" ? 0.18 : 0.26;
-      thermalShimmerAlpha = phase === "day" ? 0.12 : phase === "dawn" || phase === "dusk" ? 0.08 : 0.02;
+      horizonGlintAlpha = phase === "night" ? 0.02 : phase === "day" ? 0.18 : 0.24;
+      thermalShimmerAlpha = phase === "day" ? 0.12 : phase === "dawn" || phase === "dusk" ? 0.08 : 0;
       surfaceRelightAlpha = 0.08;
       break;
   }
@@ -1400,7 +1492,7 @@ function buildSceneProfile(state, effectiveIntensity) {
     vignette,
     sunColor: base.sun,
     moonColor: base.moon,
-    celestialGlow: rgba(withLight(base.sun, isNight ? 0.12 : 0.08), isNight ? 0.32 : 0.52),
+    celestialGlow: rgba(withLight(isNight ? base.moon : base.sun, isNight ? 0.12 : 0.08), isNight ? 0.24 : 0.52),
     celestialAlpha: celestialAlpha * atmosphereScale,
     starColor: withLight(base.moon, 0.08),
     starAlpha: starAlpha * atmosphereScale,
@@ -2421,14 +2513,34 @@ class CanvasWeatherRenderer {
     ctx.beginPath();
     ctx.arc(celestial.x, celestial.y, celestial.radius * 4.4, 0, Math.PI * 2);
     ctx.fill();
-    const core = ctx.createRadialGradient(celestial.x, celestial.y, celestial.radius * 0.12, celestial.x, celestial.y, celestial.radius);
-    core.addColorStop(0, rgba("#ffffff", profile.isNight ? 0.94 : 0.98));
-    core.addColorStop(0.4, rgba(coreColor, profile.celestialAlpha * 0.9));
-    core.addColorStop(1, rgba(coreColor, profile.celestialAlpha * 0.1));
-    ctx.fillStyle = core;
-    ctx.beginPath();
-    ctx.arc(celestial.x, celestial.y, celestial.radius, 0, Math.PI * 2);
-    ctx.fill();
+    if (profile.isNight) {
+      const moon = ctx.createRadialGradient(celestial.x - celestial.radius * 0.08, celestial.y - celestial.radius * 0.12, celestial.radius * 0.1, celestial.x, celestial.y, celestial.radius);
+      moon.addColorStop(0, rgba("#ffffff", 0.94));
+      moon.addColorStop(0.48, rgba(coreColor, profile.celestialAlpha * 0.86));
+      moon.addColorStop(1, rgba(coreColor, profile.celestialAlpha * 0.12));
+      ctx.fillStyle = moon;
+      ctx.beginPath();
+      ctx.arc(celestial.x, celestial.y, celestial.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(profile.skyTop, 0.94);
+      ctx.beginPath();
+      ctx.arc(celestial.x + celestial.radius * 0.34, celestial.y - celestial.radius * 0.04, celestial.radius * 0.92, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = rgba("#ffffff", profile.celestialAlpha * 0.34);
+      ctx.lineWidth = Math.max(1, celestial.radius * 0.04);
+      ctx.beginPath();
+      ctx.arc(celestial.x - celestial.radius * 0.02, celestial.y, celestial.radius * 0.92, Math.PI * 0.82, Math.PI * 1.22);
+      ctx.stroke();
+    } else {
+      const core = ctx.createRadialGradient(celestial.x, celestial.y, celestial.radius * 0.12, celestial.x, celestial.y, celestial.radius);
+      core.addColorStop(0, rgba("#ffffff", 0.98));
+      core.addColorStop(0.4, rgba(coreColor, profile.celestialAlpha * 0.9));
+      core.addColorStop(1, rgba(coreColor, profile.celestialAlpha * 0.1));
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(celestial.x, celestial.y, celestial.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
     if (profile.horizonGlintAlpha > 0.02) {
       const flare = ctx.createLinearGradient(celestial.x - this.width * 0.22, 0, celestial.x + this.width * 0.22, 0);
       flare.addColorStop(0, "rgba(255,255,255,0)");
@@ -2521,12 +2633,13 @@ class CanvasWeatherRenderer {
     if (motes.length === 0)
       return;
     const ctx = this.context;
+    const moteColor = profile.isNight ? profile.moonColor : profile.sunColor;
     for (const mote of motes) {
       const x = (mote.x + Math.sin(time * mote.speed + mote.phase) * mote.driftX) * this.width;
       const y = (mote.y + Math.cos(time * mote.speed * 0.7 + mote.phase) * mote.driftY) * this.height;
       ctx.save();
       ctx.globalAlpha = mote.alpha * (0.26 + profile.haze * 0.26);
-      ctx.fillStyle = rgba(profile.sunColor, 0.18);
+      ctx.fillStyle = rgba(moteColor, 0.18);
       ctx.beginPath();
       ctx.arc(x, y, mote.radius, 0, Math.PI * 2);
       ctx.fill();
@@ -2538,11 +2651,12 @@ class CanvasWeatherRenderer {
       return;
     const ctx = this.context;
     const passCount = Math.max(1, this.composition.budget.distortionPasses);
+    const shimmerColor = profile.isNight ? profile.moonColor : profile.sunColor;
     for (let index = 0;index < passCount; index += 1) {
       const alpha = profile.thermalShimmerAlpha * (0.18 + index * 0.06);
       const yBase = this.height * (0.66 + index * 0.03);
       ctx.save();
-      ctx.strokeStyle = rgba(profile.sunColor, alpha);
+      ctx.strokeStyle = rgba(shimmerColor, alpha);
       ctx.lineWidth = 1.1 + index * 0.5;
       ctx.filter = `blur(${1.2 + index * 0.8}px)`;
       ctx.beginPath();
@@ -3216,6 +3330,15 @@ function createSettingsUI(sendToBackend) {
     sceneIntensityValue
   };
   let currentState = null;
+  let lastAutoPalette = "day";
+  const deriveEditorPalette = () => derivePalette(conditionSelect.value, dateInput.value || currentState?.date || "", timeInput.value.trim() || currentState?.time || "");
+  const syncPaletteSelect = (force = false) => {
+    const nextPalette = deriveEditorPalette();
+    if (force || paletteSelect.value === lastAutoPalette || !paletteSelect.value) {
+      paletteSelect.value = nextPalette;
+    }
+    lastAutoPalette = nextPalette;
+  };
   const buildManualState = () => ({
     location: locationInput.value.trim() || currentState?.location,
     date: dateInput.value || currentState?.date,
@@ -3228,6 +3351,18 @@ function createSettingsUI(sendToBackend) {
     palette: paletteSelect.value,
     intensity: Number.parseFloat(sceneIntensity.value),
     source: "manual"
+  });
+  conditionSelect.addEventListener("change", () => {
+    syncPaletteSelect();
+  });
+  dateInput.addEventListener("change", () => {
+    syncPaletteSelect();
+  });
+  timeInput.addEventListener("input", () => {
+    syncPaletteSelect();
+  });
+  timeInput.addEventListener("change", () => {
+    syncPaletteSelect();
   });
   const updatePresetSelection = (state) => {
     const activePresetId = matchWeatherScenePreset(state);
@@ -3252,6 +3387,7 @@ function createSettingsUI(sendToBackend) {
         return;
       manualToggle.checked = true;
       applyStateToInputs(nextState, fields);
+      lastAutoPalette = derivePalette(nextState.condition ?? "clear", nextState.date ?? "", nextState.time ?? "");
       applyManualState(nextState);
     });
     presetButtons.set(preset.id, button);
@@ -3351,9 +3487,10 @@ function createSettingsUI(sendToBackend) {
       manualToggle.checked = state?.source === "manual";
       if (state) {
         applyStateToInputs(state, fields);
+        lastAutoPalette = derivePalette(state.condition, state.date, state.time);
       } else {
         conditionSelect.value = "clear";
-        paletteSelect.value = "day";
+        paletteSelect.value = derivePalette("clear", "", "");
         locationInput.value = "";
         dateInput.value = "";
         timeInput.value = "";
@@ -3363,6 +3500,7 @@ function createSettingsUI(sendToBackend) {
         sceneLayerSelect.value = "both";
         sceneIntensity.value = "0.30";
         sceneIntensityValue.textContent = "30%";
+        lastAutoPalette = paletteSelect.value;
       }
       updatePresetSelection(state);
     },

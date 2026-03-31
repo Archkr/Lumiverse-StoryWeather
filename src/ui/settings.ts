@@ -1,4 +1,5 @@
 import { buildPresetWeatherState, matchWeatherScenePreset, WEATHER_SCENE_PRESETS } from "../presets";
+import { derivePalette } from "../shared";
 import type { WeatherCondition, WeatherEffectsQuality, WeatherPalette, WeatherPrefs, WeatherState } from "../types";
 
 const CONDITIONS: WeatherCondition[] = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
@@ -378,6 +379,22 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   };
 
   let currentState: WeatherState | null = null;
+  let lastAutoPalette: WeatherPalette = "day";
+
+  const deriveEditorPalette = (): WeatherPalette =>
+    derivePalette(
+      conditionSelect.value as WeatherCondition,
+      dateInput.value || currentState?.date || "",
+      timeInput.value.trim() || currentState?.time || "",
+    );
+
+  const syncPaletteSelect = (force = false) => {
+    const nextPalette = deriveEditorPalette();
+    if (force || paletteSelect.value === lastAutoPalette || !paletteSelect.value) {
+      paletteSelect.value = nextPalette;
+    }
+    lastAutoPalette = nextPalette;
+  };
 
   const buildManualState = (): Partial<WeatherState> => ({
     location: locationInput.value.trim() || currentState?.location,
@@ -391,6 +408,19 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
     palette: paletteSelect.value as WeatherPalette,
     intensity: Number.parseFloat(sceneIntensity.value),
     source: "manual",
+  });
+
+  conditionSelect.addEventListener("change", () => {
+    syncPaletteSelect();
+  });
+  dateInput.addEventListener("change", () => {
+    syncPaletteSelect();
+  });
+  timeInput.addEventListener("input", () => {
+    syncPaletteSelect();
+  });
+  timeInput.addEventListener("change", () => {
+    syncPaletteSelect();
   });
 
   const updatePresetSelection = (state: WeatherState | null) => {
@@ -417,6 +447,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
       if (!nextState) return;
       manualToggle.checked = true;
       applyStateToInputs(nextState, fields);
+      lastAutoPalette = derivePalette(nextState.condition ?? "clear", nextState.date ?? "", nextState.time ?? "");
       applyManualState(nextState);
     });
     presetButtons.set(preset.id, button);
@@ -542,9 +573,10 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
 
       if (state) {
         applyStateToInputs(state, fields);
+        lastAutoPalette = derivePalette(state.condition, state.date, state.time);
       } else {
         conditionSelect.value = "clear";
-        paletteSelect.value = "day";
+        paletteSelect.value = derivePalette("clear", "", "");
         locationInput.value = "";
         dateInput.value = "";
         timeInput.value = "";
@@ -554,6 +586,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
         sceneLayerSelect.value = "both";
         sceneIntensity.value = "0.30";
         sceneIntensityValue.textContent = "30%";
+        lastAutoPalette = paletteSelect.value as WeatherPalette;
       }
 
       updatePresetSelection(state);

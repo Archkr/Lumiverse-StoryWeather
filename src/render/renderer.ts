@@ -426,7 +426,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
   let surfaceLight = withLight(base.horizon, 0.18);
   let surfaceMid = mixHex(base.skyBottom, base.horizon, 0.28);
   let surfaceShadow = mixHex(base.skyTop, "#091019", 0.72);
-  let celestialAlpha = phase === "day" ? 0.82 : phase === "dawn" || phase === "dusk" ? 0.54 : 0.28;
+  let celestialAlpha = phase === "day" ? 0.78 : phase === "dawn" || phase === "dusk" ? 0.4 : 0.2;
   let starAlpha = isNight ? 0.82 : phase === "dusk" || phase === "dawn" ? 0.2 : 0;
   let overcast = 0.08;
   let haze = 0.1;
@@ -458,8 +458,8 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
   let condensationAlpha = 0;
   let distortionAlpha = 0.04;
   let shadowSweepAlpha = 0.04;
-  let thermalShimmerAlpha = phase === "day" ? 0.1 : phase === "dawn" || phase === "dusk" ? 0.06 : 0.02;
-  let horizonGlintAlpha = phase === "day" ? 0.16 : phase === "dawn" || phase === "dusk" ? 0.24 : 0.04;
+  let thermalShimmerAlpha = phase === "day" ? 0.1 : phase === "dawn" || phase === "dusk" ? 0.06 : 0;
+  let horizonGlintAlpha = phase === "day" ? 0.16 : phase === "dawn" || phase === "dusk" ? 0.22 : 0.02;
   let surfaceRelightAlpha = 0.08;
 
   switch (state.condition) {
@@ -473,7 +473,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       cloudAccent = withLight(skyBottom, 0.14);
       fogLight = withLight(skyBottom, 0.28);
       fogShadow = mixHex(skyMid, skyTop, 0.58);
-      celestialAlpha = 0.16;
+      celestialAlpha = 0;
       starAlpha = isNight ? 0.03 : 0;
       overcast = 0.52;
       haze = 0.16;
@@ -501,7 +501,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       fogCreepAlpha = 0.06;
       shadowSweepAlpha = 0.12;
       thermalShimmerAlpha = 0.02;
-      horizonGlintAlpha = 0.06;
+      horizonGlintAlpha = 0.02;
       surfaceRelightAlpha = 0.1;
       break;
     case "rain":
@@ -516,7 +516,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       fogLight = mixHex(skyBottom, "#b6c4d2", 0.4);
       fogShadow = mixHex(skyMid, skyTop, 0.7);
       mistColor = mixHex(skyBottom, "#d9e6f4", 0.24);
-      celestialAlpha = 0.08;
+      celestialAlpha = 0;
       starAlpha = 0;
       overcast = 0.84;
       haze = 0.24;
@@ -553,7 +553,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       condensationAlpha = 0.12;
       distortionAlpha = 0.08;
       shadowSweepAlpha = 0.1;
-      horizonGlintAlpha = 0.08;
+      horizonGlintAlpha = 0;
       surfaceRelightAlpha = 0.24;
       break;
     case "storm":
@@ -573,7 +573,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       lightningGlow = "#c4e1ff";
       glassTint = rgba("#87a3bc", 0.22);
       glassGlow = rgba("#dcecff", 0.26);
-      celestialAlpha = 0.04;
+      celestialAlpha = 0;
       starAlpha = 0;
       overcast = 1;
       haze = 0.32;
@@ -610,7 +610,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       condensationAlpha = 0.18;
       distortionAlpha = 0.12;
       shadowSweepAlpha = 0.14;
-      horizonGlintAlpha = 0.04;
+      horizonGlintAlpha = 0;
       thermalShimmerAlpha = 0;
       surfaceRelightAlpha = 0.48;
       break;
@@ -626,7 +626,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       fogLight = mixHex(skyBottom, "#ffffff", 0.2);
       fogShadow = mixHex(skyMid, skyTop, 0.5);
       mistColor = mixHex(skyBottom, "#f5fbff", 0.1);
-      celestialAlpha = isNight ? 0.22 : 0.34;
+      celestialAlpha = 0;
       starAlpha = 0;
       overcast = 0.62;
       haze = 0.22;
@@ -663,7 +663,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       condensationAlpha = 0.08;
       distortionAlpha = 0.03;
       shadowSweepAlpha = 0.03;
-      horizonGlintAlpha = 0.06;
+      horizonGlintAlpha = 0.02;
       surfaceRelightAlpha = 0.12;
       break;
     case "fog":
@@ -678,7 +678,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       fogLight = mixHex(skyBottom, "#ffffff", 0.16);
       fogShadow = mixHex(skyMid, skyTop, 0.32);
       mistColor = mixHex(skyBottom, "#f8fcff", 0.08);
-      celestialAlpha = 0.12;
+      celestialAlpha = 0;
       starAlpha = 0;
       overcast = 0.18;
       haze = 0.46;
@@ -712,17 +712,17 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       distortionAlpha = 0.06;
       shadowSweepAlpha = 0.04;
       thermalShimmerAlpha = 0;
-      horizonGlintAlpha = 0.03;
+      horizonGlintAlpha = 0;
       surfaceRelightAlpha = 0.08;
       break;
     case "clear":
     default:
       if (phase === "day") {
-        celestialAlpha = 0.88;
+        celestialAlpha = 0.84;
       } else if (phase === "dawn" || phase === "dusk") {
-        celestialAlpha = 0.6;
+        celestialAlpha = 0.46;
       } else {
-        celestialAlpha = 0.34;
+        celestialAlpha = 0.2;
       }
       anchorFarColor = mixHex(skyTop, "#10161d", 0.46);
       anchorNearColor = mixHex(skyMid, "#17222d", 0.52);
@@ -738,8 +738,8 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
       contactHazeAlpha = phase === "night" ? 0.04 : 0.06;
       wetSheenAlpha = phase === "night" ? 0.04 : 0.12;
       fogCreepAlpha = phase === "night" ? 0.02 : 0.04;
-      horizonGlintAlpha = phase === "night" ? 0.05 : phase === "day" ? 0.18 : 0.26;
-      thermalShimmerAlpha = phase === "day" ? 0.12 : phase === "dawn" || phase === "dusk" ? 0.08 : 0.02;
+      horizonGlintAlpha = phase === "night" ? 0.02 : phase === "day" ? 0.18 : 0.24;
+      thermalShimmerAlpha = phase === "day" ? 0.12 : phase === "dawn" || phase === "dusk" ? 0.08 : 0;
       surfaceRelightAlpha = 0.08;
       break;
   }
@@ -757,7 +757,7 @@ function buildSceneProfile(state: WeatherState, effectiveIntensity: number): Sce
     vignette,
     sunColor: base.sun,
     moonColor: base.moon,
-    celestialGlow: rgba(withLight(base.sun, isNight ? 0.12 : 0.08), isNight ? 0.32 : 0.52),
+    celestialGlow: rgba(withLight(isNight ? base.moon : base.sun, isNight ? 0.12 : 0.08), isNight ? 0.24 : 0.52),
     celestialAlpha: celestialAlpha * atmosphereScale,
     starColor: withLight(base.moon, 0.08),
     starAlpha: starAlpha * atmosphereScale,
@@ -2037,14 +2037,43 @@ class CanvasWeatherRenderer {
     ctx.arc(celestial.x, celestial.y, celestial.radius * 4.4, 0, Math.PI * 2);
     ctx.fill();
 
-    const core = ctx.createRadialGradient(celestial.x, celestial.y, celestial.radius * 0.12, celestial.x, celestial.y, celestial.radius);
-    core.addColorStop(0, rgba("#ffffff", profile.isNight ? 0.94 : 0.98));
-    core.addColorStop(0.4, rgba(coreColor, profile.celestialAlpha * 0.9));
-    core.addColorStop(1, rgba(coreColor, profile.celestialAlpha * 0.1));
-    ctx.fillStyle = core;
-    ctx.beginPath();
-    ctx.arc(celestial.x, celestial.y, celestial.radius, 0, Math.PI * 2);
-    ctx.fill();
+    if (profile.isNight) {
+      const moon = ctx.createRadialGradient(
+        celestial.x - celestial.radius * 0.08,
+        celestial.y - celestial.radius * 0.12,
+        celestial.radius * 0.1,
+        celestial.x,
+        celestial.y,
+        celestial.radius,
+      );
+      moon.addColorStop(0, rgba("#ffffff", 0.94));
+      moon.addColorStop(0.48, rgba(coreColor, profile.celestialAlpha * 0.86));
+      moon.addColorStop(1, rgba(coreColor, profile.celestialAlpha * 0.12));
+      ctx.fillStyle = moon;
+      ctx.beginPath();
+      ctx.arc(celestial.x, celestial.y, celestial.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = rgba(profile.skyTop, 0.94);
+      ctx.beginPath();
+      ctx.arc(celestial.x + celestial.radius * 0.34, celestial.y - celestial.radius * 0.04, celestial.radius * 0.92, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = rgba("#ffffff", profile.celestialAlpha * 0.34);
+      ctx.lineWidth = Math.max(1, celestial.radius * 0.04);
+      ctx.beginPath();
+      ctx.arc(celestial.x - celestial.radius * 0.02, celestial.y, celestial.radius * 0.92, Math.PI * 0.82, Math.PI * 1.22);
+      ctx.stroke();
+    } else {
+      const core = ctx.createRadialGradient(celestial.x, celestial.y, celestial.radius * 0.12, celestial.x, celestial.y, celestial.radius);
+      core.addColorStop(0, rgba("#ffffff", 0.98));
+      core.addColorStop(0.4, rgba(coreColor, profile.celestialAlpha * 0.9));
+      core.addColorStop(1, rgba(coreColor, profile.celestialAlpha * 0.1));
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(celestial.x, celestial.y, celestial.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     if (profile.horizonGlintAlpha > 0.02) {
       const flare = ctx.createLinearGradient(celestial.x - this.width * 0.22, 0, celestial.x + this.width * 0.22, 0);
@@ -2160,12 +2189,13 @@ class CanvasWeatherRenderer {
   private drawMotes(time: number, motes: MoteParticle[], profile: SceneProfile): void {
     if (motes.length === 0) return;
     const ctx = this.context;
+    const moteColor = profile.isNight ? profile.moonColor : profile.sunColor;
     for (const mote of motes) {
       const x = (mote.x + Math.sin(time * mote.speed + mote.phase) * mote.driftX) * this.width;
       const y = (mote.y + Math.cos(time * mote.speed * 0.7 + mote.phase) * mote.driftY) * this.height;
       ctx.save();
       ctx.globalAlpha = mote.alpha * (0.26 + profile.haze * 0.26);
-      ctx.fillStyle = rgba(profile.sunColor, 0.18);
+      ctx.fillStyle = rgba(moteColor, 0.18);
       ctx.beginPath();
       ctx.arc(x, y, mote.radius, 0, Math.PI * 2);
       ctx.fill();
@@ -2177,11 +2207,12 @@ class CanvasWeatherRenderer {
     if (!this.composition || profile.thermalShimmerAlpha <= 0.01 || this.composition.budget.distortionPasses <= 0) return;
     const ctx = this.context;
     const passCount = Math.max(1, this.composition.budget.distortionPasses);
+    const shimmerColor = profile.isNight ? profile.moonColor : profile.sunColor;
     for (let index = 0; index < passCount; index += 1) {
       const alpha = profile.thermalShimmerAlpha * (0.18 + index * 0.06);
       const yBase = this.height * (0.66 + index * 0.03);
       ctx.save();
-      ctx.strokeStyle = rgba(profile.sunColor, alpha);
+      ctx.strokeStyle = rgba(shimmerColor, alpha);
       ctx.lineWidth = 1.1 + index * 0.5;
       ctx.filter = `blur(${1.2 + index * 0.8}px)`;
       ctx.beginPath();

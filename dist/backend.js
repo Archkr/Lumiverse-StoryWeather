@@ -149,15 +149,14 @@ function derivePalette(condition, dateValue, timeValue) {
     return "night";
   }
   const hour = parseHourFromTimeString(timeValue);
-  if (hour === null)
-    return condition === "cloudy" || condition === "rain" ? "dusk" : "day";
-  if (hour < 6)
+  const resolvedHour = hour ?? new Date().getHours();
+  if (resolvedHour < 6)
     return "night";
-  if (hour < 10)
+  if (resolvedHour < 10)
     return "dawn";
-  if (hour < 18)
+  if (resolvedHour < 18)
     return "day";
-  if (hour < 21)
+  if (resolvedHour < 21)
     return "dusk";
   return "night";
 }
