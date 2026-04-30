@@ -17,7 +17,7 @@ export const WEATHER_SCENE_PRESETS: WeatherScenePreset[] = [
     id: "clear-day",
     label: "Clear day",
     shortLabel: "Day",
-    description: "Bright open skies with a soft daylight bloom.",
+    description: "Open skies, soft daylight, faint sun haze.",
     state: {
       time: "1:18 PM",
       condition: "clear",
@@ -30,10 +30,26 @@ export const WEATHER_SCENE_PRESETS: WeatherScenePreset[] = [
     },
   },
   {
+    id: "golden-hour",
+    label: "Golden hour",
+    shortLabel: "Golden",
+    description: "Low warm sun, long shadows, dust motes in the air.",
+    state: {
+      time: "6:42 PM",
+      condition: "clear",
+      summary: "Golden hour glow",
+      temperature: "65F",
+      wind: "calm",
+      layer: "back",
+      palette: "dusk",
+      intensity: 0.42,
+    },
+  },
+  {
     id: "overcast",
     label: "Overcast",
     shortLabel: "Overcast",
-    description: "Muted daylight under a heavy cloud ceiling.",
+    description: "Heavy ceiling, muted daylight, slow drift.",
     state: {
       time: "11:26 AM",
       condition: "cloudy",
@@ -47,9 +63,9 @@ export const WEATHER_SCENE_PRESETS: WeatherScenePreset[] = [
   },
   {
     id: "rain",
-    label: "Rain",
+    label: "Steady rain",
     shortLabel: "Rain",
-    description: "Steady angled rain with a low mist at the base of the scene.",
+    description: "Angled rain with a low base mist.",
     state: {
       time: "2:42 PM",
       condition: "rain",
@@ -63,9 +79,9 @@ export const WEATHER_SCENE_PRESETS: WeatherScenePreset[] = [
   },
   {
     id: "storm",
-    label: "Storm",
+    label: "Thunderstorm",
     shortLabel: "Storm",
-    description: "Dark thunderheads, hard rain, and intermittent flashes.",
+    description: "Dark thunderheads, hard rain, lightning flashes.",
     state: {
       time: "8:18 PM",
       condition: "storm",
@@ -79,9 +95,9 @@ export const WEATHER_SCENE_PRESETS: WeatherScenePreset[] = [
   },
   {
     id: "snow",
-    label: "Snow",
+    label: "Snowfall",
     shortLabel: "Snow",
-    description: "Layered snowfall with a cold, luminous atmosphere.",
+    description: "Layered drifting snow, cold luminous air.",
     state: {
       time: "6:48 AM",
       condition: "snow",
@@ -95,9 +111,9 @@ export const WEATHER_SCENE_PRESETS: WeatherScenePreset[] = [
   },
   {
     id: "fog",
-    label: "Fog",
+    label: "Low fog",
     shortLabel: "Fog",
-    description: "Low fog pooling through the lower scene.",
+    description: "Slow fog banks pooling along the lower scene.",
     state: {
       time: "6:12 AM",
       condition: "fog",
@@ -111,13 +127,13 @@ export const WEATHER_SCENE_PRESETS: WeatherScenePreset[] = [
   },
   {
     id: "clear-night",
-    label: "Clear night",
+    label: "Starlit night",
     shortLabel: "Night",
-    description: "Clean night air with a cool moonlit palette.",
+    description: "Cool moonlit air with quiet starlight.",
     state: {
       time: "10:18 PM",
       condition: "clear",
-      summary: "Clear night air",
+      summary: "Clear night sky",
       temperature: "57F",
       wind: "light night wind",
       layer: "back",
@@ -139,9 +155,7 @@ export function buildPresetWeatherState(
   if (!preset) return null;
 
   const baseState = currentState ?? makeDefaultWeatherState();
-  const fallbackDate = /^\d{4}-\d{2}-\d{2}$/.test(baseState.date)
-    ? baseState.date
-    : formatDate(new Date());
+  const fallbackDate = /^\d{4}-\d{2}-\d{2}$/.test(baseState.date) ? baseState.date : formatDate(new Date());
 
   return {
     location: baseState.location,
@@ -153,17 +167,13 @@ export function buildPresetWeatherState(
 
 export function matchWeatherScenePreset(state?: WeatherState | null): string | null {
   if (!state) return null;
-
-  const match = WEATHER_SCENE_PRESETS.find((preset) =>
-    preset.state.condition === state.condition &&
-    preset.state.palette === state.palette &&
-    preset.state.layer === state.layer &&
-    preset.state.time === state.time &&
-    preset.state.summary === state.summary &&
-    preset.state.temperature === state.temperature &&
-    preset.state.wind === state.wind &&
-    Math.abs(preset.state.intensity - state.intensity) < 0.001,
+  const match = WEATHER_SCENE_PRESETS.find(
+    (preset) =>
+      preset.state.condition === state.condition &&
+      preset.state.palette === state.palette &&
+      preset.state.layer === state.layer &&
+      preset.state.summary === state.summary &&
+      Math.abs(preset.state.intensity - state.intensity) < 0.05,
   );
-
   return match?.id ?? null;
 }

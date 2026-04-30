@@ -1,598 +1,361 @@
-import { buildPresetWeatherState, matchWeatherScenePreset, WEATHER_SCENE_PRESETS } from "../presets";
-import { derivePalette } from "../shared";
-import type { WeatherCondition, WeatherEffectsQuality, WeatherPalette, WeatherPrefs, WeatherState } from "../types";
+import type { SpindleFrontendContext } from "lumiverse-spindle-types";
+import { WEATHER_SCENE_PRESETS, buildPresetWeatherState, matchWeatherScenePreset } from "../presets";
+import { WEATHER_CONDITIONS, WEATHER_LAYERS, WEATHER_PALETTES, clamp } from "../shared";
+import type {
+  ReducedMotionMode,
+  WeatherCondition,
+  WeatherEffectsQuality,
+  WeatherLayerMode,
+  WeatherPalette,
+  WeatherPrefs,
+  WeatherState,
+} from "../types";
 
-const CONDITIONS: WeatherCondition[] = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
-const PALETTES: WeatherPalette[] = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
-const QUALITY_MODES: Array<{ value: WeatherEffectsQuality; label: string }> = [
-  { value: "performance", label: "Performance" },
-  { value: "lite", label: "Lite" },
+export interface SettingsCallbacks {
+  onSavePrefs(prefs: Partial<WeatherPrefs>): void;
+  onSetManualState(state: Partial<WeatherState>): void;
+  onApplyPreset(presetId: string): void;
+  onClearOverride(): void;
+  onClearWeather(): void;
+  onResetWidgetPosition(): void;
+}
+
+export interface SettingsHandle {
+  destroy(): void;
+  sync(state: WeatherState | null, prefs: WeatherPrefs): void;
+}
+
+const QUALITY_OPTIONS: Array<{ value: WeatherEffectsQuality; label: string }> = [
+  { value: "lite", label: "Lite (low draw)" },
   { value: "standard", label: "Standard" },
   { value: "cinematic", label: "Cinematic" },
 ];
 
-export interface SettingsUI {
-  root: HTMLElement;
-  sync(prefs: WeatherPrefs, state: WeatherState | null): void;
-  destroy(): void;
-}
+const REDUCED_MOTION_OPTIONS: Array<{ value: ReducedMotionMode; label: string }> = [
+  { value: "system", label: "Match OS" },
+  { value: "always", label: "Always reduce" },
+  { value: "never", label: "Never reduce" },
+];
 
-function createCodeBlock(text: string): HTMLPreElement {
-  const code = document.createElement("pre");
-  code.className = "weather-settings-code";
-  code.textContent = text;
-  return code;
-}
+const LAYER_PREF_OPTIONS: Array<{ value: WeatherPrefs["layerMode"]; label: string }> = [
+  { value: "auto", label: "Auto (use scene's layer)" },
+  { value: "back", label: "Behind chat" },
+  { value: "front", label: "In front of chat" },
+  { value: "both", label: "Both layers" },
+];
 
-function createLabeledInput(labelText: string, input: HTMLElement): HTMLLabelElement {
-  const label = document.createElement("label");
-  label.className = "weather-settings-label";
-  label.textContent = labelText;
-  label.appendChild(input);
-  return label;
-}
+export function createSettingsUI(ctx: SpindleFrontendContext, callbacks: SettingsCallbacks): SettingsHandle {
+  const mount = ctx.ui.mount("settings_extensions") as HTMLElement;
+  const root = document.createElement("div");
+  root.className = "sw-settings";
+  mount.appendChild(root);
 
-function createSection(titleText: string, copyText?: string) {
-  const section = document.createElement("section");
-  section.className = "weather-settings-section";
+  // ─── Section: Prompt setup
+  const promptSection = section("Prompt integration");
+  const promptHint = document.createElement("p");
+  promptHint.className = "sw-settings__hint";
+  promptHint.textContent =
+    "Add the macro below to your character or preset system prompt. The model will append a hidden weather tag at the end of each reply.";
+  const macroBox = document.createElement("code");
+  macroBox.className = "sw-settings__macro";
+  macroBox.textContent = "{{weather_tracker}}";
+  const aliasHint = document.createElement("p");
+  aliasHint.className = "sw-settings__hint";
+  aliasHint.textContent =
+    "Aliases also accepted: {{story_weather_tracker}}, {{story_weather}}. Reference macros: {{weather_format}}, {{weather_state}}.";
+  promptSection.append(promptHint, macroBox, aliasHint);
 
-  const header = document.createElement("div");
-  header.className = "weather-settings-section-header";
-
-  const title = document.createElement("strong");
-  title.className = "weather-settings-section-title";
-  title.textContent = titleText;
-  header.appendChild(title);
-
-  if (copyText) {
-    const copy = document.createElement("p");
-    copy.className = "weather-settings-section-copy";
-    copy.textContent = copyText;
-    header.appendChild(copy);
-  }
-
-  const body = document.createElement("div");
-  body.className = "weather-settings-section-body";
-
-  section.appendChild(header);
-  section.appendChild(body);
-
-  return { section, body };
-}
-
-function applyStateToInputs(
-  state: Partial<WeatherState>,
-  fields: {
-    conditionSelect: HTMLSelectElement;
-    paletteSelect: HTMLSelectElement;
-    locationInput: HTMLInputElement;
-    dateInput: HTMLInputElement;
-    timeInput: HTMLInputElement;
-    temperatureInput: HTMLInputElement;
-    windInput: HTMLInputElement;
-    summaryInput: HTMLInputElement;
-    sceneLayerSelect: HTMLSelectElement;
-    sceneIntensity: HTMLInputElement;
-    sceneIntensityValue: HTMLSpanElement;
-  },
-): void {
-  if (state.condition) fields.conditionSelect.value = state.condition;
-  if (state.palette) fields.paletteSelect.value = state.palette;
-  if (state.location) fields.locationInput.value = state.location;
-  if (state.date && /^\d{4}-\d{2}-\d{2}$/.test(state.date)) fields.dateInput.value = state.date;
-  if (state.time) fields.timeInput.value = state.time;
-  if (state.temperature) fields.temperatureInput.value = state.temperature;
-  if (state.wind) fields.windInput.value = state.wind;
-  if (state.summary) fields.summaryInput.value = state.summary;
-  if (state.layer) fields.sceneLayerSelect.value = state.layer;
-  if (typeof state.intensity === "number" && Number.isFinite(state.intensity)) {
-    fields.sceneIntensity.value = state.intensity.toFixed(2);
-    fields.sceneIntensityValue.textContent = `${Math.round(state.intensity * 100)}%`;
-  }
-}
-
-export function createSettingsUI(sendToBackend: (payload: unknown) => void): SettingsUI {
-  const root = document.createElement("section");
-  root.className = "weather-settings-card";
-
-  const header = document.createElement("header");
-  header.className = "weather-settings-card-header";
-
-  const title = document.createElement("h3");
-  title.textContent = "Story Weather HUD";
-
-  const status = document.createElement("span");
-  status.className = "weather-settings-status";
-
-  header.appendChild(title);
-  header.appendChild(status);
-
-  const body = document.createElement("div");
-  body.className = "weather-settings-card-body";
-
-  const preview = document.createElement("div");
-  preview.className = "weather-settings-preview";
-
-  const promptSection = createSection(
-    "Prompt integration",
-    "To make the main model emit the hidden weather tag consistently, add the recommended macro to your system prompt or preset, just like simtracker uses {{sim_tracker}}.",
+  // ─── Section: Display preferences
+  const prefsSection = section("Display preferences");
+  const effectsToggleRow = toggleRow("Effects enabled", (next) => callbacks.onSavePrefs({ effectsEnabled: next }));
+  const layerRow = selectRow("Placement", LAYER_PREF_OPTIONS, (value) =>
+    callbacks.onSavePrefs({ layerMode: value as WeatherPrefs["layerMode"] }),
   );
-  const effectsSection = createSection("Effects", "Overall ambience, density, and motion.");
-  const placementSection = createSection("Placement", "Control whether the weather stays behind the chat, in front, or both.");
-  const motionSection = createSection(
-    "Motion",
-    "Fine-tune motion budgets and pacing. Higher quality increases scene depth, atmospheric layering, and back-glass detail.",
+  const qualityRow = selectRow("Quality", QUALITY_OPTIONS, (value) =>
+    callbacks.onSavePrefs({ qualityMode: value as WeatherEffectsQuality }),
+  );
+  const motionRow = selectRow("Reduced motion", REDUCED_MOTION_OPTIONS, (value) =>
+    callbacks.onSavePrefs({ reducedMotion: value as ReducedMotionMode }),
+  );
+  const intensityRow = sliderRow("Density", 0.25, 1.5, 0.05, 1, (value) => callbacks.onSavePrefs({ intensity: value }));
+  const pauseRow = toggleRow("Pause animation", (next) => callbacks.onSavePrefs({ pauseEffects: next }));
+  prefsSection.append(
+    effectsToggleRow.row,
+    layerRow.row,
+    qualityRow.row,
+    intensityRow.row,
+    motionRow.row,
+    pauseRow.row,
   );
 
-  const promptRecommended = document.createElement("div");
-  promptRecommended.className = "weather-settings-copy-group";
+  const resetWidget = document.createElement("button");
+  resetWidget.type = "button";
+  resetWidget.className = "sw-settings__button";
+  resetWidget.textContent = "Reset HUD position";
+  resetWidget.addEventListener("click", () => callbacks.onResetWidgetPosition());
+  const resetWrap = document.createElement("div");
+  resetWrap.className = "sw-settings__actions";
+  resetWrap.appendChild(resetWidget);
+  prefsSection.appendChild(resetWrap);
 
-  const promptRecommendedLabel = document.createElement("strong");
-  promptRecommendedLabel.className = "weather-settings-copy-title";
-  promptRecommendedLabel.textContent = "Recommended prompt snippet";
-
-  const promptRecommendedCopy = document.createElement("p");
-  promptRecommendedCopy.className = "weather-settings-section-copy";
-  promptRecommendedCopy.textContent = "Place this directly in the active character or preset system prompt so the main model sees the weather instruction during generation.";
-
-  promptRecommended.appendChild(promptRecommendedLabel);
-  promptRecommended.appendChild(promptRecommendedCopy);
-  promptRecommended.appendChild(createCodeBlock("{{weather_tracker}}"));
-
-  const promptOptional = document.createElement("div");
-  promptOptional.className = "weather-settings-copy-group";
-
-  const promptOptionalLabel = document.createElement("strong");
-  promptOptionalLabel.className = "weather-settings-copy-title";
-  promptOptionalLabel.textContent = "Optional reference macros";
-
-  const promptOptionalCopy = document.createElement("p");
-  promptOptionalCopy.className = "weather-settings-section-copy";
-  promptOptionalCopy.textContent = "Use these only if you want to expose the current scene summary or the raw tag example elsewhere in the prompt.";
-
-  promptOptional.appendChild(promptOptionalLabel);
-  promptOptional.appendChild(promptOptionalCopy);
-  promptOptional.appendChild(createCodeBlock("{{weather_state}}\n{{weather_format}}"));
-
-  promptSection.body.appendChild(promptRecommended);
-  promptSection.body.appendChild(promptOptional);
-
-  const effectsLabel = document.createElement("label");
-  effectsLabel.className = "weather-settings-label";
-  effectsLabel.textContent = "Animated effects";
-
-  const effectsToggle = document.createElement("input");
-  effectsToggle.type = "checkbox";
-  effectsToggle.className = "weather-settings-checkbox";
-  effectsToggle.addEventListener("change", () => {
-    sendToBackend({ type: "save_prefs", prefs: { effectsEnabled: effectsToggle.checked } });
-  });
-  effectsLabel.appendChild(effectsToggle);
-
-  const layerLabel = document.createElement("label");
-  layerLabel.className = "weather-settings-label";
-  layerLabel.textContent = "Effect placement";
-
-  const layerSelect = document.createElement("select");
-  layerSelect.className = "weather-settings-select";
-  layerSelect.innerHTML = `
-    <option value="auto">Follow story layer</option>
-    <option value="back">Back only</option>
-    <option value="front">Front only</option>
-    <option value="both">Front and back</option>
-  `;
-  layerSelect.addEventListener("change", () => {
-    sendToBackend({ type: "save_prefs", prefs: { layerMode: layerSelect.value } });
-  });
-  layerLabel.appendChild(layerSelect);
-
-  const intensityLabel = document.createElement("label");
-  intensityLabel.className = "weather-settings-label";
-  intensityLabel.textContent = "Animation intensity";
-
-  const intensityRow = document.createElement("div");
-  intensityRow.className = "weather-settings-row";
-
-  const intensitySlider = document.createElement("input");
-  intensitySlider.type = "range";
-  intensitySlider.className = "weather-settings-range";
-  intensitySlider.min = "0.25";
-  intensitySlider.max = "1.50";
-  intensitySlider.step = "0.05";
-
-  const intensityValue = document.createElement("span");
-  intensityValue.className = "weather-settings-value";
-
-  intensitySlider.addEventListener("input", () => {
-    intensityValue.textContent = `${Math.round(Number.parseFloat(intensitySlider.value) * 100)}%`;
-    sendToBackend({ type: "save_prefs", prefs: { intensity: Number.parseFloat(intensitySlider.value) } });
-  });
-
-  intensityRow.appendChild(intensitySlider);
-  intensityRow.appendChild(intensityValue);
-  intensityLabel.appendChild(intensityRow);
-
-  const qualityLabel = document.createElement("label");
-  qualityLabel.className = "weather-settings-label";
-  qualityLabel.textContent = "Effects quality";
-
-  const qualitySelect = document.createElement("select");
-  qualitySelect.className = "weather-settings-select";
-  qualitySelect.innerHTML = QUALITY_MODES.map((mode) => `<option value="${mode.value}">${mode.label}</option>`).join("");
-  qualitySelect.addEventListener("change", () => {
-    sendToBackend({ type: "save_prefs", prefs: { qualityMode: qualitySelect.value } });
-  });
-  qualityLabel.appendChild(qualitySelect);
-
-  const qualityHint = document.createElement("p");
-  qualityHint.className = "weather-settings-section-copy";
-  qualityHint.textContent =
-    "Performance and Lite keep the renderer restrained. Standard adds fuller horizon layering and cloud depth, while Cinematic pushes the richest framing, silhouettes, curtains, mist, and back-glass detail.";
-
-  const motionLabel = document.createElement("label");
-  motionLabel.className = "weather-settings-label";
-  motionLabel.textContent = "Reduced motion";
-
-  const motionSelect = document.createElement("select");
-  motionSelect.className = "weather-settings-select";
-  motionSelect.innerHTML = `
-    <option value="never">Always animate</option>
-    <option value="system">Follow system setting</option>
-    <option value="always">Always reduce motion</option>
-  `;
-  motionSelect.addEventListener("change", () => {
-    sendToBackend({ type: "save_prefs", prefs: { reducedMotion: motionSelect.value } });
-  });
-  motionLabel.appendChild(motionSelect);
-
-  const pauseLabel = document.createElement("label");
-  pauseLabel.className = "weather-settings-label";
-  pauseLabel.textContent = "Pause motion";
-
-  const pauseToggle = document.createElement("input");
-  pauseToggle.type = "checkbox";
-  pauseToggle.className = "weather-settings-checkbox";
-  pauseToggle.addEventListener("change", () => {
-    sendToBackend({ type: "save_prefs", prefs: { pauseEffects: pauseToggle.checked } });
-  });
-  pauseLabel.appendChild(pauseToggle);
-
-  effectsSection.body.appendChild(effectsLabel);
-  placementSection.body.appendChild(layerLabel);
-  motionSection.body.appendChild(intensityLabel);
-  motionSection.body.appendChild(qualityLabel);
-  motionSection.body.appendChild(qualityHint);
-  motionSection.body.appendChild(motionLabel);
-  motionSection.body.appendChild(pauseLabel);
-
-  const manualCard = document.createElement("section");
-  manualCard.className = "weather-settings-manual-card";
-
-  const manualHeader = document.createElement("div");
-  manualHeader.className = "weather-settings-manual-header";
-
-  const manualTitleWrap = document.createElement("div");
-  manualTitleWrap.className = "weather-settings-manual-titlewrap";
-
-  const manualEyebrow = document.createElement("span");
-  manualEyebrow.className = "weather-settings-section-title";
-  manualEyebrow.textContent = "Manual scene";
-
-  const manualTitle = document.createElement("strong");
-  manualTitle.textContent = "Lock the current chat to a custom weather scene";
-
-  manualTitleWrap.appendChild(manualEyebrow);
-  manualTitleWrap.appendChild(manualTitle);
-
-  const manualModePill = document.createElement("span");
-  manualModePill.className = "weather-settings-status-pill";
-
-  manualHeader.appendChild(manualTitleWrap);
-  manualHeader.appendChild(manualModePill);
-
-  const manualHint = document.createElement("p");
-  manualHint.className = "weather-settings-manual-hint";
-  manualHint.textContent = "Quick presets apply immediately. The full editor below lets you refine the current scene and keep it locked until you resume story sync.";
-
-  const manualToggle = document.createElement("input");
-  manualToggle.type = "checkbox";
-  manualToggle.className = "weather-settings-checkbox";
-  const manualToggleLabel = createLabeledInput("Manual override", manualToggle);
-
+  // ─── Section: Quick presets
+  const presetSection = section("Quick presets");
   const presetGrid = document.createElement("div");
-  presetGrid.className = "weather-settings-preset-grid";
+  presetGrid.className = "sw-settings__presets";
   const presetButtons = new Map<string, HTMLButtonElement>();
-
-  const conditionSelect = document.createElement("select");
-  conditionSelect.className = "weather-settings-select";
-  conditionSelect.innerHTML = CONDITIONS.map((condition) => `<option value="${condition}">${condition}</option>`).join("");
-
-  const paletteSelect = document.createElement("select");
-  paletteSelect.className = "weather-settings-select";
-  paletteSelect.innerHTML = PALETTES.map((palette) => `<option value="${palette}">${palette}</option>`).join("");
-
-  const sceneLayerSelect = document.createElement("select");
-  sceneLayerSelect.className = "weather-settings-select";
-  sceneLayerSelect.innerHTML = `
-    <option value="back">Back</option>
-    <option value="front">Front</option>
-    <option value="both">Both</option>
-  `;
-
-  const dateInput = document.createElement("input");
-  dateInput.type = "date";
-  dateInput.className = "weather-settings-input";
-
-  const locationInput = document.createElement("input");
-  locationInput.type = "text";
-  locationInput.className = "weather-settings-input";
-  locationInput.placeholder = "Tengu City";
-
-  const timeInput = document.createElement("input");
-  timeInput.type = "text";
-  timeInput.className = "weather-settings-input";
-  timeInput.placeholder = "9:42 PM";
-
-  const temperatureInput = document.createElement("input");
-  temperatureInput.type = "text";
-  temperatureInput.className = "weather-settings-input";
-  temperatureInput.placeholder = "61F";
-
-  const windInput = document.createElement("input");
-  windInput.type = "text";
-  windInput.className = "weather-settings-input";
-  windInput.placeholder = "breezy";
-
-  const summaryInput = document.createElement("input");
-  summaryInput.type = "text";
-  summaryInput.className = "weather-settings-input";
-  summaryInput.placeholder = "Cold spring rain";
-
-  const sceneIntensityRow = document.createElement("div");
-  sceneIntensityRow.className = "weather-settings-row";
-  const sceneIntensity = document.createElement("input");
-  sceneIntensity.type = "range";
-  sceneIntensity.className = "weather-settings-range";
-  sceneIntensity.min = "0.00";
-  sceneIntensity.max = "1.00";
-  sceneIntensity.step = "0.05";
-  const sceneIntensityValue = document.createElement("span");
-  sceneIntensityValue.className = "weather-settings-value";
-  sceneIntensity.addEventListener("input", () => {
-    sceneIntensityValue.textContent = `${Math.round(Number.parseFloat(sceneIntensity.value) * 100)}%`;
-  });
-  sceneIntensityRow.appendChild(sceneIntensity);
-  sceneIntensityRow.appendChild(sceneIntensityValue);
-
-  const fields = {
-    conditionSelect,
-    paletteSelect,
-    locationInput,
-    dateInput,
-    timeInput,
-    temperatureInput,
-    windInput,
-    summaryInput,
-    sceneLayerSelect,
-    sceneIntensity,
-    sceneIntensityValue,
-  };
-
-  let currentState: WeatherState | null = null;
-  let lastAutoPalette: WeatherPalette = "day";
-
-  const deriveEditorPalette = (): WeatherPalette =>
-    derivePalette(
-      conditionSelect.value as WeatherCondition,
-      dateInput.value || currentState?.date || "",
-      timeInput.value.trim() || currentState?.time || "",
-    );
-
-  const syncPaletteSelect = (force = false) => {
-    const nextPalette = deriveEditorPalette();
-    if (force || paletteSelect.value === lastAutoPalette || !paletteSelect.value) {
-      paletteSelect.value = nextPalette;
-    }
-    lastAutoPalette = nextPalette;
-  };
-
-  const buildManualState = (): Partial<WeatherState> => ({
-    location: locationInput.value.trim() || currentState?.location,
-    date: dateInput.value || currentState?.date,
-    time: timeInput.value.trim() || currentState?.time,
-    condition: conditionSelect.value as WeatherCondition,
-    summary: summaryInput.value.trim() || currentState?.summary,
-    temperature: temperatureInput.value.trim() || currentState?.temperature,
-    wind: windInput.value.trim() || currentState?.wind,
-    layer: sceneLayerSelect.value as WeatherState["layer"],
-    palette: paletteSelect.value as WeatherPalette,
-    intensity: Number.parseFloat(sceneIntensity.value),
-    source: "manual",
-  });
-
-  conditionSelect.addEventListener("change", () => {
-    syncPaletteSelect();
-  });
-  dateInput.addEventListener("change", () => {
-    syncPaletteSelect();
-  });
-  timeInput.addEventListener("input", () => {
-    syncPaletteSelect();
-  });
-  timeInput.addEventListener("change", () => {
-    syncPaletteSelect();
-  });
-
-  const updatePresetSelection = (state: WeatherState | null) => {
-    const activePresetId = matchWeatherScenePreset(state);
-    for (const [presetId, button] of presetButtons) {
-      button.classList.toggle("weather-settings-preset-active", presetId === activePresetId);
-    }
-  };
-
-  const applyManualState = (state?: Partial<WeatherState>) => {
-    sendToBackend({ type: "set_manual_state", state: state ?? buildManualState() });
-  };
-
   for (const preset of WEATHER_SCENE_PRESETS) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "weather-settings-preset";
-    button.innerHTML = `
-      <span class="weather-settings-preset-label">${preset.label}</span>
-      <span class="weather-settings-preset-copy">${preset.description}</span>
-    `;
-    button.addEventListener("click", () => {
-      const nextState = buildPresetWeatherState(preset.id, currentState);
-      if (!nextState) return;
-      manualToggle.checked = true;
-      applyStateToInputs(nextState, fields);
-      lastAutoPalette = derivePalette(nextState.condition ?? "clear", nextState.date ?? "", nextState.time ?? "");
-      applyManualState(nextState);
-    });
-    presetButtons.set(preset.id, button);
-    presetGrid.appendChild(button);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "sw-settings__preset";
+    btn.textContent = preset.label;
+    btn.title = preset.description;
+    btn.addEventListener("click", () => callbacks.onApplyPreset(preset.id));
+    presetGrid.appendChild(btn);
+    presetButtons.set(preset.id, btn);
   }
+  presetSection.appendChild(presetGrid);
 
-  manualToggle.addEventListener("change", () => {
-    if (manualToggle.checked) {
-      applyManualState();
-    } else {
-      sendToBackend({ type: "clear_manual_override" });
-    }
-  });
+  // ─── Section: Manual scene editor
+  const manualSection = section("Manual scene editor");
+  const grid = document.createElement("div");
+  grid.className = "sw-settings__grid";
 
-  const manualGrid = document.createElement("div");
-  manualGrid.className = "weather-settings-manual-grid";
-  manualGrid.appendChild(createLabeledInput("Condition", conditionSelect));
-  manualGrid.appendChild(createLabeledInput("Palette", paletteSelect));
-  manualGrid.appendChild(createLabeledInput("Location", locationInput));
-  manualGrid.appendChild(createLabeledInput("Story date", dateInput));
-  manualGrid.appendChild(createLabeledInput("Story time", timeInput));
-  manualGrid.appendChild(createLabeledInput("Temperature", temperatureInput));
-  manualGrid.appendChild(createLabeledInput("Wind", windInput));
-  manualGrid.appendChild(createLabeledInput("Scene layer", sceneLayerSelect));
-  manualGrid.appendChild(createLabeledInput("Summary", summaryInput));
+  const conditionField = selectField(
+    "Condition",
+    WEATHER_CONDITIONS.map((c) => ({ value: c, label: capitalize(c) })),
+  );
+  const paletteField = selectField(
+    "Palette",
+    WEATHER_PALETTES.map((p) => ({ value: p, label: capitalize(p) })),
+  );
+  const layerField = selectField(
+    "Layer",
+    WEATHER_LAYERS.map((l) => ({ value: l, label: capitalize(l) })),
+  );
+  const dateField = textField("Date", "2026-03-24");
+  const timeField = textField("Time", "9:42 PM");
+  const tempField = textField("Temperature", "61F");
+  const windField = textField("Wind", "breezy");
+  const summaryField = textField("Summary", "Cold spring rain");
+  const intensityField = numberField("Intensity (0–1)", "0.65", 0, 1, 0.05);
+  const locationField = textField("Location", "Tengu City");
 
-  const sceneIntensityLabel = createLabeledInput("Scene intensity", sceneIntensityRow);
+  grid.append(
+    conditionField.field,
+    paletteField.field,
+    layerField.field,
+    dateField.field,
+    timeField.field,
+    tempField.field,
+    windField.field,
+    summaryField.field,
+    intensityField.field,
+    locationField.field,
+  );
+  manualSection.appendChild(grid);
 
   const manualActions = document.createElement("div");
-  manualActions.className = "weather-settings-actions";
-
-  const applyButton = document.createElement("button");
-  applyButton.className = "weather-settings-button weather-settings-button-primary";
-  applyButton.textContent = "Apply manual weather";
-  applyButton.addEventListener("click", () => {
-    manualToggle.checked = true;
-    applyManualState();
+  manualActions.className = "sw-settings__actions";
+  const applyManual = document.createElement("button");
+  applyManual.type = "button";
+  applyManual.className = "sw-settings__button sw-settings__button--primary";
+  applyManual.textContent = "Apply manual lock";
+  applyManual.addEventListener("click", () => {
+    const intensity = clamp(parseFloat(intensityField.input.value) || 0, 0, 1);
+    callbacks.onSetManualState({
+      location: locationField.input.value,
+      date: dateField.input.value,
+      time: timeField.input.value,
+      condition: conditionField.input.value as WeatherCondition,
+      palette: paletteField.input.value as WeatherPalette,
+      layer: layerField.input.value as WeatherLayerMode,
+      summary: summaryField.input.value,
+      temperature: tempField.input.value,
+      wind: windField.input.value,
+      intensity,
+    });
   });
+  const clearOverride = document.createElement("button");
+  clearOverride.type = "button";
+  clearOverride.className = "sw-settings__button";
+  clearOverride.textContent = "Resume story sync";
+  clearOverride.addEventListener("click", () => callbacks.onClearOverride());
+  const clearAll = document.createElement("button");
+  clearAll.type = "button";
+  clearAll.className = "sw-settings__button sw-settings__button--danger";
+  clearAll.textContent = "Clear saved scene";
+  clearAll.addEventListener("click", () => callbacks.onClearWeather());
+  manualActions.append(applyManual, clearOverride, clearAll);
+  manualSection.appendChild(manualActions);
 
-  const resumeButton = document.createElement("button");
-  resumeButton.className = "weather-settings-button";
-  resumeButton.textContent = "Resume story sync";
-  resumeButton.addEventListener("click", () => {
-    manualToggle.checked = false;
-    sendToBackend({ type: "clear_manual_override" });
-  });
+  const status = document.createElement("div");
+  status.className = "sw-settings__status";
+  status.textContent = "No saved scene yet.";
+  manualSection.appendChild(status);
 
-  const clearSceneButton = document.createElement("button");
-  clearSceneButton.className = "weather-settings-button weather-settings-button-danger weather-settings-button-wide";
-  clearSceneButton.textContent = "Clear saved weather";
-  clearSceneButton.addEventListener("click", () => {
-    if (!window.confirm("Clear the saved weather state for this chat? This removes both story sync data and any manual lock.")) {
-      return;
+  root.append(promptSection, prefsSection, presetSection, manualSection);
+
+  function sync(state: WeatherState | null, prefs: WeatherPrefs): void {
+    effectsToggleRow.input.checked = prefs.effectsEnabled;
+    layerRow.input.value = prefs.layerMode;
+    qualityRow.input.value = prefs.qualityMode;
+    motionRow.input.value = prefs.reducedMotion;
+    intensityRow.input.value = String(prefs.intensity);
+    intensityRow.value.textContent = prefs.intensity.toFixed(2);
+    pauseRow.input.checked = prefs.pauseEffects;
+
+    if (state) {
+      conditionField.input.value = state.condition;
+      paletteField.input.value = state.palette;
+      layerField.input.value = state.layer;
+      dateField.input.value = state.date;
+      timeField.input.value = state.time;
+      tempField.input.value = state.temperature;
+      windField.input.value = state.wind;
+      summaryField.input.value = state.summary;
+      intensityField.input.value = state.intensity.toFixed(2);
+      locationField.input.value = state.location;
+
+      status.textContent = `Active: ${state.condition} · ${state.palette} · ${state.summary} (${state.source === "manual" ? "manual lock" : "story sync"})`;
+    } else {
+      status.textContent = "No saved scene yet.";
     }
-    manualToggle.checked = false;
-    sendToBackend({ type: "clear_weather_state" });
-  });
 
-  manualActions.appendChild(applyButton);
-  manualActions.appendChild(resumeButton);
-  manualActions.appendChild(clearSceneButton);
-
-  const storageHint = document.createElement("p");
-  storageHint.className = "weather-settings-manual-hint weather-settings-storage-hint";
-  storageHint.textContent =
-    "Use clear saved weather if a tagged assistant message was deleted and you want the extension to forget the current scene for this chat.";
-
-  manualCard.appendChild(manualHeader);
-  manualCard.appendChild(manualHint);
-  manualCard.appendChild(manualToggleLabel);
-  manualCard.appendChild(presetGrid);
-  manualCard.appendChild(manualGrid);
-  manualCard.appendChild(sceneIntensityLabel);
-  manualCard.appendChild(manualActions);
-  manualCard.appendChild(storageHint);
-
-  const resetButton = document.createElement("button");
-  resetButton.className = "weather-settings-button";
-  resetButton.textContent = "Reset HUD position";
-  resetButton.addEventListener("click", () => {
-    sendToBackend({ type: "reset_widget_position" });
-  });
-
-  body.appendChild(preview);
-  body.appendChild(promptSection.section);
-  body.appendChild(effectsSection.section);
-  body.appendChild(placementSection.section);
-  body.appendChild(motionSection.section);
-  body.appendChild(manualCard);
-  body.appendChild(resetButton);
-
-  root.appendChild(header);
-  root.appendChild(body);
+    const matched = matchWeatherScenePreset(state);
+    for (const [id, btn] of presetButtons) {
+      btn.setAttribute("aria-pressed", id === matched ? "true" : "false");
+    }
+  }
 
   return {
-    root,
-    sync(prefs, state) {
-      currentState = state;
-      effectsToggle.checked = prefs.effectsEnabled;
-      layerSelect.value = prefs.layerMode;
-      intensitySlider.value = String(prefs.intensity.toFixed(2));
-      intensityValue.textContent = `${Math.round(prefs.intensity * 100)}%`;
-      qualitySelect.value = prefs.qualityMode;
-      motionSelect.value = prefs.reducedMotion;
-      pauseToggle.checked = prefs.pauseEffects;
-
-      status.textContent = state
-        ? `${state.source === "manual" ? "manual" : "story"} / ${state.condition} ${state.temperature}`
-        : "Waiting for story weather";
-
-      preview.textContent = state
-        ? `${state.date} at ${state.time} • ${state.summary} • ${state.wind} • layer ${prefs.layerMode === "auto" ? state.layer : prefs.layerMode}`
-        : "The HUD will wake up as soon as the model emits its first weather-state tag.";
-
-      const effectiveLayer = prefs.layerMode === "auto" ? state?.layer : prefs.layerMode;
-      preview.textContent = state
-        ? `${state.location} | ${state.date} at ${state.time} | ${state.summary} | ${state.wind} | layer ${effectiveLayer}`
-        : "Add {{weather_tracker}} to the active prompt, then the HUD will wake up as soon as the model emits its first weather-state tag.";
-
-      manualModePill.textContent = state?.source === "manual" ? "Manual lock" : "Story sync";
-      manualModePill.dataset.mode = state?.source === "manual" ? "manual" : "story";
-      manualToggle.checked = state?.source === "manual";
-
-      if (state) {
-        applyStateToInputs(state, fields);
-        lastAutoPalette = derivePalette(state.condition, state.date, state.time);
-      } else {
-        conditionSelect.value = "clear";
-        paletteSelect.value = derivePalette("clear", "", "");
-        locationInput.value = "";
-        dateInput.value = "";
-        timeInput.value = "";
-        temperatureInput.value = "";
-        windInput.value = "";
-        summaryInput.value = "";
-        sceneLayerSelect.value = "both";
-        sceneIntensity.value = "0.30";
-        sceneIntensityValue.textContent = "30%";
-        lastAutoPalette = paletteSelect.value as WeatherPalette;
-      }
-
-      updatePresetSelection(state);
-    },
     destroy() {
       root.remove();
     },
+    sync,
   };
+
+  // ─── helpers ───
+  function section(title: string): HTMLDivElement {
+    const wrap = document.createElement("div");
+    wrap.className = "sw-settings__section";
+    const h = document.createElement("h3");
+    h.className = "sw-settings__title";
+    h.textContent = title;
+    wrap.appendChild(h);
+    return wrap;
+  }
+
+  function toggleRow(label: string, onChange: (next: boolean) => void) {
+    const row = document.createElement("label");
+    row.className = "sw-settings__row";
+    const span = document.createElement("span");
+    span.textContent = label;
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.addEventListener("change", () => onChange(input.checked));
+    row.append(span, input);
+    return { row, input };
+  }
+
+  function selectRow<T extends string>(
+    label: string,
+    options: Array<{ value: T; label: string }>,
+    onChange: (value: T) => void,
+  ) {
+    const row = document.createElement("div");
+    row.className = "sw-settings__row";
+    const span = document.createElement("label");
+    span.textContent = label;
+    const input = document.createElement("select");
+    for (const opt of options) {
+      const o = document.createElement("option");
+      o.value = opt.value;
+      o.textContent = opt.label;
+      input.appendChild(o);
+    }
+    input.addEventListener("change", () => onChange(input.value as T));
+    row.append(span, input);
+    return { row, input };
+  }
+
+  function sliderRow(
+    label: string,
+    min: number,
+    max: number,
+    step: number,
+    initial: number,
+    onChange: (value: number) => void,
+  ) {
+    const row = document.createElement("div");
+    row.className = "sw-settings__row";
+    const span = document.createElement("label");
+    span.textContent = label;
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(step);
+    input.value = String(initial);
+    const value = document.createElement("span");
+    value.style.minWidth = "32px";
+    value.style.textAlign = "right";
+    value.textContent = initial.toFixed(2);
+    input.addEventListener("input", () => {
+      const v = parseFloat(input.value);
+      value.textContent = v.toFixed(2);
+      onChange(v);
+    });
+    row.append(span, input, value);
+    return { row, input, value };
+  }
+
+  function textField(label: string, placeholder = "") {
+    const field = document.createElement("div");
+    field.className = "sw-settings__field";
+    const lbl = document.createElement("label");
+    lbl.textContent = label;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = placeholder;
+    field.append(lbl, input);
+    return { field, input };
+  }
+
+  function numberField(label: string, defaultValue: string, min: number, max: number, step: number) {
+    const field = document.createElement("div");
+    field.className = "sw-settings__field";
+    const lbl = document.createElement("label");
+    lbl.textContent = label;
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(step);
+    input.value = defaultValue;
+    field.append(lbl, input);
+    return { field, input };
+  }
+
+  function selectField<T extends string>(label: string, options: Array<{ value: T; label: string }>) {
+    const field = document.createElement("div");
+    field.className = "sw-settings__field";
+    const lbl = document.createElement("label");
+    lbl.textContent = label;
+    const input = document.createElement("select");
+    for (const opt of options) {
+      const o = document.createElement("option");
+      o.value = opt.value;
+      o.textContent = opt.label;
+      input.appendChild(o);
+    }
+    field.append(lbl, input);
+    return { field, input };
+  }
 }
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+// Re-export to satisfy backward consumers.
+export { buildPresetWeatherState };

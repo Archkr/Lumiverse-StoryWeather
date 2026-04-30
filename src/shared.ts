@@ -17,7 +17,7 @@ export const WEATHER_CONDITIONS: WeatherCondition[] = ["clear", "cloudy", "rain"
 export const WEATHER_LAYERS: WeatherLayerMode[] = ["back", "front", "both"];
 export const WEATHER_PALETTES: WeatherPalette[] = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
 export const REDUCED_MOTION_VALUES: ReducedMotionMode[] = ["system", "always", "never"];
-export const WEATHER_EFFECT_QUALITY_VALUES: WeatherEffectsQuality[] = ["performance", "lite", "standard", "cinematic"];
+export const WEATHER_EFFECT_QUALITY_VALUES: WeatherEffectsQuality[] = ["lite", "standard", "cinematic"];
 
 export const DEFAULT_PREFS: WeatherPrefs = {
   effectsEnabled: true,
@@ -43,38 +43,8 @@ function normalizeText(value: unknown, fallback: string, maxLength: number): str
   return trimmed ? trimmed.slice(0, maxLength) : fallback;
 }
 
-function normalizeCondition(value: unknown, fallback: WeatherCondition): WeatherCondition {
-  return typeof value === "string" && WEATHER_CONDITIONS.includes(value as WeatherCondition)
-    ? (value as WeatherCondition)
-    : fallback;
-}
-
-function normalizeLayer(value: unknown, fallback: WeatherLayerMode): WeatherLayerMode {
-  return typeof value === "string" && WEATHER_LAYERS.includes(value as WeatherLayerMode)
-    ? (value as WeatherLayerMode)
-    : fallback;
-}
-
-function normalizePalette(value: unknown, fallback: WeatherPalette): WeatherPalette {
-  return typeof value === "string" && WEATHER_PALETTES.includes(value as WeatherPalette)
-    ? (value as WeatherPalette)
-    : fallback;
-}
-
-function normalizeReducedMotion(value: unknown, fallback: ReducedMotionMode): ReducedMotionMode {
-  return typeof value === "string" && REDUCED_MOTION_VALUES.includes(value as ReducedMotionMode)
-    ? (value as ReducedMotionMode)
-    : fallback;
-}
-
-function normalizeQualityMode(value: unknown, fallback: WeatherEffectsQuality): WeatherEffectsQuality {
-  return typeof value === "string" && WEATHER_EFFECT_QUALITY_VALUES.includes(value as WeatherEffectsQuality)
-    ? (value as WeatherEffectsQuality)
-    : fallback;
-}
-
-function normalizeSource(value: unknown, fallback: WeatherSourceMode): WeatherSourceMode {
-  return value === "manual" || value === "story" ? value : fallback;
+function normalizeEnum<T extends string>(values: readonly T[], value: unknown, fallback: T): T {
+  return typeof value === "string" && (values as readonly string[]).includes(value) ? (value as T) : fallback;
 }
 
 function parseNumeric(value: unknown): number | null {
@@ -101,7 +71,7 @@ export function formatTime(date: Date): string {
   return `${hours12}:${pad2(date.getMinutes())} ${suffix}`;
 }
 
-function parseHourFromTimeString(timeValue: string): number | null {
+export function parseHourFromTimeString(timeValue: string): number | null {
   const time12 = timeValue.match(/^(\d{1,2}):(\d{2})(?:\s*:\s*(\d{2}))?\s*([AP]M)$/i);
   if (time12) {
     let hours = Number.parseInt(time12[1], 10);
@@ -163,21 +133,11 @@ export function derivePalette(condition: WeatherCondition, dateValue: string, ti
   if (condition === "snow") return "snow";
 
   const timestamp = parseStoryDateTime(dateValue, timeValue);
-  if (timestamp !== null) {
-    const hour = new Date(timestamp).getHours();
-    if (hour < 6) return "night";
-    if (hour < 10) return "dawn";
-    if (hour < 18) return "day";
-    if (hour < 21) return "dusk";
-    return "night";
-  }
-
-  const hour = parseHourFromTimeString(timeValue);
-  const resolvedHour = hour ?? new Date().getHours();
-  if (resolvedHour < 6) return "night";
-  if (resolvedHour < 10) return "dawn";
-  if (resolvedHour < 18) return "day";
-  if (resolvedHour < 21) return "dusk";
+  const hour = timestamp !== null ? new Date(timestamp).getHours() : parseHourFromTimeString(timeValue) ?? new Date().getHours();
+  if (hour < 6) return "night";
+  if (hour < 9) return "dawn";
+  if (hour < 18) return "day";
+  if (hour < 21) return "dusk";
   return "night";
 }
 
@@ -206,10 +166,11 @@ export function normalizeWeatherState(input: unknown, previous?: WeatherState | 
   const date = normalizeText(source.date, fallback.date, 24);
   const time = normalizeText(source.time, fallback.time, 16);
   const timestampMs = parseStoryDateTime(date, time);
-  const condition = normalizeCondition(source.condition, fallback.condition);
-  const palette = normalizePalette(source.palette, derivePalette(condition, date, time));
+  const condition = normalizeEnum(WEATHER_CONDITIONS, source.condition, fallback.condition);
+  const palette = normalizeEnum(WEATHER_PALETTES, source.palette, derivePalette(condition, date, time));
   const intensity = clamp(parseNumeric(source.intensity) ?? fallback.intensity, 0, 1);
   const updatedAt = parseNumeric(source.updatedAt) ?? Date.now();
+  const sourceMode: WeatherSourceMode = source.source === "manual" ? "manual" : "story";
 
   return {
     location: normalizeText(source.location, fallback.location, 72),
@@ -220,11 +181,11 @@ export function normalizeWeatherState(input: unknown, previous?: WeatherState | 
     temperature: normalizeText(source.temperature, fallback.temperature, 16),
     intensity,
     wind: normalizeText(source.wind, fallback.wind, 32),
-    layer: normalizeLayer(source.layer, fallback.layer),
+    layer: normalizeEnum(WEATHER_LAYERS, source.layer, fallback.layer),
     palette,
     timestampMs: timestampMs ?? fallback.timestampMs,
     updatedAt,
-    source: normalizeSource(source.source, fallback.source),
+    source: sourceMode,
   };
 }
 
@@ -245,13 +206,39 @@ export function normalizePrefs(input: unknown): WeatherPrefs {
     ? (source.layerMode as WeatherPrefs["layerMode"])
     : DEFAULT_PREFS.layerMode;
 
+  const rawQuality = typeof source.qualityMode === "string" ? source.qualityMode : DEFAULT_PREFS.qualityMode;
+  const qualityMode: WeatherEffectsQuality =
+    rawQuality === "performance" ? "lite" : normalizeEnum(WEATHER_EFFECT_QUALITY_VALUES, rawQuality, DEFAULT_PREFS.qualityMode);
+
   return {
     effectsEnabled: typeof source.effectsEnabled === "boolean" ? source.effectsEnabled : DEFAULT_PREFS.effectsEnabled,
     layerMode,
     intensity: clamp(parseNumeric(source.intensity) ?? DEFAULT_PREFS.intensity, 0.25, 1.5),
-    qualityMode: normalizeQualityMode(source.qualityMode, DEFAULT_PREFS.qualityMode),
-    reducedMotion: normalizeReducedMotion(source.reducedMotion, DEFAULT_PREFS.reducedMotion),
+    qualityMode,
+    reducedMotion: normalizeEnum(REDUCED_MOTION_VALUES, source.reducedMotion, DEFAULT_PREFS.reducedMotion),
     pauseEffects: typeof source.pauseEffects === "boolean" ? source.pauseEffects : DEFAULT_PREFS.pauseEffects,
     widgetPosition: position,
   };
+}
+
+export function hashString(value: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+export function createRng(seed: number): () => number {
+  let state = (seed >>> 0) || 0xdeadbeef;
+  return () => {
+    state = (Math.imul(state ^ (state >>> 15), 0x85ebca6b) ^ (state >>> 13)) >>> 0;
+    state = Math.imul(state, 0xc2b2ae35) >>> 0;
+    return ((state ^ (state >>> 16)) >>> 0) / 0xffffffff;
+  };
+}
+
+export function weatherSignature(state: WeatherState): string {
+  return [state.condition, state.palette, state.layer, state.intensity.toFixed(2), state.timestampMs ?? 0].join("|");
 }

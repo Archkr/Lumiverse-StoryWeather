@@ -4,7 +4,7 @@ export type WeatherLayerPreference = "auto" | WeatherLayerMode;
 export type WeatherPalette = "dawn" | "day" | "dusk" | "night" | "storm" | "mist" | "snow";
 export type ReducedMotionMode = "system" | "always" | "never";
 export type WeatherSourceMode = "story" | "manual";
-export type WeatherEffectsQuality = "performance" | "lite" | "standard" | "cinematic";
+export type WeatherEffectsQuality = "lite" | "standard" | "cinematic";
 
 export interface WidgetPosition {
   x: number;
