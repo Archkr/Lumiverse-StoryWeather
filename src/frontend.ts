@@ -173,6 +173,48 @@ function createSpan(className: string, styles: Record<string, string>): HTMLSpan
   return span;
 }
 
+function randomRange(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+function cssNumber(value: number, precision = 2): string {
+  return value.toFixed(precision).replace(/\.?0+$/, "");
+}
+
+function createCloudElement(index: number, total: number): HTMLSpanElement {
+  const depth = total <= 1 ? 0 : index / (total - 1);
+  const width = randomRange(220, 430) + depth * 140;
+  const height = width * randomRange(0.22, 0.32);
+  const blur = Math.max(3.5, randomRange(7, 13) - depth * 4);
+  const scale = randomRange(0.82, 0.98) + depth * 0.28;
+  const driftStart = -24 - depth * 10 - randomRange(0, 10);
+  const driftEnd = 24 + depth * 18 + randomRange(4, 18);
+  const driftMid = (driftStart + driftEnd) / 2 + randomRange(-3, 3);
+
+  return createSpan("weather-fx-cloud", {
+    "--cloud-width": `${Math.round(width)}px`,
+    "--cloud-height": `${Math.round(height)}px`,
+    "--cloud-top": `${cssNumber(3 + depth * 58 + randomRange(-2, 5))}%`,
+    "--cloud-left": `${cssNumber(-28 + randomRange(0, 108))}%`,
+    "--cloud-duration": `${cssNumber(randomRange(46, 74) - depth * 18)}s`,
+    "--cloud-delay": `${cssNumber(randomRange(-46, -4))}s`,
+    "--cloud-blur": `${cssNumber(blur)}px`,
+    "--cloud-soft-blur": `${cssNumber(Math.max(1.5, blur * 0.55))}px`,
+    "--cloud-opacity-scale": `${cssNumber(0.46 + randomRange(0.12, 0.52) + depth * 0.24)}`,
+    "--cloud-depth": `${cssNumber(depth)}`,
+    "--cloud-scale": `${cssNumber(scale)}`,
+    "--cloud-scale-mid": `${cssNumber(scale + randomRange(0.02, 0.06))}`,
+    "--cloud-drift-x-start": `${cssNumber(driftStart)}vw`,
+    "--cloud-drift-x-mid": `${cssNumber(driftMid)}vw`,
+    "--cloud-drift-x-end": `${cssNumber(driftEnd)}vw`,
+    "--cloud-drift-y": `${cssNumber(randomRange(-1.4, 0.8))}vh`,
+    "--cloud-lift": `${cssNumber(randomRange(-24, -8))}%`,
+    "--cloud-shear": `${cssNumber(randomRange(-1.8, 1.8))}deg`,
+    "--cloud-shadow-opacity": `${cssNumber(0.16 + depth * 0.18)}`,
+    "--cloud-highlight-opacity": `${cssNumber(0.42 - depth * 0.16)}`,
+  });
+}
+
 function protectInteractive(element: HTMLElement): void {
   const stop = (event: Event) => event.stopPropagation();
   element.addEventListener("pointerdown", stop);
@@ -229,19 +271,9 @@ function createFxMarkup(kind: "back" | "front"): FxRoot {
     snow.className = "weather-fx-snow";
     root.appendChild(snow);
 
-    for (let index = 0; index < 10; index += 1) {
-      clouds.appendChild(
-        createSpan("weather-fx-cloud", {
-          "--cloud-width": `${180 + Math.round(Math.random() * 260)}px`,
-          "--cloud-height": `${46 + Math.round(Math.random() * 70)}px`,
-          "--cloud-top": `${4 + index * 8 + Math.round(Math.random() * 5)}%`,
-          "--cloud-left": `${-22 + Math.round(Math.random() * 102)}%`,
-          "--cloud-duration": `${28 + Math.round(Math.random() * 34)}s`,
-          "--cloud-delay": `${Math.round(Math.random() * -30)}s`,
-          "--cloud-blur": `${4 + Math.round(Math.random() * 10)}px`,
-          "--cloud-opacity-scale": `${(0.55 + Math.random() * 0.65).toFixed(2)}`,
-        }),
-      );
+    const cloudCount = 12;
+    for (let index = 0; index < cloudCount; index += 1) {
+      clouds.appendChild(createCloudElement(index, cloudCount));
     }
 
     for (let index = 0; index < 6; index += 1) {
@@ -1190,6 +1222,8 @@ function applySceneState(root: FxRoot, state: WeatherState, prefs: WeatherPrefs,
   root.root.dataset.palette = state.palette;
   root.root.classList.toggle("weather-reduced-motion", reducedMotion);
   root.root.classList.toggle("weather-paused", prefs.pauseEffects);
+  root.root.classList.toggle("weather-rain-active", state.condition === "rain" || state.condition === "storm");
+  root.root.classList.toggle("weather-snow-active", state.condition === "snow");
 
   root.root.style.setProperty("--weather-bg-start", tokens.bgStart);
   root.root.style.setProperty("--weather-bg-mid", tokens.bgMid);

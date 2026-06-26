@@ -564,6 +564,7 @@ async function appendWeatherTagViaFallback(chatId, messageId) {
     if (!recentMessages.length)
       return;
     const result = await spindle.generate.raw({
+      type: "raw",
       messages: [
         {
           role: "user",
