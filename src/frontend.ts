@@ -1,6 +1,6 @@
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 import { buildPresetWeatherState, matchWeatherScenePreset, WEATHER_SCENE_PRESETS } from "./presets";
-import { DEFAULT_PREFS, WEATHER_TAG_NAME, clamp, makeDefaultWeatherState } from "./shared";
+import { DEFAULT_PREFS, WEATHER_TAG_NAME, clamp, formatTemperatureForUnit, makeDefaultWeatherState } from "./shared";
 import type {
   BackendToFrontend,
   FrontendToBackend,
@@ -16,8 +16,8 @@ const GEAR_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 1
 const CHEVRON_DOWN_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>`;
 const CHEVRON_UP_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="m7.41 15.41 4.59-4.58 4.59 4.58L18 14l-6-6-6 6z"/></svg>`;
 
-const HUD_COLLAPSED_SIZE = { width: 272, height: 176 };
-const HUD_EXPANDED_SIZE = { width: 312, height: 388 };
+const HUD_COLLAPSED_SIZE = { width: 272, height: 148 };
+const HUD_EXPANDED_SIZE = { width: 312, height: 360 };
 const DEFAULT_WIDGET_POSITION = { x: 24, y: 96 };
 
 type FloatWidgetHandle = ReturnType<SpindleFrontendContext["ui"]["createFloatWidget"]>;
@@ -57,9 +57,6 @@ type HudElements = {
   icon: HTMLDivElement;
   temp: HTMLDivElement;
   summary: HTMLDivElement;
-  layer: HTMLSpanElement;
-  condition: HTMLSpanElement;
-  palette: HTMLSpanElement;
   source: HTMLSpanElement;
   drawerToggleLabel: HTMLSpanElement;
   drawerToggleIcon: HTMLSpanElement;
@@ -814,8 +811,8 @@ function resolveSceneTokens(state: WeatherState, intensity: number): SceneTokens
   };
 }
 
-function getEffectiveLayerMode(prefs: WeatherPrefs, state: WeatherState): WeatherLayerMode {
-  return prefs.layerMode === "auto" ? state.layer : prefs.layerMode;
+function getEffectiveLayerMode(prefs: WeatherPrefs): WeatherLayerMode {
+  return prefs.layerMode;
 }
 
 function createHudWidget(
@@ -918,21 +915,8 @@ function createHudWidget(
   body.appendChild(left);
   body.appendChild(right);
 
-  const footer = document.createElement("div");
-  footer.className = "weather-hud-footer";
-  const layer = document.createElement("span");
-  layer.className = "weather-hud-badge";
-  const condition = document.createElement("span");
-  condition.className = "weather-hud-badge";
-  const palette = document.createElement("span");
-  palette.className = "weather-hud-badge";
-  footer.appendChild(layer);
-  footer.appendChild(condition);
-  footer.appendChild(palette);
-
   root.appendChild(header);
   root.appendChild(body);
-  root.appendChild(footer);
 
   const presetButtons = new Map<string, HTMLButtonElement>();
   let storyButton: HTMLButtonElement | undefined;
@@ -1022,7 +1006,6 @@ function createHudWidget(
     layerSelect = document.createElement("select");
     layerSelect.className = "weather-hud-select";
     layerSelect.innerHTML = `
-      <option value="auto">Auto</option>
       <option value="back">Back</option>
       <option value="front">Front</option>
       <option value="both">Both</option>
@@ -1114,9 +1097,6 @@ function createHudWidget(
     icon,
     temp,
     summary,
-    layer,
-    condition,
-    palette,
     source,
     drawerToggleLabel,
     drawerToggleIcon,
@@ -1139,7 +1119,7 @@ function getLiveDate(state: WeatherState): Date | null {
 function syncHudState(hud: HudElements, prefs: WeatherPrefs, state: WeatherState, expanded: boolean): void {
   const liveDate = getLiveDate(state);
   const phase = resolveHudTimePhase(state, liveDate);
-  const effectiveLayer = getEffectiveLayerMode(prefs, state);
+  const effectiveLayer = getEffectiveLayerMode(prefs);
   const sceneIntensity = clamp(state.intensity * prefs.intensity, 0.25, 1.5);
   hud.root.dataset.expanded = expanded ? "true" : "false";
   hud.root.dataset.source = state.source;
@@ -1151,14 +1131,11 @@ function syncHudState(hud: HudElements, prefs: WeatherPrefs, state: WeatherState
   hud.root.style.setProperty("--weather-hud-scene-intensity", sceneIntensity.toFixed(2));
 
   hud.icon.innerHTML = conditionIcon(state.condition);
-  hud.temp.textContent = state.temperature;
+  hud.temp.textContent = formatTemperatureForUnit(state.temperature, prefs.temperatureUnit);
   hud.summary.textContent = state.summary;
   hud.wind.textContent = `Wind • ${state.wind}`;
   hud.location.textContent = state.location;
   hud.wind.textContent = `Wind ${state.wind}`;
-  hud.condition.textContent = titleCase(state.condition);
-  hud.palette.textContent = formatHudPaletteLabel(state, phase);
-  hud.layer.textContent = titleCase(effectiveLayer);
   hud.source.textContent = state.source === "manual" ? "Scene lock" : "Story sync";
   hud.drawerToggleLabel.textContent = expanded ? "Hide" : "Controls";
   hud.drawerToggleIcon.innerHTML = expanded ? CHEVRON_UP_SVG : CHEVRON_DOWN_SVG;
@@ -1559,7 +1536,7 @@ console.info("[weather_hud] frontend build 2026-03-25.5");
 
   const updateScene = () => {
     const reducedMotion = getReducedMotion();
-    const layerMode = getEffectiveLayerMode(currentPrefs, currentState);
+    const layerMode = getEffectiveLayerMode(currentPrefs);
     const showEffects = currentPrefs.effectsEnabled;
 
     if (hud) {

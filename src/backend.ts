@@ -17,7 +17,6 @@ import type { BackendToFrontend, FrontendToBackend, WeatherPrefs, WeatherState }
 import {
   DEFAULT_PREFS,
   WEATHER_CONDITIONS,
-  WEATHER_LAYERS,
   WEATHER_MANUAL_STATE_VAR,
   WEATHER_PALETTES,
   WEATHER_STATE_VAR,
@@ -71,7 +70,6 @@ function formatWeatherTag(state: WeatherState): string {
     ["temperature", state.temperature],
     ["intensity", state.intensity.toFixed(2)],
     ["wind", state.wind],
-    ["layer", state.layer],
     ["palette", state.palette],
   ].map(([key, value]) => `${key}="${sanitizeAttrValue(String(value))}"`);
 
@@ -119,9 +117,8 @@ function buildSecondaryWeatherPrompt(messages: Array<{ role: "system" | "user" |
   return [
     "Generate scene metadata for a story weather HUD.",
     "Return ONLY a JSON object and nothing else.",
-    'Required keys: "location", "date", "time", "condition", "summary", "temperature", "intensity", "wind", "layer", "palette".',
+    'Required keys: "location", "date", "time", "condition", "summary", "temperature", "intensity", "wind", "palette".',
     `Allowed conditions: ${WEATHER_CONDITIONS.join(", ")}`,
-    `Allowed layers: ${WEATHER_LAYERS.join(", ")}`,
     `Allowed palettes: ${WEATHER_PALETTES.join(", ")}`,
     'Use short plain-text values. "intensity" must be a number from 0 to 1.',
     `Previous state: ${summarizeWeatherState(previous)}`,
@@ -251,7 +248,7 @@ async function pushActiveChatState(chatId?: string | null): Promise<void> {
 }
 
 function buildWeatherTagExample(): string {
-  return '<weather-state location="Tengu City" date="2026-03-24" time="9:42 PM" condition="rain" summary="Cold spring rain" temperature="61F" intensity="0.65" wind="breezy" layer="both" palette="storm"></weather-state>';
+  return '<weather-state location="Tengu City" date="2026-03-24" time="9:42 PM" condition="rain" summary="Cold spring rain" temperature="61F" intensity="0.65" wind="breezy" palette="storm"></weather-state>';
 }
 
 function summarizeWeatherState(state: WeatherState | null): string {
@@ -265,7 +262,6 @@ function summarizeWeatherState(state: WeatherState | null): string {
     `Temperature: ${state.temperature}`,
     `Intensity: ${state.intensity.toFixed(2)}`,
     `Wind: ${state.wind}`,
-    `Layer: ${state.layer}`,
     `Palette: ${state.palette}`,
   ].join(" | ");
 }
@@ -280,9 +276,8 @@ function buildTrackerMacro(state: WeatherState | null): string {
     "Never place visible prose after the tag.",
     "Emit the tag as the very last text in the assistant message.",
     `Allowed conditions: ${WEATHER_CONDITIONS.join(", ")}`,
-    `Allowed layers: ${WEATHER_LAYERS.join(", ")}`,
     `Allowed palettes: ${WEATHER_PALETTES.join(", ")}`,
-    "Use location, date, time, condition, summary, temperature, intensity, wind, layer, and palette.",
+    "Use location, date, time, condition, summary, temperature, intensity, wind, and palette.",
     "Exact wrapper example:",
     buildWeatherTagExample(),
     `Current scene: ${summarizeWeatherState(state)}`,

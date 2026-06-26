@@ -553,7 +553,6 @@ export const WEATHER_HUD_CSS = `
 
 .weather-hud-header,
 .weather-hud-body,
-.weather-hud-footer,
 .weather-hud-drawer {
   position: relative;
   z-index: 1;
@@ -754,31 +753,6 @@ export const WEATHER_HUD_CSS = `
   color: var(--weather-hud-text-soft);
 }
 
-.weather-hud-footer {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-}
-
-.weather-hud-badge {
-  min-width: 0;
-  padding: 5px 9px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--weather-hud-line) 78%, transparent);
-  background: color-mix(in srgb, var(--weather-hud-surface) 94%, transparent);
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(244, 247, 255, 0.84);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-}
-
 .weather-hud-drawer {
   display: grid;
   gap: 10px;
@@ -870,10 +844,6 @@ export const WEATHER_HUD_CSS = `
 
 .weather-hud-widget[data-expanded="false"] {
   gap: 10px;
-}
-
-.weather-hud-widget[data-expanded="false"] .weather-hud-footer {
-  gap: 6px;
 }
 
 .weather-hud-widget[data-expanded="false"] .weather-hud-summary {

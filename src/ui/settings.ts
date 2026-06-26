@@ -1,4 +1,5 @@
 import { buildPresetWeatherState, matchWeatherScenePreset, WEATHER_SCENE_PRESETS } from "../presets";
+import { formatTemperatureForUnit } from "../shared";
 import type { WeatherCondition, WeatherPalette, WeatherPrefs, WeatherState } from "../types";
 
 const CONDITIONS: WeatherCondition[] = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
@@ -64,7 +65,6 @@ function applyStateToInputs(
     temperatureInput: HTMLInputElement;
     windInput: HTMLInputElement;
     summaryInput: HTMLInputElement;
-    sceneLayerSelect: HTMLSelectElement;
     sceneIntensity: HTMLInputElement;
     sceneIntensityValue: HTMLSpanElement;
   },
@@ -77,7 +77,6 @@ function applyStateToInputs(
   if (state.temperature) fields.temperatureInput.value = state.temperature;
   if (state.wind) fields.windInput.value = state.wind;
   if (state.summary) fields.summaryInput.value = state.summary;
-  if (state.layer) fields.sceneLayerSelect.value = state.layer;
   if (typeof state.intensity === "number" && Number.isFinite(state.intensity)) {
     fields.sceneIntensity.value = state.intensity.toFixed(2);
     fields.sceneIntensityValue.textContent = `${Math.round(state.intensity * 100)}%`;
@@ -166,7 +165,6 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   const layerSelect = document.createElement("select");
   layerSelect.className = "weather-settings-select";
   layerSelect.innerHTML = `
-    <option value="auto">Follow story layer</option>
     <option value="back">Back only</option>
     <option value="front">Front only</option>
     <option value="both">Front and back</option>
@@ -175,6 +173,21 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
     sendToBackend({ type: "save_prefs", prefs: { layerMode: layerSelect.value } });
   });
   layerLabel.appendChild(layerSelect);
+
+  const temperatureUnitLabel = document.createElement("label");
+  temperatureUnitLabel.className = "weather-settings-label";
+  temperatureUnitLabel.textContent = "Temperature unit";
+
+  const temperatureUnitSelect = document.createElement("select");
+  temperatureUnitSelect.className = "weather-settings-select";
+  temperatureUnitSelect.innerHTML = `
+    <option value="fahrenheit">Fahrenheit</option>
+    <option value="celsius">Celsius</option>
+  `;
+  temperatureUnitSelect.addEventListener("change", () => {
+    sendToBackend({ type: "save_prefs", prefs: { temperatureUnit: temperatureUnitSelect.value } });
+  });
+  temperatureUnitLabel.appendChild(temperatureUnitSelect);
 
   const intensityLabel = document.createElement("label");
   intensityLabel.className = "weather-settings-label";
@@ -232,6 +245,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
 
   effectsSection.body.appendChild(effectsLabel);
   placementSection.body.appendChild(layerLabel);
+  placementSection.body.appendChild(temperatureUnitLabel);
   motionSection.body.appendChild(intensityLabel);
   motionSection.body.appendChild(motionLabel);
   motionSection.body.appendChild(pauseLabel);
@@ -282,14 +296,6 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   paletteSelect.className = "weather-settings-select";
   paletteSelect.innerHTML = PALETTES.map((palette) => `<option value="${palette}">${palette}</option>`).join("");
 
-  const sceneLayerSelect = document.createElement("select");
-  sceneLayerSelect.className = "weather-settings-select";
-  sceneLayerSelect.innerHTML = `
-    <option value="back">Back</option>
-    <option value="front">Front</option>
-    <option value="both">Both</option>
-  `;
-
   const dateInput = document.createElement("input");
   dateInput.type = "date";
   dateInput.className = "weather-settings-input";
@@ -307,7 +313,7 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   const temperatureInput = document.createElement("input");
   temperatureInput.type = "text";
   temperatureInput.className = "weather-settings-input";
-  temperatureInput.placeholder = "61F";
+  temperatureInput.placeholder = "61F or 16C";
 
   const windInput = document.createElement("input");
   windInput.type = "text";
@@ -344,7 +350,6 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
     temperatureInput,
     windInput,
     summaryInput,
-    sceneLayerSelect,
     sceneIntensity,
     sceneIntensityValue,
   };
@@ -359,7 +364,6 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
     summary: summaryInput.value.trim() || currentState?.summary,
     temperature: temperatureInput.value.trim() || currentState?.temperature,
     wind: windInput.value.trim() || currentState?.wind,
-    layer: sceneLayerSelect.value as WeatherState["layer"],
     palette: paletteSelect.value as WeatherPalette,
     intensity: Number.parseFloat(sceneIntensity.value),
     source: "manual",
@@ -412,7 +416,6 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
   manualGrid.appendChild(createLabeledInput("Story time", timeInput));
   manualGrid.appendChild(createLabeledInput("Temperature", temperatureInput));
   manualGrid.appendChild(createLabeledInput("Wind", windInput));
-  manualGrid.appendChild(createLabeledInput("Scene layer", sceneLayerSelect));
   manualGrid.appendChild(createLabeledInput("Summary", summaryInput));
 
   const sceneIntensityLabel = createLabeledInput("Scene intensity", sceneIntensityRow);
@@ -471,22 +474,20 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
       currentState = state;
       effectsToggle.checked = prefs.effectsEnabled;
       layerSelect.value = prefs.layerMode;
+      temperatureUnitSelect.value = prefs.temperatureUnit;
       intensitySlider.value = String(prefs.intensity.toFixed(2));
       intensityValue.textContent = `${Math.round(prefs.intensity * 100)}%`;
       motionSelect.value = prefs.reducedMotion;
       pauseToggle.checked = prefs.pauseEffects;
 
+      const displayTemperature = state ? formatTemperatureForUnit(state.temperature, prefs.temperatureUnit) : "";
+
       status.textContent = state
-        ? `${state.source === "manual" ? "manual" : "story"} / ${state.condition} ${state.temperature}`
+        ? `${state.source === "manual" ? "manual" : "story"} / ${state.condition} ${displayTemperature}`
         : "Waiting for story weather";
 
       preview.textContent = state
-        ? `${state.date} at ${state.time} • ${state.summary} • ${state.wind} • layer ${prefs.layerMode === "auto" ? state.layer : prefs.layerMode}`
-        : "The HUD will wake up as soon as the model emits its first weather-state tag.";
-
-      const effectiveLayer = prefs.layerMode === "auto" ? state?.layer : prefs.layerMode;
-      preview.textContent = state
-        ? `${state.location} | ${state.date} at ${state.time} | ${state.summary} | ${state.wind} | layer ${effectiveLayer}`
+        ? `${state.location} | ${state.date} at ${state.time} | ${displayTemperature} | ${state.summary} | ${state.wind} | placement ${prefs.layerMode}`
         : "Add {{weather_tracker}} to the active prompt, then the HUD will wake up as soon as the model emits its first weather-state tag.";
 
       manualModePill.textContent = state?.source === "manual" ? "Manual lock" : "Story sync";
@@ -504,7 +505,6 @@ export function createSettingsUI(sendToBackend: (payload: unknown) => void): Set
         temperatureInput.value = "";
         windInput.value = "";
         summaryInput.value = "";
-        sceneLayerSelect.value = "both";
         sceneIntensity.value = "0.30";
         sceneIntensityValue.textContent = "30%";
       }

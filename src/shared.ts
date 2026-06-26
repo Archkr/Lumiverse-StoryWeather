@@ -1,5 +1,6 @@
 import type {
   ReducedMotionMode,
+  TemperatureUnit,
   WeatherCondition,
   WeatherLayerMode,
   WeatherPalette,
@@ -16,12 +17,14 @@ export const WEATHER_CONDITIONS: WeatherCondition[] = ["clear", "cloudy", "rain"
 export const WEATHER_LAYERS: WeatherLayerMode[] = ["back", "front", "both"];
 export const WEATHER_PALETTES: WeatherPalette[] = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
 export const REDUCED_MOTION_VALUES: ReducedMotionMode[] = ["system", "always", "never"];
+export const TEMPERATURE_UNITS: TemperatureUnit[] = ["fahrenheit", "celsius"];
 
 export const DEFAULT_PREFS: WeatherPrefs = {
   effectsEnabled: true,
-  layerMode: "auto",
+  layerMode: "both",
   intensity: 1,
   reducedMotion: "never",
+  temperatureUnit: "fahrenheit",
   pauseEffects: false,
   widgetPosition: null,
 };
@@ -61,6 +64,12 @@ function normalizePalette(value: unknown, fallback: WeatherPalette): WeatherPale
 function normalizeReducedMotion(value: unknown, fallback: ReducedMotionMode): ReducedMotionMode {
   return typeof value === "string" && REDUCED_MOTION_VALUES.includes(value as ReducedMotionMode)
     ? (value as ReducedMotionMode)
+    : fallback;
+}
+
+function normalizeTemperatureUnit(value: unknown, fallback: TemperatureUnit): TemperatureUnit {
+  return typeof value === "string" && TEMPERATURE_UNITS.includes(value as TemperatureUnit)
+    ? (value as TemperatureUnit)
     : fallback;
 }
 
@@ -223,6 +232,23 @@ export function normalizeWeatherTag(attrs: Record<string, string>, previous?: We
   return normalizeWeatherState({ ...attrs, updatedAt: Date.now(), source: "story" }, previous);
 }
 
+export function formatTemperatureForUnit(value: string, unit: TemperatureUnit): string {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(-?\d+(?:\.\d+)?)\s*\u00b0?\s*([FC])\b/i);
+  if (!match) return trimmed;
+
+  const amount = Number.parseFloat(match[1]);
+  if (!Number.isFinite(amount)) return trimmed;
+
+  const sourceUnit = match[2].toUpperCase() === "C" ? "celsius" : "fahrenheit";
+  if (sourceUnit === unit) {
+    return `${Math.round(amount)}${unit === "celsius" ? "C" : "F"}`;
+  }
+
+  const converted = unit === "celsius" ? (amount - 32) * (5 / 9) : amount * (9 / 5) + 32;
+  return `${Math.round(converted)}${unit === "celsius" ? "C" : "F"}`;
+}
+
 export function normalizePrefs(input: unknown): WeatherPrefs {
   const source = isRecord(input) ? input : {};
   const position = isRecord(source.widgetPosition)
@@ -232,8 +258,8 @@ export function normalizePrefs(input: unknown): WeatherPrefs {
       }
     : null;
 
-  const layerMode = typeof source.layerMode === "string" && ["auto", ...WEATHER_LAYERS].includes(source.layerMode)
-    ? (source.layerMode as WeatherPrefs["layerMode"])
+  const layerMode = typeof source.layerMode === "string" && WEATHER_LAYERS.includes(source.layerMode as WeatherLayerMode)
+    ? (source.layerMode as WeatherLayerMode)
     : DEFAULT_PREFS.layerMode;
 
   return {
@@ -241,6 +267,7 @@ export function normalizePrefs(input: unknown): WeatherPrefs {
     layerMode,
     intensity: clamp(parseNumeric(source.intensity) ?? DEFAULT_PREFS.intensity, 0.25, 1.5),
     reducedMotion: normalizeReducedMotion(source.reducedMotion, DEFAULT_PREFS.reducedMotion),
+    temperatureUnit: normalizeTemperatureUnit(source.temperatureUnit, DEFAULT_PREFS.temperatureUnit),
     pauseEffects: typeof source.pauseEffects === "boolean" ? source.pauseEffects : DEFAULT_PREFS.pauseEffects,
     widgetPosition: position,
   };

@@ -1,8 +1,8 @@
 export type WeatherCondition = "clear" | "cloudy" | "rain" | "storm" | "snow" | "fog";
 export type WeatherLayerMode = "back" | "front" | "both";
-export type WeatherLayerPreference = "auto" | WeatherLayerMode;
 export type WeatherPalette = "dawn" | "day" | "dusk" | "night" | "storm" | "mist" | "snow";
 export type ReducedMotionMode = "system" | "always" | "never";
+export type TemperatureUnit = "fahrenheit" | "celsius";
 export type WeatherSourceMode = "story" | "manual";
 
 export interface WidgetPosition {
@@ -28,9 +28,10 @@ export interface WeatherState {
 
 export interface WeatherPrefs {
   effectsEnabled: boolean;
-  layerMode: WeatherLayerPreference;
+  layerMode: WeatherLayerMode;
   intensity: number;
   reducedMotion: ReducedMotionMode;
+  temperatureUnit: TemperatureUnit;
   pauseEffects: boolean;
   widgetPosition: WidgetPosition | null;
 }

@@ -2,9 +2,10 @@
 var WEATHER_TAG_NAME = "weather-state";
 var DEFAULT_PREFS = {
   effectsEnabled: true,
-  layerMode: "auto",
+  layerMode: "both",
   intensity: 1,
   reducedMotion: "never",
+  temperatureUnit: "fahrenheit",
   pauseEffects: false,
   widgetPosition: null
 };
@@ -41,6 +42,21 @@ function makeDefaultWeatherState(now = Date.now()) {
     source: "story"
   };
 }
+function formatTemperatureForUnit(value, unit) {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(-?\d+(?:\.\d+)?)\s*\u00b0?\s*([FC])\b/i);
+  if (!match)
+    return trimmed;
+  const amount = Number.parseFloat(match[1]);
+  if (!Number.isFinite(amount))
+    return trimmed;
+  const sourceUnit = match[2].toUpperCase() === "C" ? "celsius" : "fahrenheit";
+  if (sourceUnit === unit) {
+    return `${Math.round(amount)}${unit === "celsius" ? "C" : "F"}`;
+  }
+  const converted = unit === "celsius" ? (amount - 32) * (5 / 9) : amount * (9 / 5) + 32;
+  return `${Math.round(converted)}${unit === "celsius" ? "C" : "F"}`;
+}
 
 // src/presets.ts
 var WEATHER_SCENE_PRESETS = [
@@ -55,7 +71,6 @@ var WEATHER_SCENE_PRESETS = [
       summary: "Bright open skies",
       temperature: "72F",
       wind: "light breeze",
-      layer: "back",
       palette: "day",
       intensity: 0.34
     }
@@ -71,7 +86,6 @@ var WEATHER_SCENE_PRESETS = [
       summary: "Heavy overcast",
       temperature: "63F",
       wind: "cool drift",
-      layer: "back",
       palette: "day",
       intensity: 0.58
     }
@@ -87,7 +101,6 @@ var WEATHER_SCENE_PRESETS = [
       summary: "Rain sweeping through",
       temperature: "61F",
       wind: "steady rainwind",
-      layer: "both",
       palette: "dusk",
       intensity: 0.74
     }
@@ -103,7 +116,6 @@ var WEATHER_SCENE_PRESETS = [
       summary: "Thunderheads building",
       temperature: "58F",
       wind: "hard gusts",
-      layer: "both",
       palette: "storm",
       intensity: 0.94
     }
@@ -119,7 +131,6 @@ var WEATHER_SCENE_PRESETS = [
       summary: "Quiet snowfall",
       temperature: "29F",
       wind: "hushed air",
-      layer: "both",
       palette: "snow",
       intensity: 0.68
     }
@@ -135,7 +146,6 @@ var WEATHER_SCENE_PRESETS = [
       summary: "Fog pooling low",
       temperature: "54F",
       wind: "still",
-      layer: "back",
       palette: "mist",
       intensity: 0.64
     }
@@ -151,7 +161,6 @@ var WEATHER_SCENE_PRESETS = [
       summary: "Clear night air",
       temperature: "57F",
       wind: "light night wind",
-      layer: "back",
       palette: "night",
       intensity: 0.24
     }
@@ -176,7 +185,7 @@ function buildPresetWeatherState(presetId, currentState) {
 function matchWeatherScenePreset(state) {
   if (!state)
     return null;
-  const match = WEATHER_SCENE_PRESETS.find((preset) => preset.state.condition === state.condition && preset.state.palette === state.palette && preset.state.layer === state.layer && preset.state.time === state.time && preset.state.summary === state.summary && preset.state.temperature === state.temperature && preset.state.wind === state.wind && Math.abs(preset.state.intensity - state.intensity) < 0.001);
+  const match = WEATHER_SCENE_PRESETS.find((preset) => preset.state.condition === state.condition && preset.state.palette === state.palette && preset.state.time === state.time && preset.state.summary === state.summary && preset.state.temperature === state.temperature && preset.state.wind === state.wind && Math.abs(preset.state.intensity - state.intensity) < 0.001);
   return match?.id ?? null;
 }
 
@@ -234,8 +243,6 @@ function applyStateToInputs(state, fields) {
     fields.windInput.value = state.wind;
   if (state.summary)
     fields.summaryInput.value = state.summary;
-  if (state.layer)
-    fields.sceneLayerSelect.value = state.layer;
   if (typeof state.intensity === "number" && Number.isFinite(state.intensity)) {
     fields.sceneIntensity.value = state.intensity.toFixed(2);
     fields.sceneIntensityValue.textContent = `${Math.round(state.intensity * 100)}%`;
@@ -301,7 +308,6 @@ function createSettingsUI(sendToBackend) {
   const layerSelect = document.createElement("select");
   layerSelect.className = "weather-settings-select";
   layerSelect.innerHTML = `
-    <option value="auto">Follow story layer</option>
     <option value="back">Back only</option>
     <option value="front">Front only</option>
     <option value="both">Front and back</option>
@@ -310,6 +316,19 @@ function createSettingsUI(sendToBackend) {
     sendToBackend({ type: "save_prefs", prefs: { layerMode: layerSelect.value } });
   });
   layerLabel.appendChild(layerSelect);
+  const temperatureUnitLabel = document.createElement("label");
+  temperatureUnitLabel.className = "weather-settings-label";
+  temperatureUnitLabel.textContent = "Temperature unit";
+  const temperatureUnitSelect = document.createElement("select");
+  temperatureUnitSelect.className = "weather-settings-select";
+  temperatureUnitSelect.innerHTML = `
+    <option value="fahrenheit">Fahrenheit</option>
+    <option value="celsius">Celsius</option>
+  `;
+  temperatureUnitSelect.addEventListener("change", () => {
+    sendToBackend({ type: "save_prefs", prefs: { temperatureUnit: temperatureUnitSelect.value } });
+  });
+  temperatureUnitLabel.appendChild(temperatureUnitSelect);
   const intensityLabel = document.createElement("label");
   intensityLabel.className = "weather-settings-label";
   intensityLabel.textContent = "Animation intensity";
@@ -356,6 +375,7 @@ function createSettingsUI(sendToBackend) {
   pauseLabel.appendChild(pauseToggle);
   effectsSection.body.appendChild(effectsLabel);
   placementSection.body.appendChild(layerLabel);
+  placementSection.body.appendChild(temperatureUnitLabel);
   motionSection.body.appendChild(intensityLabel);
   motionSection.body.appendChild(motionLabel);
   motionSection.body.appendChild(pauseLabel);
@@ -392,13 +412,6 @@ function createSettingsUI(sendToBackend) {
   const paletteSelect = document.createElement("select");
   paletteSelect.className = "weather-settings-select";
   paletteSelect.innerHTML = PALETTES.map((palette) => `<option value="${palette}">${palette}</option>`).join("");
-  const sceneLayerSelect = document.createElement("select");
-  sceneLayerSelect.className = "weather-settings-select";
-  sceneLayerSelect.innerHTML = `
-    <option value="back">Back</option>
-    <option value="front">Front</option>
-    <option value="both">Both</option>
-  `;
   const dateInput = document.createElement("input");
   dateInput.type = "date";
   dateInput.className = "weather-settings-input";
@@ -413,7 +426,7 @@ function createSettingsUI(sendToBackend) {
   const temperatureInput = document.createElement("input");
   temperatureInput.type = "text";
   temperatureInput.className = "weather-settings-input";
-  temperatureInput.placeholder = "61F";
+  temperatureInput.placeholder = "61F or 16C";
   const windInput = document.createElement("input");
   windInput.type = "text";
   windInput.className = "weather-settings-input";
@@ -446,7 +459,6 @@ function createSettingsUI(sendToBackend) {
     temperatureInput,
     windInput,
     summaryInput,
-    sceneLayerSelect,
     sceneIntensity,
     sceneIntensityValue
   };
@@ -459,7 +471,6 @@ function createSettingsUI(sendToBackend) {
     summary: summaryInput.value.trim() || currentState?.summary,
     temperature: temperatureInput.value.trim() || currentState?.temperature,
     wind: windInput.value.trim() || currentState?.wind,
-    layer: sceneLayerSelect.value,
     palette: paletteSelect.value,
     intensity: Number.parseFloat(sceneIntensity.value),
     source: "manual"
@@ -508,7 +519,6 @@ function createSettingsUI(sendToBackend) {
   manualGrid.appendChild(createLabeledInput("Story time", timeInput));
   manualGrid.appendChild(createLabeledInput("Temperature", temperatureInput));
   manualGrid.appendChild(createLabeledInput("Wind", windInput));
-  manualGrid.appendChild(createLabeledInput("Scene layer", sceneLayerSelect));
   manualGrid.appendChild(createLabeledInput("Summary", summaryInput));
   const sceneIntensityLabel = createLabeledInput("Scene intensity", sceneIntensityRow);
   const manualActions = document.createElement("div");
@@ -557,14 +567,14 @@ function createSettingsUI(sendToBackend) {
       currentState = state;
       effectsToggle.checked = prefs.effectsEnabled;
       layerSelect.value = prefs.layerMode;
+      temperatureUnitSelect.value = prefs.temperatureUnit;
       intensitySlider.value = String(prefs.intensity.toFixed(2));
       intensityValue.textContent = `${Math.round(prefs.intensity * 100)}%`;
       motionSelect.value = prefs.reducedMotion;
       pauseToggle.checked = prefs.pauseEffects;
-      status.textContent = state ? `${state.source === "manual" ? "manual" : "story"} / ${state.condition} ${state.temperature}` : "Waiting for story weather";
-      preview.textContent = state ? `${state.date} at ${state.time} • ${state.summary} • ${state.wind} • layer ${prefs.layerMode === "auto" ? state.layer : prefs.layerMode}` : "The HUD will wake up as soon as the model emits its first weather-state tag.";
-      const effectiveLayer = prefs.layerMode === "auto" ? state?.layer : prefs.layerMode;
-      preview.textContent = state ? `${state.location} | ${state.date} at ${state.time} | ${state.summary} | ${state.wind} | layer ${effectiveLayer}` : "Add {{weather_tracker}} to the active prompt, then the HUD will wake up as soon as the model emits its first weather-state tag.";
+      const displayTemperature = state ? formatTemperatureForUnit(state.temperature, prefs.temperatureUnit) : "";
+      status.textContent = state ? `${state.source === "manual" ? "manual" : "story"} / ${state.condition} ${displayTemperature}` : "Waiting for story weather";
+      preview.textContent = state ? `${state.location} | ${state.date} at ${state.time} | ${displayTemperature} | ${state.summary} | ${state.wind} | placement ${prefs.layerMode}` : "Add {{weather_tracker}} to the active prompt, then the HUD will wake up as soon as the model emits its first weather-state tag.";
       manualModePill.textContent = state?.source === "manual" ? "Manual lock" : "Story sync";
       manualModePill.dataset.mode = state?.source === "manual" ? "manual" : "story";
       manualToggle.checked = state?.source === "manual";
@@ -579,7 +589,6 @@ function createSettingsUI(sendToBackend) {
         temperatureInput.value = "";
         windInput.value = "";
         summaryInput.value = "";
-        sceneLayerSelect.value = "both";
         sceneIntensity.value = "0.30";
         sceneIntensityValue.textContent = "30%";
       }
@@ -1147,7 +1156,6 @@ var WEATHER_HUD_CSS = `
 
 .weather-hud-header,
 .weather-hud-body,
-.weather-hud-footer,
 .weather-hud-drawer {
   position: relative;
   z-index: 1;
@@ -1348,31 +1356,6 @@ var WEATHER_HUD_CSS = `
   color: var(--weather-hud-text-soft);
 }
 
-.weather-hud-footer {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-}
-
-.weather-hud-badge {
-  min-width: 0;
-  padding: 5px 9px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--weather-hud-line) 78%, transparent);
-  background: color-mix(in srgb, var(--weather-hud-surface) 94%, transparent);
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(244, 247, 255, 0.84);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-}
-
 .weather-hud-drawer {
   display: grid;
   gap: 10px;
@@ -1464,10 +1447,6 @@ var WEATHER_HUD_CSS = `
 
 .weather-hud-widget[data-expanded="false"] {
   gap: 10px;
-}
-
-.weather-hud-widget[data-expanded="false"] .weather-hud-footer {
-  gap: 6px;
 }
 
 .weather-hud-widget[data-expanded="false"] .weather-hud-summary {
@@ -1900,8 +1879,8 @@ var WEATHER_HUD_CSS = `
 var GEAR_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 12.98a7.79 7.79 0 000-1.96l2.03-1.58a.5.5 0 00.12-.64l-1.92-3.32a.5.5 0 00-.6-.22l-2.39.96a7.88 7.88 0 00-1.69-.98l-.36-2.54a.5.5 0 00-.49-.42h-3.84a.5.5 0 00-.49.42l-.36 2.54c-.6.24-1.16.56-1.69.98l-2.39-.96a.5.5 0 00-.6.22L2.43 8.8a.5.5 0 00.12.64l2.03 1.58a7.79 7.79 0 000 1.96L2.55 14.56a.5.5 0 00-.12.64l1.92 3.32a.5.5 0 00.6.22l2.39-.96c.53.42 1.09.74 1.69.98l.36 2.54a.5.5 0 00.49.42h3.84a.5.5 0 00.49-.42l.36-2.54c.6-.24 1.16-.56 1.69-.98l2.39.96a.5.5 0 00.6-.22l1.92-3.32a.5.5 0 00-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1112 8a3.5 3.5 0 010 7.5z"/></svg>`;
 var CHEVRON_DOWN_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>`;
 var CHEVRON_UP_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="m7.41 15.41 4.59-4.58 4.59 4.58L18 14l-6-6-6 6z"/></svg>`;
-var HUD_COLLAPSED_SIZE = { width: 272, height: 176 };
-var HUD_EXPANDED_SIZE = { width: 312, height: 388 };
+var HUD_COLLAPSED_SIZE = { width: 272, height: 148 };
+var HUD_EXPANDED_SIZE = { width: 312, height: 360 };
 var DEFAULT_WIDGET_POSITION = { x: 24, y: 96 };
 function conditionIcon(condition) {
   switch (condition) {
@@ -1919,9 +1898,6 @@ function conditionIcon(condition) {
     default:
       return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5a1 1 0 011-1h0a1 1 0 011 1v1.1a1 1 0 01-1 1h0a1 1 0 01-1-1V5zm0 11.8a1 1 0 011 1V19a1 1 0 01-2 0v-1.2a1 1 0 011-1zM5 11a1 1 0 011-1h1.2a1 1 0 010 2H6a1 1 0 01-1-1zm11.8 0a1 1 0 011-1H19a1 1 0 010 2h-1.2a1 1 0 01-1-1zM7.05 7.05a1 1 0 011.41 0l.85.85a1 1 0 11-1.41 1.41l-.85-.85a1 1 0 010-1.41zm7.64 7.64a1 1 0 011.41 0l.85.85a1 1 0 01-1.41 1.41l-.85-.85a1 1 0 010-1.41zm1.41-7.64a1 1 0 010 1.41l-.85.85a1 1 0 01-1.41-1.41l.85-.85a1 1 0 011.41 0zm-7.64 7.64a1 1 0 010 1.41l-.85.85a1 1 0 01-1.41-1.41l.85-.85a1 1 0 011.41 0zM12 8a4 4 0 110 8 4 4 0 010-8z"/></svg>`;
   }
-}
-function titleCase(value) {
-  return value.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 function parseHourFromTimeLabel(value) {
   const match = value.trim().match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
@@ -1954,12 +1930,6 @@ function resolveHudTimePhase(state, liveDate) {
   if (hour >= 18 && hour < 21)
     return "dusk";
   return "night";
-}
-function formatHudPaletteLabel(state, phase) {
-  if (state.palette === "storm" || state.palette === "mist" || state.palette === "snow") {
-    return titleCase(state.palette);
-  }
-  return titleCase(phase);
 }
 function sendToBackend(ctx, payload) {
   ctx.sendToBackend(payload);
@@ -2509,8 +2479,8 @@ function resolveSceneTokens(state, intensity) {
     flashOpacity: values.flashOpacity
   };
 }
-function getEffectiveLayerMode(prefs, state) {
-  return prefs.layerMode === "auto" ? state.layer : prefs.layerMode;
+function getEffectiveLayerMode(prefs) {
+  return prefs.layerMode;
 }
 function createHudWidget(ctx, initialPosition, expanded, callbacks) {
   const size = expanded ? HUD_EXPANDED_SIZE : HUD_COLLAPSED_SIZE;
@@ -2595,20 +2565,8 @@ function createHudWidget(ctx, initialPosition, expanded, callbacks) {
   right.appendChild(summary);
   body.appendChild(left);
   body.appendChild(right);
-  const footer = document.createElement("div");
-  footer.className = "weather-hud-footer";
-  const layer = document.createElement("span");
-  layer.className = "weather-hud-badge";
-  const condition = document.createElement("span");
-  condition.className = "weather-hud-badge";
-  const palette = document.createElement("span");
-  palette.className = "weather-hud-badge";
-  footer.appendChild(layer);
-  footer.appendChild(condition);
-  footer.appendChild(palette);
   root.appendChild(header);
   root.appendChild(body);
-  root.appendChild(footer);
   const presetButtons = new Map;
   let storyButton;
   let manualButton;
@@ -2686,7 +2644,6 @@ function createHudWidget(ctx, initialPosition, expanded, callbacks) {
     layerSelect = document.createElement("select");
     layerSelect.className = "weather-hud-select";
     layerSelect.innerHTML = `
-      <option value="auto">Auto</option>
       <option value="back">Back</option>
       <option value="front">Front</option>
       <option value="both">Both</option>
@@ -2766,9 +2723,6 @@ function createHudWidget(ctx, initialPosition, expanded, callbacks) {
     icon,
     temp,
     summary,
-    layer,
-    condition,
-    palette,
     source,
     drawerToggleLabel,
     drawerToggleIcon,
@@ -2790,7 +2744,7 @@ function getLiveDate(state) {
 function syncHudState(hud, prefs, state, expanded) {
   const liveDate = getLiveDate(state);
   const phase = resolveHudTimePhase(state, liveDate);
-  const effectiveLayer = getEffectiveLayerMode(prefs, state);
+  const effectiveLayer = getEffectiveLayerMode(prefs);
   const sceneIntensity = clamp(state.intensity * prefs.intensity, 0.25, 1.5);
   hud.root.dataset.expanded = expanded ? "true" : "false";
   hud.root.dataset.source = state.source;
@@ -2801,14 +2755,11 @@ function syncHudState(hud, prefs, state, expanded) {
   hud.root.dataset.paused = prefs.pauseEffects ? "true" : "false";
   hud.root.style.setProperty("--weather-hud-scene-intensity", sceneIntensity.toFixed(2));
   hud.icon.innerHTML = conditionIcon(state.condition);
-  hud.temp.textContent = state.temperature;
+  hud.temp.textContent = formatTemperatureForUnit(state.temperature, prefs.temperatureUnit);
   hud.summary.textContent = state.summary;
   hud.wind.textContent = `Wind • ${state.wind}`;
   hud.location.textContent = state.location;
   hud.wind.textContent = `Wind ${state.wind}`;
-  hud.condition.textContent = titleCase(state.condition);
-  hud.palette.textContent = formatHudPaletteLabel(state, phase);
-  hud.layer.textContent = titleCase(effectiveLayer);
   hud.source.textContent = state.source === "manual" ? "Scene lock" : "Story sync";
   hud.drawerToggleLabel.textContent = expanded ? "Hide" : "Controls";
   hud.drawerToggleIcon.innerHTML = expanded ? CHEVRON_UP_SVG : CHEVRON_DOWN_SVG;
@@ -3137,7 +3088,7 @@ function setup(ctx) {
   };
   const updateScene = () => {
     const reducedMotion = getReducedMotion();
-    const layerMode = getEffectiveLayerMode(currentPrefs, currentState);
+    const layerMode = getEffectiveLayerMode(currentPrefs);
     const showEffects = currentPrefs.effectsEnabled;
     if (hud) {
       syncHudState(hud, currentPrefs, currentState, hudExpanded);

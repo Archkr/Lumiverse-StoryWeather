@@ -48,7 +48,7 @@ Supported aliases:
 The assistant should keep all visible prose natural, then end the message with exactly one hidden weather tag:
 
 ```html
-<weather-state location="Tengu City" date="2026-03-24" time="9:42 PM" condition="rain" summary="Cold spring rain" temperature="61F" intensity="0.65" wind="breezy" layer="both" palette="storm"></weather-state>
+<weather-state location="Tengu City" date="2026-03-24" time="9:42 PM" condition="rain" summary="Cold spring rain" temperature="61F" intensity="0.65" wind="breezy" palette="storm"></weather-state>
 ```
 
 Supported conditions:
@@ -60,11 +60,11 @@ Supported conditions:
 - `snow`
 - `fog`
 
-Supported layers:
+Effect placement is user-controlled in settings:
 
-- `back`
-- `front`
-- `both`
+- Back only
+- Front only
+- Front and back
 
 Supported palettes:
 

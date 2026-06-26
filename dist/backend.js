@@ -6,11 +6,13 @@ var WEATHER_CONDITIONS = ["clear", "cloudy", "rain", "storm", "snow", "fog"];
 var WEATHER_LAYERS = ["back", "front", "both"];
 var WEATHER_PALETTES = ["dawn", "day", "dusk", "night", "storm", "mist", "snow"];
 var REDUCED_MOTION_VALUES = ["system", "always", "never"];
+var TEMPERATURE_UNITS = ["fahrenheit", "celsius"];
 var DEFAULT_PREFS = {
   effectsEnabled: true,
-  layerMode: "auto",
+  layerMode: "both",
   intensity: 1,
   reducedMotion: "never",
+  temperatureUnit: "fahrenheit",
   pauseEffects: false,
   widgetPosition: null
 };
@@ -37,6 +39,9 @@ function normalizePalette(value, fallback) {
 }
 function normalizeReducedMotion(value, fallback) {
   return typeof value === "string" && REDUCED_MOTION_VALUES.includes(value) ? value : fallback;
+}
+function normalizeTemperatureUnit(value, fallback) {
+  return typeof value === "string" && TEMPERATURE_UNITS.includes(value) ? value : fallback;
 }
 function normalizeSource(value, fallback) {
   return value === "manual" || value === "story" ? value : fallback;
@@ -209,12 +214,13 @@ function normalizePrefs(input) {
     x: clamp(parseNumeric(source.widgetPosition.x) ?? 24, 0, 5000),
     y: clamp(parseNumeric(source.widgetPosition.y) ?? 96, 0, 5000)
   } : null;
-  const layerMode = typeof source.layerMode === "string" && ["auto", ...WEATHER_LAYERS].includes(source.layerMode) ? source.layerMode : DEFAULT_PREFS.layerMode;
+  const layerMode = typeof source.layerMode === "string" && WEATHER_LAYERS.includes(source.layerMode) ? source.layerMode : DEFAULT_PREFS.layerMode;
   return {
     effectsEnabled: typeof source.effectsEnabled === "boolean" ? source.effectsEnabled : DEFAULT_PREFS.effectsEnabled,
     layerMode,
     intensity: clamp(parseNumeric(source.intensity) ?? DEFAULT_PREFS.intensity, 0.25, 1.5),
     reducedMotion: normalizeReducedMotion(source.reducedMotion, DEFAULT_PREFS.reducedMotion),
+    temperatureUnit: normalizeTemperatureUnit(source.temperatureUnit, DEFAULT_PREFS.temperatureUnit),
     pauseEffects: typeof source.pauseEffects === "boolean" ? source.pauseEffects : DEFAULT_PREFS.pauseEffects,
     widgetPosition: position
   };
@@ -256,7 +262,6 @@ function formatWeatherTag(state) {
     ["temperature", state.temperature],
     ["intensity", state.intensity.toFixed(2)],
     ["wind", state.wind],
-    ["layer", state.layer],
     ["palette", state.palette]
   ].map(([key, value]) => `${key}="${sanitizeAttrValue(String(value))}"`);
   return `<weather-state ${attrs.join(" ")}></weather-state>`;
@@ -295,9 +300,8 @@ function buildSecondaryWeatherPrompt(messages, previous) {
   return [
     "Generate scene metadata for a story weather HUD.",
     "Return ONLY a JSON object and nothing else.",
-    'Required keys: "location", "date", "time", "condition", "summary", "temperature", "intensity", "wind", "layer", "palette".',
+    'Required keys: "location", "date", "time", "condition", "summary", "temperature", "intensity", "wind", "palette".',
     `Allowed conditions: ${WEATHER_CONDITIONS.join(", ")}`,
-    `Allowed layers: ${WEATHER_LAYERS.join(", ")}`,
     `Allowed palettes: ${WEATHER_PALETTES.join(", ")}`,
     'Use short plain-text values. "intensity" must be a number from 0 to 1.',
     `Previous state: ${summarizeWeatherState(previous)}`,
@@ -411,7 +415,7 @@ async function pushActiveChatState(chatId) {
   send({ type: "active_chat_state", chatId: resolvedChatId, state });
 }
 function buildWeatherTagExample() {
-  return '<weather-state location="Tengu City" date="2026-03-24" time="9:42 PM" condition="rain" summary="Cold spring rain" temperature="61F" intensity="0.65" wind="breezy" layer="both" palette="storm"></weather-state>';
+  return '<weather-state location="Tengu City" date="2026-03-24" time="9:42 PM" condition="rain" summary="Cold spring rain" temperature="61F" intensity="0.65" wind="breezy" palette="storm"></weather-state>';
 }
 function summarizeWeatherState(state) {
   if (!state)
@@ -425,7 +429,6 @@ function summarizeWeatherState(state) {
     `Temperature: ${state.temperature}`,
     `Intensity: ${state.intensity.toFixed(2)}`,
     `Wind: ${state.wind}`,
-    `Layer: ${state.layer}`,
     `Palette: ${state.palette}`
   ].join(" | ");
 }
@@ -439,9 +442,8 @@ function buildTrackerMacro(state) {
     "Never place visible prose after the tag.",
     "Emit the tag as the very last text in the assistant message.",
     `Allowed conditions: ${WEATHER_CONDITIONS.join(", ")}`,
-    `Allowed layers: ${WEATHER_LAYERS.join(", ")}`,
     `Allowed palettes: ${WEATHER_PALETTES.join(", ")}`,
-    "Use location, date, time, condition, summary, temperature, intensity, wind, layer, and palette.",
+    "Use location, date, time, condition, summary, temperature, intensity, wind, and palette.",
     "Exact wrapper example:",
     buildWeatherTagExample(),
     `Current scene: ${summarizeWeatherState(state)}`
